@@ -41,7 +41,7 @@ export default function Landmark() {
   const sphereColor = '#d24f7a'
 
   return (
-    <group position={[CITY.landmark.x, 0, CITY.landmark.z]}>
+    <group position={[CITY.landmark.x, 0, CITY.landmark.z]} scale={0.82}>
       {/* three splayed legs */}
       {legs.map((l, i) => (
         <mesh

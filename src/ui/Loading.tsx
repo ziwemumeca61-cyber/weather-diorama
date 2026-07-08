@@ -1,10 +1,22 @@
+import { useEffect, useState } from 'react'
 import { useStore } from '../data/store'
 
-/** Full-screen boot loader shown until the first weather payload arrives. */
+/**
+ * Brief boot loader. The city renders immediately regardless of network, so we
+ * dismiss once the first weather payload arrives, on error, or after a short
+ * fallback timeout (keeps the scene reachable even if the API is unreachable).
+ */
 export default function Loading() {
   const status = useStore((s) => s.status)
   const hasData = useStore((s) => s.current !== null)
-  if (hasData || status === 'error') return null
+  const [timedOut, setTimedOut] = useState(false)
+
+  useEffect(() => {
+    const t = setTimeout(() => setTimedOut(true), 2500)
+    return () => clearTimeout(t)
+  }, [])
+
+  if (hasData || status === 'error' || timedOut) return null
   return (
     <div className="boot">
       <div className="boot-inner">
