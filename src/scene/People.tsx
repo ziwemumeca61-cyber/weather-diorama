@@ -7,6 +7,9 @@ import { useStore } from '../data/store'
 
 type Mode = 'walk' | 'run' | 'trudge' | 'umbrella'
 
+/** Global size multiplier for all pedestrians. */
+const BASE_SCALE = 1.8
+
 const MODE_TUNING: Record<Mode, { speed: number; cadence: number; swing: number; bob: number; lean: number }> = {
   walk: { speed: 1.0, cadence: 9, swing: 0.6, bob: 0.015, lean: 0.05 },
   run: { speed: 2.4, cadence: 16, swing: 1.0, bob: 0.032, lean: 0.28 },
@@ -80,7 +83,8 @@ function Person({ a, b, speed, phase, mode, appearance, hero }: PersonProps) {
     }
   })
 
-  const scale = hero ? 1.15 : 1
+  // chibi people run oversized vs. true scale so they read at diorama distance
+  const scale = (hero ? 1.15 : 1) * BASE_SCALE
 
   return (
     <group ref={root} scale={scale}>
