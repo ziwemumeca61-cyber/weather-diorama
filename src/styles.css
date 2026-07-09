@@ -127,6 +127,8 @@ canvas {
   border-radius: 18px;
   padding: 14px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  max-height: min(78vh, 720px);
+  overflow-y: auto;
 }
 
 .search-row {
@@ -217,6 +219,63 @@ canvas {
 
 .reset:hover {
   background: rgba(255, 255, 255, 0.18);
+}
+
+/* ---------- Avatar customization ---------- */
+.avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.swatch input[type='color'] {
+  width: 100%;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.swatch input[type='color']:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.swatch input[type='color']::-webkit-color-swatch-wrapper {
+  padding: 3px;
+}
+.swatch input[type='color']::-webkit-color-swatch {
+  border: none;
+  border-radius: 7px;
+}
+
+.hat-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.avatar-hint {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-dim);
 }
 
 /* ---------- Boot loader ---------- */

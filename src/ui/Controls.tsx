@@ -7,12 +7,20 @@ import {
 } from '../data/api'
 import type { WeatherKind, TimeOfDay } from '../weather/weatherCode'
 import { labelForKind } from '../weather/weatherCode'
+import type { Appearance } from '../data/store'
 
 const KINDS: WeatherKind[] = ['clear', 'cloudy', 'overcast', 'fog', 'rain', 'snow', 'thunder']
 const TIMES: { id: TimeOfDay; label: string }[] = [
   { id: 'day', label: '白天' },
   { id: 'dusk', label: '黄昏' },
   { id: 'night', label: '夜晚' },
+]
+const AVATAR_PARTS: { key: keyof Appearance; label: string }[] = [
+  { key: 'skin', label: '肤色' },
+  { key: 'hair', label: '头发' },
+  { key: 'shirt', label: '上衣' },
+  { key: 'pants', label: '裤子' },
+  { key: 'umbrella', label: '雨伞' },
 ]
 
 export default function Controls() {
@@ -27,6 +35,8 @@ export default function Controls() {
   const setOverrideTime = useStore((s) => s.setOverrideTime)
   const clearOverrides = useStore((s) => s.clearOverrides)
   const error = useStore((s) => s.error)
+  const avatar = useStore((s) => s.avatar)
+  const setAvatar = useStore((s) => s.setAvatar)
 
   async function search(e?: React.FormEvent) {
     e?.preventDefault()
@@ -105,6 +115,38 @@ export default function Controls() {
               恢复实时天气
             </button>
           )}
+
+          <div className="chips-label">我的小人</div>
+          <div className="avatar-grid">
+            {AVATAR_PARTS.map((part) => (
+              <label key={part.key} className="swatch">
+                <input
+                  type="color"
+                  value={avatar[part.key] as string}
+                  onChange={(e) => setAvatar({ [part.key]: e.target.value })}
+                />
+                <span>{part.label}</span>
+              </label>
+            ))}
+            <label className="swatch">
+              <input
+                type="color"
+                value={avatar.hatColor}
+                disabled={!avatar.hat}
+                onChange={(e) => setAvatar({ hatColor: e.target.value })}
+              />
+              <span>帽子</span>
+            </label>
+          </div>
+          <label className="hat-toggle">
+            <input
+              type="checkbox"
+              checked={avatar.hat}
+              onChange={(e) => setAvatar({ hat: e.target.checked })}
+            />
+            戴帽子
+          </label>
+          <div className="avatar-hint">拖动镜头找到脚下有光环的小人就是你 · 下雨会打伞</div>
         </div>
       )}
     </div>

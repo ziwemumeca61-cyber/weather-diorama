@@ -4,6 +4,47 @@ import type { WeatherKind, WeatherState, TimeOfDay } from '../weather/weatherCod
 
 type Status = 'idle' | 'loading' | 'ready' | 'error'
 
+/** Look of the user's customizable chibi character (and defaults for NPCs). */
+export interface Appearance {
+  skin: string
+  hair: string
+  shirt: string
+  pants: string
+  umbrella: string
+  hat: boolean
+  hatColor: string
+}
+
+export const DEFAULT_AVATAR: Appearance = {
+  skin: '#f2c9a0',
+  hair: '#3a2a1a',
+  shirt: '#4f8fe0',
+  pants: '#33384a',
+  umbrella: '#e0574f',
+  hat: false,
+  hatColor: '#e0574f',
+}
+
+const AVATAR_KEY = 'weather-diorama.avatar'
+
+function loadAvatar(): Appearance {
+  try {
+    const raw = localStorage.getItem(AVATAR_KEY)
+    if (raw) return { ...DEFAULT_AVATAR, ...JSON.parse(raw) }
+  } catch {
+    /* ignore */
+  }
+  return DEFAULT_AVATAR
+}
+
+function saveAvatar(avatar: Appearance) {
+  try {
+    localStorage.setItem(AVATAR_KEY, JSON.stringify(avatar))
+  } catch {
+    /* ignore */
+  }
+}
+
 interface AppState {
   status: Status
   error: string | null
@@ -12,6 +53,9 @@ interface AppState {
   /** Manual overrides (demo mode). When set, they win over live data. */
   overrideKind: WeatherKind | null
   overrideTime: TimeOfDay | null
+
+  /** The user's customizable hero character appearance. */
+  avatar: Appearance
 
   /** The effective weather driving the scene (live merged with overrides). */
   effectiveWeather: () => WeatherState
@@ -22,6 +66,7 @@ interface AppState {
   setOverrideKind: (k: WeatherKind | null) => void
   setOverrideTime: (t: TimeOfDay | null) => void
   clearOverrides: () => void
+  setAvatar: (patch: Partial<Appearance>) => void
 }
 
 const DEFAULT_WEATHER: WeatherState = {
@@ -50,6 +95,7 @@ export const useStore = create<AppState>((set, get) => ({
   current: null,
   overrideKind: null,
   overrideTime: null,
+  avatar: loadAvatar(),
 
   effectiveWeather: () => {
     const s = get()
@@ -67,4 +113,10 @@ export const useStore = create<AppState>((set, get) => ({
   setOverrideKind: (k) => set({ overrideKind: k }),
   setOverrideTime: (t) => set({ overrideTime: t }),
   clearOverrides: () => set({ overrideKind: null, overrideTime: null }),
+  setAvatar: (patch) =>
+    set((s) => {
+      const avatar = { ...s.avatar, ...patch }
+      saveAvatar(avatar)
+      return { avatar }
+    }),
 }))

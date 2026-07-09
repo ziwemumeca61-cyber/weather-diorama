@@ -112,22 +112,69 @@ export function generateTrees(seed = 77): TreeInstance[] {
   return trees
 }
 
-export interface PersonInstance {
-  position: [number, number, number]
-  color: THREE.Color
+export interface PedestrianAppearance {
+  skin: string
+  hair: string
+  shirt: string
+  pants: string
+  umbrella: string
+  hat: boolean
+  hatColor: string
 }
 
-const PERSON_COLORS = ['#e05b5b', '#4f8fe0', '#e0a24f', '#5fbf7a', '#b06fd0', '#e8e8e8']
+export interface Pedestrian {
+  a: [number, number, number]
+  b: [number, number, number]
+  speed: number
+  hasUmbrella: boolean
+  appearance: PedestrianAppearance
+  phase: number
+}
 
-export function generatePeople(seed = 909): PersonInstance[] {
+const SKINS = ['#f2c9a0', '#e8b98a', '#d69f6e', '#c8824f']
+const HAIRS = ['#2a1a12', '#3a2a1a', '#5a3a22', '#141414', '#7a5a3a', '#b0651f']
+const SHIRTS = ['#e0574f', '#4f8fe0', '#5fbf7a', '#e0a24f', '#b06fd0', '#ececec', '#4fbfc0']
+const PANTS = ['#33384a', '#4a3f2f', '#2f4a3f', '#555b66', '#6b4a2f']
+const UMBRELLAS = ['#e0574f', '#4f8fe0', '#333842', '#5fbf7a', '#e0a24f', '#b06fd0']
+
+// Streets align with the city grid (roadEvery=4, step=1.55 from CITY.minX/minZ).
+const X_LINES = [-9, -2.8, 3.4]
+const Z_LINES = [-9, -2.8, 3.4]
+
+/** Chibi pedestrians walking along the street grid; one may be the hero. */
+export function generatePedestrians(seed = 4242, count = 22): Pedestrian[] {
   const rand = mulberry32(seed)
-  const people: PersonInstance[] = []
-  for (let i = 0; i < 120; i++) {
-    const x = THREE.MathUtils.lerp(CITY.minX, CITY.maxX, rand())
-    const z = THREE.MathUtils.lerp(CITY.minZ, CITY.riverZ - 0.3, rand())
+  const pick = <T,>(arr: T[]) => arr[Math.floor(rand() * arr.length)]
+  const people: Pedestrian[] = []
+  for (let i = 0; i < count; i++) {
+    const horizontal = rand() < 0.5
+    const sidewalk = (rand() < 0.5 ? 1 : -1) * 0.5
+    let a: [number, number, number]
+    let b: [number, number, number]
+    if (horizontal) {
+      const z = pick(Z_LINES) + sidewalk
+      a = [CITY.minX + 0.6, 0, z]
+      b = [CITY.maxX - 0.6, 0, z]
+    } else {
+      const x = pick(X_LINES) + sidewalk
+      a = [x, 0, CITY.minZ + 0.6]
+      b = [x, 0, CITY.riverZ - 0.7]
+    }
     people.push({
-      position: [x, 0, z],
-      color: new THREE.Color(PERSON_COLORS[Math.floor(rand() * PERSON_COLORS.length)]),
+      a,
+      b,
+      speed: 0.05 + rand() * 0.06,
+      hasUmbrella: rand() < 0.6,
+      phase: rand() * Math.PI * 2,
+      appearance: {
+        skin: pick(SKINS),
+        hair: pick(HAIRS),
+        shirt: pick(SHIRTS),
+        pants: pick(PANTS),
+        umbrella: pick(UMBRELLAS),
+        hat: rand() < 0.25,
+        hatColor: pick(SHIRTS),
+      },
     })
   }
   return people

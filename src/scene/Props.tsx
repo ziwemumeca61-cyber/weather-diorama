@@ -1,7 +1,7 @@
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { CITY, generateTrees, generatePeople } from './cityData'
+import { CITY, generateTrees } from './cityData'
 
 function Trees() {
   const trees = useMemo(() => generateTrees(), [])
@@ -40,29 +40,6 @@ function Trees() {
         <meshStandardMaterial roughness={0.85} />
       </instancedMesh>
     </group>
-  )
-}
-
-function People() {
-  const people = useMemo(() => generatePeople(), [])
-  const ref = useRef<THREE.InstancedMesh>(null)
-  useLayoutEffect(() => {
-    const dummy = new THREE.Object3D()
-    people.forEach((p, i) => {
-      dummy.position.set(p.position[0], 0.09, p.position[2])
-      dummy.scale.setScalar(1)
-      dummy.updateMatrix()
-      ref.current!.setMatrixAt(i, dummy.matrix)
-      ref.current!.setColorAt(i, p.color)
-    })
-    ref.current!.instanceMatrix.needsUpdate = true
-    if (ref.current!.instanceColor) ref.current!.instanceColor.needsUpdate = true
-  }, [people])
-  return (
-    <instancedMesh ref={ref} args={[undefined, undefined, people.length]} castShadow>
-      <capsuleGeometry args={[0.05, 0.1, 3, 6]} />
-      <meshStandardMaterial roughness={0.7} />
-    </instancedMesh>
   )
 }
 
@@ -171,7 +148,6 @@ export default function Props() {
   return (
     <group>
       <Trees />
-      <People />
       <Cars />
       <Bridge />
     </group>
