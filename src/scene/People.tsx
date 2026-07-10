@@ -4,6 +4,7 @@ import * as THREE from 'three'
 import { generatePedestrians, type PedestrianAppearance } from './cityData'
 import { useEffectiveWeather } from '../data/store'
 import { useStore } from '../data/store'
+import { lightningPulse } from '../weather/effects/Lightning'
 
 type Mode = 'walk' | 'run' | 'trudge' | 'umbrella'
 
@@ -78,7 +79,9 @@ function Person({ a, b, speed, phase, mode, appearance, hero }: PersonProps) {
     if (armR.current) armR.current.rotation.x = showUmbrella ? -2.3 : s * 0.8
 
     if (bob.current) {
-      bob.current.position.y = Math.abs(Math.sin(gait.current)) * tune.bob
+      // lightning makes everyone hop in fright
+      const startle = lightningPulse.value > 0.45 ? lightningPulse.value * 0.09 : 0
+      bob.current.position.y = Math.abs(Math.sin(gait.current)) * tune.bob + startle
       bob.current.rotation.x = tune.lean
     }
   })

@@ -7,6 +7,7 @@ import City from './City'
 import Landmark from './Landmark'
 import Props from './Props'
 import People from './People'
+import Extras from './Extras'
 
 const GROUND = {
   x0: -9.9,
@@ -189,6 +190,7 @@ export default function Diorama() {
       <Landmark />
       <Props />
       <People />
+      <Extras />
     </group>
   )
 }

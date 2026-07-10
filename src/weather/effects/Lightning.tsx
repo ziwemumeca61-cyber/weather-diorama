@@ -1,6 +1,12 @@
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
+
+/**
+ * Shared flash energy (0..1) so other parts of the scene can react to a
+ * strike — e.g. pedestrians jumping in fright.
+ */
+export const lightningPulse = { value: 0 }
 
 /**
  * Occasional lightning: a bright point-light flash high above the city with a
@@ -12,6 +18,9 @@ export default function Lightning() {
   const timer = useRef(0)
   const flash = useRef(0) // remaining flash energy
   const pos = useRef(new THREE.Vector3(0, 12, 0))
+
+  // clear the shared pulse when the storm ends
+  useEffect(() => () => void (lightningPulse.value = 0), [])
 
   useFrame((_, dtRaw) => {
     const dt = Math.min(dtRaw, 0.05)
@@ -28,6 +37,7 @@ export default function Lightning() {
 
     // decay
     flash.current = Math.max(0, flash.current - dt * 6)
+    lightningPulse.value = flash.current
     if (lightRef.current) {
       lightRef.current.position.copy(pos.current)
       lightRef.current.intensity = flash.current * 60
