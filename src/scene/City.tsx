@@ -4,6 +4,7 @@ import * as THREE from 'three'
 import { generateCity, type BuildingInstance } from './cityData'
 import { getFacades } from './facades'
 import { useEffectiveWeather } from '../data/store'
+import { useCityProfile } from './cityProfiles'
 
 /** One category of buildings sharing a material (glass towers or concrete blocks). */
 function BuildingCluster({
@@ -149,7 +150,8 @@ function Rooftops({ buildings }: { buildings: BuildingInstance[] }) {
 }
 
 export default function City() {
-  const buildings = useMemo(() => generateCity(), [])
+  const profile = useCityProfile()
+  const buildings = useMemo(() => generateCity(20251225, profile.clearZones), [profile])
   const { glass, concrete } = useMemo(() => {
     const glass: BuildingInstance[] = []
     const concrete: BuildingInstance[] = []
@@ -162,7 +164,8 @@ export default function City() {
   emissiveTarget.current = timeOfDay === 'night' ? 1.15 : timeOfDay === 'dusk' ? 0.5 : 0.0
 
   return (
-    <group>
+    // remount on profile switch: InstancedMesh capacity is fixed at construction
+    <group key={profile.id}>
       <BuildingCluster items={glass} glass emissiveTargetRef={emissiveTarget} />
       <BuildingCluster items={concrete} glass={false} emissiveTargetRef={emissiveTarget} />
       <Crowns towers={glass} />

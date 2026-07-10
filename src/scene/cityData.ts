@@ -49,7 +49,18 @@ const PALETTE = [
 ]
 const CORE_PALETTE = ['#8ea6bd', '#7f97b4', '#9fb8cf', '#aebfce', '#c0cad6']
 
-export function generateCity(seed = 20251225): BuildingInstance[] {
+export interface ClearZone {
+  x: number
+  z: number
+  r: number
+}
+
+const DEFAULT_CLEAR_ZONES: ClearZone[] = [{ x: CITY.landmark.x, z: CITY.landmark.z, r: 1.5 }]
+
+export function generateCity(
+  seed = 20251225,
+  clearZones: ClearZone[] = DEFAULT_CLEAR_ZONES,
+): BuildingInstance[] {
   const rand = mulberry32(seed)
   const buildings: BuildingInstance[] = []
 
@@ -62,9 +73,9 @@ export function generateCity(seed = 20251225): BuildingInstance[] {
     for (let z = CITY.minZ; z <= CITY.maxZ; z += step, iz++) {
       // leave street corridors
       if (ix % roadEvery === 0 || iz % roadEvery === 0) continue
-      // keep the plaza around the landmark clear-ish
+      // keep landmark footprints clear
       const dToCore = Math.hypot(x - CITY.landmark.x, z - CITY.landmark.z)
-      if (dToCore < 1.5) continue
+      if (clearZones.some((c) => Math.hypot(x - c.x, z - c.z) < c.r)) continue
       // random gaps
       if (rand() < 0.12) continue
 
