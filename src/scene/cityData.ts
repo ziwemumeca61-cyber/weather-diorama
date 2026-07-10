@@ -55,11 +55,20 @@ export interface ClearZone {
   r: number
 }
 
+/** Buildings inside a calm zone are capped in height so landmarks stay visible. */
+export interface CalmZone {
+  x: number
+  z: number
+  r: number
+  maxHeight: number
+}
+
 const DEFAULT_CLEAR_ZONES: ClearZone[] = [{ x: CITY.landmark.x, z: CITY.landmark.z, r: 1.5 }]
 
 export function generateCity(
   seed = 20251225,
   clearZones: ClearZone[] = DEFAULT_CLEAR_ZONES,
+  calmZones: CalmZone[] = [],
 ): BuildingInstance[] {
   const rand = mulberry32(seed)
   const buildings: BuildingInstance[] = []
@@ -88,7 +97,16 @@ export function generateCity(
 
       // taller downtown, low-rise waterfront/edges
       const base = 0.6 + rand() * 0.8
-      const height = base + Math.pow(coreness, 1.6) * (2.5 + rand() * 6.5)
+      let height = base + Math.pow(coreness, 1.6) * (2.5 + rand() * 6.5)
+
+      // suppress height near landmarks so they stay visible (soft falloff)
+      for (const zone of calmZones) {
+        const d = Math.hypot(x - zone.x, z - zone.z)
+        if (d < zone.r) {
+          const t = THREE.MathUtils.smoothstep(d, zone.r * 0.45, zone.r)
+          height = Math.min(height, zone.maxHeight + (height - zone.maxHeight) * t)
+        }
+      }
 
       const isCore = coreness > 0.55 && rand() < 0.6
       const palette = isCore ? CORE_PALETTE : PALETTE

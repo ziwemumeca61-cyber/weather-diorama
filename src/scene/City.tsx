@@ -151,7 +151,10 @@ function Rooftops({ buildings }: { buildings: BuildingInstance[] }) {
 
 export default function City() {
   const profile = useCityProfile()
-  const buildings = useMemo(() => generateCity(20251225, profile.clearZones), [profile])
+  const buildings = useMemo(
+    () => generateCity(20251225, profile.clearZones, profile.calmZones ?? []),
+    [profile],
+  )
   const { glass, concrete } = useMemo(() => {
     const glass: BuildingInstance[] = []
     const concrete: BuildingInstance[] = []

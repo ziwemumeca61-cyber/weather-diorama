@@ -31,6 +31,11 @@ function TempleOfHeaven({ position }: { position: [number, number, number] }) {
   const glow = useNightGlow()
   return (
     <group position={position}>
+      {/* paved plaza so the site reads as a destination */}
+      <mesh position={[0, 0.015, 0]} receiveShadow>
+        <cylinderGeometry args={[2.05, 2.05, 0.03, 40]} />
+        <meshStandardMaterial color={'#d9d2c2'} roughness={0.95} />
+      </mesh>
       {[
         { r: 1.85, y: 0.09 },
         { r: 1.5, y: 0.27 },
@@ -88,6 +93,15 @@ function Tiananmen({ position }: { position: [number, number, number] }) {
   )
   return (
     <group position={position}>
+      {/* forecourt square with a red carpet approach */}
+      <mesh position={[0, 0.012, 0.7]} receiveShadow>
+        <boxGeometry args={[3.6, 0.024, 2.8]} />
+        <meshStandardMaterial color={'#cfc9bb'} roughness={0.95} />
+      </mesh>
+      <mesh position={[0, 0.03, 1.35]} receiveShadow>
+        <boxGeometry args={[0.5, 0.012, 1.4]} />
+        <meshStandardMaterial color={'#b03a30'} roughness={0.9} />
+      </mesh>
       {/* marble platform */}
       <mesh position={[0, 0.08, 0]} receiveShadow castShadow>
         <boxGeometry args={[2.9, 0.16, 1.5]} />
@@ -142,20 +156,20 @@ function CiticTower({ position }: { position: [number, number, number] }) {
   )
   return (
     <group position={position}>
-      <mesh position={[0, 1.4, 0]} castShadow>
-        <cylinderGeometry args={[0.42, 0.6, 2.8, 12]} />
+      <mesh position={[0, 1.75, 0]} castShadow>
+        <cylinderGeometry args={[0.48, 0.68, 3.5, 12]} />
         {mat}
       </mesh>
-      <mesh position={[0, 4.0, 0]} castShadow>
-        <cylinderGeometry args={[0.4, 0.42, 2.4, 12]} />
+      <mesh position={[0, 5.0, 0]} castShadow>
+        <cylinderGeometry args={[0.46, 0.48, 3.0, 12]} />
         {mat}
       </mesh>
-      <mesh position={[0, 6.25, 0]} castShadow>
-        <cylinderGeometry args={[0.52, 0.4, 2.1, 12]} />
+      <mesh position={[0, 7.8, 0]} castShadow>
+        <cylinderGeometry args={[0.6, 0.46, 2.6, 12]} />
         {mat}
       </mesh>
-      <mesh position={[0, 7.38, 0]} castShadow>
-        <cylinderGeometry args={[0.44, 0.52, 0.18, 12]} />
+      <mesh position={[0, 9.2, 0]} castShadow>
+        <cylinderGeometry args={[0.5, 0.6, 0.2, 12]} />
         <meshStandardMaterial color={'#6d6252'} metalness={0.7} roughness={0.4} />
       </mesh>
     </group>
@@ -164,7 +178,7 @@ function CiticTower({ position }: { position: [number, number, number] }) {
 
 /** 央视大楼 CCTV headquarters: two leaning towers joined by a cantilever loop. */
 function CctvLoop({ position }: { position: [number, number, number] }) {
-  const dark = <meshStandardMaterial color={'#3a4149'} metalness={0.75} roughness={0.35} envMapIntensity={1.3} />
+  const dark = <meshStandardMaterial color={'#5a6672'} metalness={0.7} roughness={0.4} envMapIntensity={1.4} />
   const lean = 0.16
   return (
     <group position={position} rotation={[0, -0.5, 0]}>
@@ -190,14 +204,20 @@ function CctvLoop({ position }: { position: [number, number, number] }) {
   )
 }
 
-/** Beijing landmark ensemble. */
+/** Beijing landmark ensemble — scaled up so each site reads at diorama distance. */
 export default function BeijingLandmarks() {
   return (
     <group>
-      <TempleOfHeaven position={[-1.5, 0, -2]} />
-      <Tiananmen position={[1.9, 0, 2.6]} />
+      <group position={[-1.5, 0, -2]} scale={1.5}>
+        <TempleOfHeaven position={[0, 0, 0]} />
+      </group>
+      <group position={[1.9, 0, 2.6]} scale={1.4}>
+        <Tiananmen position={[0, 0, 0]} />
+      </group>
       <CiticTower position={[-5.3, 0, -5.2]} />
-      <CctvLoop position={[4.3, 0, -5.1]} />
+      <group position={[4.1, 0, -4.6]} scale={1.35}>
+        <CctvLoop position={[0, 0, 0]} />
+      </group>
     </group>
   )
 }

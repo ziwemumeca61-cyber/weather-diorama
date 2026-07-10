@@ -3,7 +3,7 @@ import { useMemo } from 'react'
 import ShanghaiLandmarks from './landmarks/Shanghai'
 import BeijingLandmarks from './landmarks/Beijing'
 import { useStore } from '../data/store'
-import type { ClearZone } from './cityData'
+import type { ClearZone, CalmZone } from './cityData'
 
 export interface CityProfile {
   id: string
@@ -12,6 +12,8 @@ export interface CityProfile {
   Landmarks: ComponentType
   /** footprints kept free of generated buildings for the landmark set */
   clearZones: ClearZone[]
+  /** areas where generated buildings are height-capped so landmarks read clearly */
+  calmZones?: CalmZone[]
 }
 
 /**
@@ -25,10 +27,15 @@ export const CITY_PROFILES: CityProfile[] = [
     match: /北京|beijing/i,
     Landmarks: BeijingLandmarks,
     clearZones: [
-      { x: -1.5, z: -2, r: 2.3 }, // 祈年殿 Temple of Heaven
-      { x: 1.9, z: 2.6, r: 2.0 }, // 天安门 Tiananmen
-      { x: -5.3, z: -5.2, r: 1.3 }, // 中国尊 CITIC Tower
-      { x: 4.3, z: -5.1, r: 2.0 }, // 央视大楼 CCTV loop
+      { x: -1.5, z: -2, r: 3.1 }, // 祈年殿 Temple of Heaven
+      { x: 1.9, z: 2.6, r: 2.7 }, // 天安门 Tiananmen
+      { x: -5.3, z: -5.2, r: 1.6 }, // 中国尊 CITIC Tower
+      { x: 4.1, z: -4.6, r: 2.5 }, // 央视大楼 CCTV loop
+    ],
+    calmZones: [
+      { x: -1.5, z: -2, r: 5.2, maxHeight: 2.0 }, // low-rise ring around the Temple
+      { x: 1.9, z: 2.6, r: 4.4, maxHeight: 1.6 }, // open sightline to Tiananmen
+      { x: 4.1, z: -4.6, r: 3.6, maxHeight: 3.0 }, // CCTV silhouette breathing room
     ],
   },
   {
