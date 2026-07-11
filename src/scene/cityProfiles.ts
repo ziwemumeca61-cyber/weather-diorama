@@ -42,7 +42,15 @@ export const CITY_PROFILES: CityProfile[] = [
     id: 'shanghai',
     match: /上海|shanghai/i,
     Landmarks: ShanghaiLandmarks,
-    clearZones: [{ x: -1.5, z: -2, r: 1.5 }],
+    clearZones: [
+      { x: -1.5, z: -2, r: 1.5 }, // 东方明珠 Oriental Pearl
+      { x: -3.6, z: -3.4, r: 1.2 }, // 上海中心 Shanghai Tower
+      { x: -1.7, z: -4.9, r: 1.1 }, // 金茂大厦 Jin Mao
+      { x: 0.5, z: -4.1, r: 1.2 }, // 环球金融中心 SWFC
+    ],
+    calmZones: [
+      { x: -1.5, z: -3.5, r: 3.6, maxHeight: 3.2 }, // keep the Lujiazui cluster readable
+    ],
   },
 ]
 

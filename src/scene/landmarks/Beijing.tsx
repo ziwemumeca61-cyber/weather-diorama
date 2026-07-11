@@ -1,7 +1,7 @@
-import { useMemo, useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useMemo } from 'react'
 import * as THREE from 'three'
-import { useEffectiveWeather } from '../../data/store'
+import { makeTowerSkin } from './towerSkin'
+import { useNightGlow } from './nightGlow'
 
 const RED = '#9e2f28' // palace wall red
 const RED_BRIGHT = '#b03a30'
@@ -10,23 +10,6 @@ const ROOF_GOLD = '#d9a441' // imperial glazed yellow
 const MARBLE = '#ece7dc'
 const GOLD = '#e0b54f'
 
-/**
- * Warm floodlight glow at night for heritage buildings. Returns a ref callback
- * that collects every material it's attached to and damps their emissive.
- */
-function useNightGlow(mult = 1) {
-  const { timeOfDay } = useEffectiveWeather()
-  const target = (timeOfDay === 'night' ? 0.55 : timeOfDay === 'dusk' ? 0.22 : 0.03) * mult
-  const mats = useRef<Set<THREE.MeshStandardMaterial>>(new Set())
-  useFrame((_, dt) => {
-    mats.current.forEach((m) => {
-      m.emissiveIntensity = THREE.MathUtils.damp(m.emissiveIntensity, target, 3, dt)
-    })
-  })
-  return (m: THREE.MeshStandardMaterial | null) => {
-    if (m) mats.current.add(m)
-  }
-}
 
 /* ---------------- roof geometry generators ---------------- */
 
@@ -175,64 +158,6 @@ function makeDougongTexture(): THREE.Texture {
   return tex
 }
 
-/** Curtain-wall canvas texture: window grid + diagonal diagrid bracing. */
-function makeTowerSkin(opts: { base: string; pane: string; grid: string; diagrid: boolean }) {
-  const W = 128
-  const H = 256
-  const c = document.createElement('canvas')
-  c.width = W
-  c.height = H
-  const ctx = c.getContext('2d')!
-  ctx.fillStyle = opts.base
-  ctx.fillRect(0, 0, W, H)
-  const cols = 8
-  const rows = 24
-  const cw = W / cols
-  const rh = H / rows
-  for (let r = 0; r < rows; r++) {
-    for (let col = 0; col < cols; col++) {
-      ctx.fillStyle = opts.pane
-      ctx.globalAlpha = 0.75 + Math.random() * 0.25
-      ctx.fillRect(col * cw + 1.5, r * rh + 1.5, cw - 3, rh - 3)
-    }
-  }
-  ctx.globalAlpha = 1
-  if (opts.diagrid) {
-    ctx.strokeStyle = opts.grid
-    ctx.lineWidth = 3
-    for (let x = -H; x < W + H; x += 32) {
-      ctx.beginPath()
-      ctx.moveTo(x, 0)
-      ctx.lineTo(x + H, H)
-      ctx.stroke()
-      ctx.beginPath()
-      ctx.moveTo(x + H, 0)
-      ctx.lineTo(x, H)
-      ctx.stroke()
-    }
-  }
-  const map = new THREE.CanvasTexture(c)
-  map.colorSpace = THREE.SRGBColorSpace
-  map.wrapS = map.wrapT = THREE.RepeatWrapping
-
-  const e = document.createElement('canvas')
-  e.width = W
-  e.height = H
-  const ectx = e.getContext('2d')!
-  ectx.fillStyle = '#000'
-  ectx.fillRect(0, 0, W, H)
-  for (let r = 0; r < rows; r++) {
-    for (let col = 0; col < cols; col++) {
-      if (Math.random() > 0.45) continue
-      ectx.fillStyle = Math.random() > 0.5 ? '#ffcf7a' : '#ffe9c4'
-      ectx.fillRect(col * cw + 1.5, r * rh + 1.5, cw - 3, rh - 3)
-    }
-  }
-  const emissiveMap = new THREE.CanvasTexture(e)
-  emissiveMap.colorSpace = THREE.SRGBColorSpace
-  emissiveMap.wrapS = emissiveMap.wrapT = THREE.RepeatWrapping
-  return { map, emissiveMap }
-}
 
 /* ---------------- 祈年殿 Temple of Heaven ---------------- */
 
