@@ -2,6 +2,7 @@ import type { ComponentType } from 'react'
 import { useMemo } from 'react'
 import ShanghaiLandmarks from './landmarks/Shanghai'
 import BeijingLandmarks from './landmarks/Beijing'
+import Cc0Downtown from './landmarks/Cc0Downtown'
 import { useStore } from '../data/store'
 import type { ClearZone, CalmZone } from './cityData'
 import type { GltfModelSpec } from './landmarks/GltfLandmark'
@@ -71,10 +72,19 @@ export const CITY_PROFILES: CityProfile[] = [
       { x: -1.5, z: -3.5, r: 3.6, maxHeight: 3.2 }, // keep the Lujiazui cluster readable
     ],
   },
+  {
+    // Fallback for any city without a bespoke set: a modeled downtown built
+    // from Kenney's CC0 City Kit (real .glb buildings, no attribution needed).
+    id: 'generic',
+    match: /__never_matches_by_name__/,
+    Landmarks: Cc0Downtown,
+    clearZones: [{ x: -0.5, z: -2, r: 5.6 }],
+    calmZones: [{ x: -0.5, z: -2, r: 8.5, maxHeight: 2.2 }],
+  },
 ]
 
-/** Default profile for cities without a bespoke landmark set (yet). */
-export const DEFAULT_PROFILE = CITY_PROFILES[CITY_PROFILES.length - 1]
+/** Default profile for cities without a bespoke landmark set: the CC0 downtown. */
+export const DEFAULT_PROFILE = CITY_PROFILES.find((p) => p.id === 'generic')!
 
 export function profileForCity(name: string | undefined): CityProfile {
   if (!name) return DEFAULT_PROFILE

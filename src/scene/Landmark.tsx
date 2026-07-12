@@ -6,7 +6,8 @@ import ModelErrorBoundary from './landmarks/ModelErrorBoundary'
 /**
  * Renders the landmark set for the currently loaded city. A profile may supply
  * GLB models (loaded async, with the procedural set as an error fallback) or a
- * procedural component. Keyed on profile id so it remounts on a city switch.
+ * procedural component (which may itself load models — hence the Suspense on
+ * both paths). Keyed on profile id so it remounts on a city switch.
  */
 export default function Landmark() {
   const profile = useCityProfile()
@@ -23,5 +24,11 @@ export default function Landmark() {
     )
   }
 
-  return <group key={profile.id}>{proceduralNode}</group>
+  // Procedural path — wrapped too, since a "procedural" set may load GLBs
+  // (e.g. the CC0 modeled downtown). A load failure degrades to an empty scene.
+  return (
+    <ModelErrorBoundary key={profile.id} fallback={null}>
+      <Suspense fallback={null}>{proceduralNode}</Suspense>
+    </ModelErrorBoundary>
+  )
 }

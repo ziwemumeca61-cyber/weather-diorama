@@ -29,9 +29,13 @@ fetched from a CDN at runtime.
 - If a model fails to load, the profile's procedural `Landmarks` render instead
   (a profile can supply both).
 
-## Attribution
+## Bundled assets
 
-`littlest-tokyo.glb` — "Littlest Tokyo" by [Glen Fox](https://artstation.com/glenatron),
-licensed **CC-BY 4.0**, via the three.js examples. It ships as the built-in demo
-for the Tokyo profile (search 東京 / Tokyo). Replace or remove it freely; keep the
-credit if you keep the model.
+- `kenney/b00.glb … b19.glb` — buildings from Kenney's **City Kit**, licensed
+  **CC0 1.0** (public domain, no attribution required). Composed into the
+  fallback "modeled downtown" (`src/scene/landmarks/Cc0Downtown.tsx`) that any
+  city without a bespoke profile shows — search e.g. Paris / 广州.
+- `littlest-tokyo.glb` — "Littlest Tokyo" by
+  [Glen Fox](https://artstation.com/glenatron), licensed **CC-BY 4.0**, via the
+  three.js examples; the built-in demo for the Tokyo profile (search 東京 /
+  Tokyo). Credit is shown on-screen. Replace or remove it freely.
