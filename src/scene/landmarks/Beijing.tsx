@@ -45,6 +45,7 @@ function makeHipRoof(
   const dHalf = d / 2
   const ridgeHalf = (w * ridgeRatio) / 2
   const positions: number[] = []
+  const uvs: number[] = []
   const indices: number[] = []
   const S = 14
   const T = 8
@@ -57,6 +58,7 @@ function makeHipRoof(
     for (let j = 0; j <= T; j++) {
       for (let i = 0; i <= S; i++) {
         positions.push(...fx(i / S, j / T))
+        uvs.push(i / S, j / T)
       }
     }
     for (let j = 0; j < T; j++) {
@@ -91,9 +93,45 @@ function makeHipRoof(
 
   const g = new THREE.BufferGeometry()
   g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
   g.setIndex(indices)
   g.computeVertexNormals()
   return g
+}
+
+/**
+ * The four hip-edge curves of makeHipRoof (same parameters), for laying
+ * ridge tubes along the roof skeleton.
+ */
+function hipRidgeCurves(
+  w: number,
+  d: number,
+  h: number,
+  ridgeRatio = 0.5,
+  kick = 0.18,
+): THREE.CatmullRomCurve3[] {
+  const wHalf = w / 2
+  const dHalf = d / 2
+  const ridgeHalf = (w * ridgeRatio) / 2
+  const sag = (t: number) => Math.pow(1 - t, 1.55)
+  const curves: THREE.CatmullRomCurve3[] = []
+  for (const sx of [1, -1]) {
+    for (const sz of [1, -1]) {
+      const pts: THREE.Vector3[] = []
+      for (let j = 0; j <= 8; j++) {
+        const t = j / 8
+        pts.push(
+          new THREE.Vector3(
+            sx * THREE.MathUtils.lerp(ridgeHalf, wHalf, t),
+            h * sag(t) + h * kick * Math.pow(t, 6),
+            sz * dHalf * t,
+          ),
+        )
+      }
+      curves.push(new THREE.CatmullRomCurve3(pts))
+    }
+  }
+  return curves
 }
 
 /* ---------------- baked detail textures ---------------- */
@@ -159,6 +197,39 @@ function makeDougongTexture(): THREE.Texture {
 }
 
 
+/** Glazed roof-tile texture: radial rib lines + subtle course lines. */
+function makeTileTexture(base: string, rib: string): THREE.Texture {
+  const W = 256
+  const H = 128
+  const c = document.createElement('canvas')
+  c.width = W
+  c.height = H
+  const ctx = c.getContext('2d')!
+  ctx.fillStyle = base
+  ctx.fillRect(0, 0, W, H)
+  ctx.strokeStyle = rib
+  ctx.lineWidth = 2.5
+  for (let x = 0; x <= W; x += 16) {
+    ctx.beginPath()
+    ctx.moveTo(x, 0)
+    ctx.lineTo(x, H)
+    ctx.stroke()
+  }
+  ctx.globalAlpha = 0.22
+  ctx.lineWidth = 1.5
+  for (let y = 0; y <= H; y += 12) {
+    ctx.beginPath()
+    ctx.moveTo(0, y)
+    ctx.lineTo(W, y)
+    ctx.stroke()
+  }
+  ctx.globalAlpha = 1
+  const tex = new THREE.CanvasTexture(c)
+  tex.colorSpace = THREE.SRGBColorSpace
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping
+  return tex
+}
+
 /* ---------------- 祈年殿 Temple of Heaven ---------------- */
 
 function TempleOfHeaven({ position }: { position: [number, number, number] }) {
@@ -187,15 +258,21 @@ function TempleOfHeaven({ position }: { position: [number, number, number] }) {
       />
     )
   }
-  const roofMat = (
-    <meshStandardMaterial
-      color={ROOF_BLUE}
-      roughness={0.3}
-      metalness={0.2}
-      side={THREE.DoubleSide}
-      envMapIntensity={0.9}
-    />
-  )
+  const tileTex = useMemo(() => makeTileTexture(ROOF_BLUE, '#1a3563'), [])
+  const roofMat = (rep: number) => {
+    const map = tileTex.clone()
+    map.repeat.set(rep, 1.4)
+    map.needsUpdate = true
+    return (
+      <meshStandardMaterial
+        map={map}
+        roughness={0.42}
+        metalness={0.12}
+        side={THREE.DoubleSide}
+        envMapIntensity={0.8}
+      />
+    )
+  }
   return (
     <group position={position}>
       {/* paved plaza */}
@@ -241,7 +318,7 @@ function TempleOfHeaven({ position }: { position: [number, number, number] }) {
       </mesh>
       {/* tier-1 concave roof */}
       <mesh position={[0, 1.44, 0]} geometry={roof1} castShadow>
-        {roofMat}
+        {roofMat(4)}
       </mesh>
       {/* drum 2 */}
       <mesh position={[0, 2.0, 0]} castShadow>
@@ -253,7 +330,7 @@ function TempleOfHeaven({ position }: { position: [number, number, number] }) {
         <meshStandardMaterial color={GOLD} metalness={0.7} roughness={0.35} />
       </mesh>
       <mesh position={[0, 2.18, 0]} geometry={roof2} castShadow>
-        {roofMat}
+        {roofMat(3)}
       </mesh>
       {/* drum 3 */}
       <mesh position={[0, 2.68, 0]} castShadow>
@@ -261,7 +338,7 @@ function TempleOfHeaven({ position }: { position: [number, number, number] }) {
         {drumMat(4)}
       </mesh>
       <mesh position={[0, 2.8, 0]} geometry={roof3} castShadow>
-        {roofMat}
+        {roofMat(2)}
       </mesh>
       {/* gilded finial */}
       <mesh position={[0, 3.46, 0]}>
@@ -282,25 +359,36 @@ function Tiananmen({ position }: { position: [number, number, number] }) {
   const glow = useNightGlow()
   const panelTex = useMemo(() => makePanelTexture(), [])
   const dougongTex = useMemo(() => makeDougongTexture(), [])
-  const roofLower = useMemo(() => makeHipRoof(2.95, 1.4, 0.36, 0.55, 0.2), [])
-  const roofUpper = useMemo(() => makeHipRoof(2.35, 1.05, 0.46, 0.45, 0.22), [])
-  const posts = useMemo(() => Array.from({ length: 15 }).map((_, i) => -1.35 + i * 0.193), [])
+  const tileTex = useMemo(() => makeTileTexture(ROOF_GOLD, '#b07f2a'), [])
+  const ROOF_L = [3.7, 1.25, 0.34, 0.62, 0.2] as const
+  const ROOF_U = [2.9, 0.95, 0.44, 0.5, 0.22] as const
+  const roofLower = useMemo(() => makeHipRoof(...ROOF_L), [])
+  const roofUpper = useMemo(() => makeHipRoof(...ROOF_U), [])
+  const ridgesLower = useMemo(() => hipRidgeCurves(...ROOF_L), [])
+  const ridgesUpper = useMemo(() => hipRidgeCurves(...ROOF_U), [])
+  const posts = useMemo(() => Array.from({ length: 19 }).map((_, i) => -1.75 + i * 0.194), [])
   const arches = [
-    { x: 0, w: 0.3, h: 0.5, r: 0.15 },
-    { x: -0.55, w: 0.24, h: 0.42, r: 0.12 },
-    { x: 0.55, w: 0.24, h: 0.42, r: 0.12 },
-    { x: -1.02, w: 0.2, h: 0.36, r: 0.1 },
-    { x: 1.02, w: 0.2, h: 0.36, r: 0.1 },
+    { x: 0, w: 0.32, h: 0.5, r: 0.16 },
+    { x: -0.62, w: 0.26, h: 0.42, r: 0.13 },
+    { x: 0.62, w: 0.26, h: 0.42, r: 0.13 },
+    { x: -1.18, w: 0.22, h: 0.36, r: 0.11 },
+    { x: 1.18, w: 0.22, h: 0.36, r: 0.11 },
   ]
-  const goldRoofMat = (
-    <meshStandardMaterial
-      color={ROOF_GOLD}
-      roughness={0.34}
-      metalness={0.3}
-      side={THREE.DoubleSide}
-      envMapIntensity={1.0}
-    />
-  )
+  const goldRoofMat = (repX: number) => {
+    const map = tileTex.clone()
+    map.repeat.set(repX, 1.6)
+    map.needsUpdate = true
+    return (
+      <meshStandardMaterial
+        map={map}
+        roughness={0.4}
+        metalness={0.18}
+        side={THREE.DoubleSide}
+        envMapIntensity={0.9}
+      />
+    )
+  }
+  const ridgeMat = <meshStandardMaterial color={'#b8892f'} metalness={0.4} roughness={0.4} />
   const dougongMat = (repX: number) => {
     const map = dougongTex.clone()
     map.repeat.set(repX, 1)
@@ -309,15 +397,15 @@ function Tiananmen({ position }: { position: [number, number, number] }) {
   }
   const pavilionMap = useMemo(() => {
     const m = panelTex.clone()
-    m.repeat.set(4, 1)
+    m.repeat.set(5, 1)
     m.needsUpdate = true
     return m
   }, [panelTex])
   return (
     <group position={position}>
       {/* forecourt + red carpet */}
-      <mesh position={[0, 0.012, 0.7]} receiveShadow>
-        <boxGeometry args={[3.6, 0.024, 2.8]} />
+      <mesh position={[0, 0.012, 0.75]} receiveShadow>
+        <boxGeometry args={[4.6, 0.024, 2.8]} />
         <meshStandardMaterial color={'#cfc9bb'} roughness={0.95} />
       </mesh>
       <mesh position={[0, 0.03, 1.35]} receiveShadow>
@@ -326,31 +414,50 @@ function Tiananmen({ position }: { position: [number, number, number] }) {
       </mesh>
       {/* marble platform + front balustrade */}
       <mesh position={[0, 0.08, 0]} receiveShadow castShadow>
-        <boxGeometry args={[3.0, 0.16, 1.55]} />
+        <boxGeometry args={[3.9, 0.16, 1.35]} />
         <meshStandardMaterial color={MARBLE} roughness={0.85} />
       </mesh>
       {posts.map((x, i) => (
-        <mesh key={i} position={[x, 0.235, 0.75]} castShadow>
+        <mesh key={i} position={[x, 0.235, 0.64]} castShadow>
           <boxGeometry args={[0.035, 0.15, 0.035]} />
           <meshStandardMaterial color={'#f4f0e6'} roughness={0.8} />
         </mesh>
       ))}
-      <mesh position={[0, 0.315, 0.75]}>
-        <boxGeometry args={[2.85, 0.035, 0.045]} />
+      <mesh position={[0, 0.315, 0.64]}>
+        <boxGeometry args={[3.55, 0.035, 0.045]} />
         <meshStandardMaterial color={'#f4f0e6'} roughness={0.8} />
       </mesh>
-      {/* grey stone base course, then the red wall */}
+      {/* grey stone base course, then the long red wall */}
       <mesh position={[0, 0.23, 0]} castShadow>
-        <boxGeometry args={[2.75, 0.14, 1.2]} />
+        <boxGeometry args={[3.5, 0.14, 1.0]} />
         <meshStandardMaterial color={'#9a958a'} roughness={0.9} />
       </mesh>
-      <mesh position={[0, 0.82, 0]} castShadow>
-        <boxGeometry args={[2.7, 1.04, 1.15]} />
+      <mesh position={[0, 0.78, 0]} castShadow>
+        <boxGeometry args={[3.4, 0.96, 0.95]} />
         <meshStandardMaterial ref={glow} color={RED} emissive={'#ff9a5c'} emissiveIntensity={0.03} roughness={0.65} />
       </mesh>
+      {/* flanking palace walls with crenellations */}
+      {[-1, 1].map((side) => (
+        <group key={side} position={[side * 2.35, 0, 0]}>
+          <mesh position={[0, 0.36, 0]} castShadow>
+            <boxGeometry args={[1.35, 0.62, 0.5]} />
+            <meshStandardMaterial ref={glow} color={RED} emissive={'#ff9a5c'} emissiveIntensity={0.03} roughness={0.7} />
+          </mesh>
+          <mesh position={[0, 0.7, 0]}>
+            <boxGeometry args={[1.35, 0.05, 0.56]} />
+            <meshStandardMaterial color={ROOF_GOLD} roughness={0.45} metalness={0.2} />
+          </mesh>
+          {[-0.5, -0.25, 0, 0.25, 0.5].map((cx) => (
+            <mesh key={cx} position={[cx, 0.78, 0]}>
+              <boxGeometry args={[0.12, 0.11, 0.5]} />
+              <meshStandardMaterial color={RED} roughness={0.7} />
+            </mesh>
+          ))}
+        </group>
+      ))}
       {/* five gate arches */}
       {arches.map((a, i) => (
-        <group key={i} position={[a.x, 0, 0.578]}>
+        <group key={i} position={[a.x, 0, 0.478]}>
           <mesh position={[0, 0.3 + a.h / 2, 0]}>
             <boxGeometry args={[a.w, a.h, 0.03]} />
             <meshStandardMaterial color={'#33201c'} roughness={0.9} />
@@ -362,65 +469,77 @@ function Tiananmen({ position }: { position: [number, number, number] }) {
         </group>
       ))}
       {/* portrait + slogan boards */}
-      <mesh position={[0, 1.13, 0.583]}>
+      <mesh position={[0, 1.05, 0.483]}>
         <boxGeometry args={[0.28, 0.34, 0.02]} />
         <meshStandardMaterial color={'#f4f0e6'} roughness={0.7} />
       </mesh>
-      <mesh position={[0, 1.13, 0.591]}>
+      <mesh position={[0, 1.05, 0.491]}>
         <boxGeometry args={[0.22, 0.28, 0.015]} />
         <meshStandardMaterial color={'#7a5b45'} roughness={0.7} />
       </mesh>
-      {[-0.98, 0.98].map((x) => (
-        <mesh key={x} position={[x, 1.1, 0.583]}>
-          <boxGeometry args={[0.55, 0.09, 0.02]} />
+      {[-1.15, 1.15].map((x) => (
+        <mesh key={x} position={[x, 1.02, 0.483]}>
+          <boxGeometry args={[0.7, 0.09, 0.02]} />
           <meshStandardMaterial color={'#f4f0e6'} roughness={0.75} />
         </mesh>
       ))}
-      {/* dougong band + sweeping lower roof + hanging lanterns */}
-      <mesh position={[0, 1.39, 0]} castShadow>
-        <boxGeometry args={[2.6, 0.1, 1.1]} />
-        {dougongMat(10)}
+      {/* dougong band + sweeping lower roof with hip ridges + lanterns */}
+      <mesh position={[0, 1.31, 0]} castShadow>
+        <boxGeometry args={[3.3, 0.1, 0.9]} />
+        {dougongMat(12)}
       </mesh>
-      <mesh position={[0, 1.44, 0]} geometry={roofLower} castShadow>
-        {goldRoofMat}
-      </mesh>
-      {[-0.6, -0.3, 0, 0.3, 0.6].map((x) => (
-        <mesh key={x} position={[x, 1.32, 0.64]}>
+      <group position={[0, 1.36, 0]}>
+        <mesh geometry={roofLower} castShadow>{goldRoofMat(12)}</mesh>
+        {ridgesLower.map((c, i) => (
+          <mesh key={i}>
+            <tubeGeometry args={[c, 12, 0.024, 6]} />
+            {ridgeMat}
+          </mesh>
+        ))}
+      </group>
+      {[-0.9, -0.6, -0.3, 0, 0.3, 0.6, 0.9].map((x) => (
+        <mesh key={x} position={[x, 1.25, 0.52]}>
           <sphereGeometry args={[0.035, 10, 10]} />
           <meshStandardMaterial color={'#e02c2c'} emissive={'#ff3b3b'} emissiveIntensity={0.8} roughness={0.4} />
         </mesh>
       ))}
       {/* upper pavilion with lattice panels + colonnade */}
-      <mesh position={[0, 1.88, 0]} castShadow>
-        <boxGeometry args={[1.8, 0.52, 0.72]} />
+      <mesh position={[0, 1.85, 0]} castShadow>
+        <boxGeometry args={[2.4, 0.52, 0.62]} />
         <meshStandardMaterial ref={glow} map={pavilionMap} emissive={'#ff9a5c'} emissiveIntensity={0.03} roughness={0.6} />
       </mesh>
-      {Array.from({ length: 8 }).map((_, i) => (
-        <mesh key={i} position={[-0.77 + i * 0.22, 1.88, 0.4]} castShadow>
+      {Array.from({ length: 10 }).map((_, i) => (
+        <mesh key={i} position={[-1.05 + i * 0.233, 1.85, 0.35]} castShadow>
           <cylinderGeometry args={[0.026, 0.03, 0.52, 8]} />
           <meshStandardMaterial color={RED_BRIGHT} roughness={0.55} />
         </mesh>
       ))}
-      {/* upper dougong + sweeping top roof + ridge with upturned ends */}
-      <mesh position={[0, 2.18, 0]} castShadow>
-        <boxGeometry args={[1.9, 0.09, 0.82]} />
-        {dougongMat(8)}
+      {/* upper dougong + sweeping top roof with ridges + golden main ridge */}
+      <mesh position={[0, 2.15, 0]} castShadow>
+        <boxGeometry args={[2.5, 0.09, 0.72]} />
+        {dougongMat(10)}
       </mesh>
-      <mesh position={[0, 2.22, 0]} geometry={roofUpper} castShadow>
-        {goldRoofMat}
-      </mesh>
-      <mesh position={[0, 2.68, 0]} castShadow>
-        <boxGeometry args={[1.08, 0.07, 0.1]} />
+      <group position={[0, 2.19, 0]}>
+        <mesh geometry={roofUpper} castShadow>{goldRoofMat(9)}</mesh>
+        {ridgesUpper.map((c, i) => (
+          <mesh key={i}>
+            <tubeGeometry args={[c, 12, 0.026, 6]} />
+            {ridgeMat}
+          </mesh>
+        ))}
+      </group>
+      <mesh position={[0, 2.66, 0]} castShadow>
+        <boxGeometry args={[1.5, 0.07, 0.11]} />
         <meshStandardMaterial color={ROOF_GOLD} metalness={0.35} roughness={0.35} />
       </mesh>
-      {[-0.56, 0.56].map((x) => (
-        <mesh key={x} position={[x, 2.73, 0]} rotation={[0, 0, x > 0 ? -0.3 : 0.3]} castShadow>
-          <boxGeometry args={[0.07, 0.16, 0.09]} />
+      {[-0.78, 0.78].map((x) => (
+        <mesh key={x} position={[x, 2.71, 0]} rotation={[0, 0, x > 0 ? -0.3 : 0.3]} castShadow>
+          <boxGeometry args={[0.07, 0.16, 0.1]} />
           <meshStandardMaterial color={ROOF_GOLD} metalness={0.35} roughness={0.35} />
         </mesh>
       ))}
       {/* national flag */}
-      <group position={[0, 0, 1.05]}>
+      <group position={[0, 0, 1.15]}>
         <mesh position={[0, 0.6, 0]}>
           <cylinderGeometry args={[0.015, 0.015, 1.2, 6]} />
           <meshStandardMaterial color={'#c8ccd6'} metalness={0.6} roughness={0.4} />
@@ -431,8 +550,8 @@ function Tiananmen({ position }: { position: [number, number, number] }) {
         </mesh>
       </group>
       {/* pair of huabiao columns */}
-      {[-1.35, 1.35].map((x) => (
-        <group key={x} position={[x, 0, 1.5]}>
+      {[-1.6, 1.6].map((x) => (
+        <group key={x} position={[x, 0, 1.45]}>
           <mesh position={[0, 0.06, 0]}>
             <cylinderGeometry args={[0.09, 0.11, 0.12, 8]} />
             <meshStandardMaterial color={MARBLE} roughness={0.8} />

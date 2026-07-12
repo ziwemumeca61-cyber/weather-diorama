@@ -28,7 +28,7 @@ export const CITY_PROFILES: CityProfile[] = [
     Landmarks: BeijingLandmarks,
     clearZones: [
       { x: -1.5, z: -2, r: 3.1 }, // 祈年殿 Temple of Heaven
-      { x: 1.9, z: 2.6, r: 2.7 }, // 天安门 Tiananmen
+      { x: 1.9, z: 2.6, r: 3.3 }, // 天安门 Tiananmen (incl. flanking walls)
       { x: -5.3, z: -5.2, r: 1.6 }, // 中国尊 CITIC Tower
       { x: 4.1, z: -4.6, r: 2.5 }, // 央视大楼 CCTV loop
     ],
