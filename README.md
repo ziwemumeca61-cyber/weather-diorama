@@ -8,6 +8,7 @@
 
 - **程序化微缩城市**：基于固定种子确定性生成，`InstancedMesh` 保证性能；夜间楼窗自动点亮。
 - **城市地标档案**：按当前城市自动切换地标组合 —— 上海（东方明珠）、北京（天坛祈年殿、天安门、中国尊、央视大楼），夜间地标泛光；在 `src/scene/cityProfiles.ts` 注册即可扩展更多城市。
+- **GLB 模型地标**：地标既可用程序化几何，也可直接加载 `.glb` 真实模型（自托管 Draco 解码、自动播放动画、加载失败回退程序化）。内置示范：搜索「東京 / Tokyo」加载 [Littlest Tokyo](https://artstation.com/glenatron)（CC-BY 4.0）微缩街景模型。放模型到 `public/models/` 并在档案里加一条 `models` 配置即可，详见 `public/models/README.md`。
 - **实时天气**：接入 [Open-Meteo](https://open-meteo.com) 免费天气 API（无需 API key），支持城市搜索与浏览器定位。
 - **天气特效**：
   - ☔️ **雨** — 雨柱下落 + 命中屋顶/地面的溅落涟漪

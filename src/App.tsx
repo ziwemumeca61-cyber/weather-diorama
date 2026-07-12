@@ -20,6 +20,7 @@ import Lighting from './scene/Lighting'
 import WeatherController from './weather/WeatherController'
 import ForecastCard from './ui/ForecastCard'
 import Controls from './ui/Controls'
+import Credit from './ui/Credit'
 import Loading from './ui/Loading'
 import { useStore } from './data/store'
 import { fetchWeatherByCity } from './data/api'
@@ -114,6 +115,7 @@ export default function App() {
       <div className="hud">
         <ForecastCard />
         <Controls />
+        <Credit />
       </div>
       <Loading />
       <InitialLoad />
