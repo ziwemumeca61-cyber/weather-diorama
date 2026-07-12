@@ -19,7 +19,7 @@ const GOLD = '#e0b54f'
  */
 function makeConcaveRoof(eaveR: number, height: number, peakR = 0.05): THREE.LatheGeometry {
   const pts: THREE.Vector2[] = []
-  const N = 14
+  const N = 22
   for (let i = 0; i <= N; i++) {
     const t = i / N
     const r = peakR + (eaveR - peakR) * t
@@ -27,7 +27,7 @@ function makeConcaveRoof(eaveR: number, height: number, peakR = 0.05): THREE.Lat
     pts.push(new THREE.Vector2(r, y))
   }
   pts.push(new THREE.Vector2(eaveR * 1.07, height * 0.1)) // flying-eave lip
-  return new THREE.LatheGeometry(pts, 40)
+  return new THREE.LatheGeometry(pts, 56)
 }
 
 /**
@@ -47,8 +47,8 @@ function makeHipRoof(
   const positions: number[] = []
   const uvs: number[] = []
   const indices: number[] = []
-  const S = 14
-  const T = 8
+  const S = 22
+  const T = 12
   let base = 0
   const sag = (t: number) => Math.pow(1 - t, 1.55)
   const kickY = (s: number, t: number) =>
@@ -263,13 +263,18 @@ function TempleOfHeaven({ position }: { position: [number, number, number] }) {
     const map = tileTex.clone()
     map.repeat.set(rep, 1.4)
     map.needsUpdate = true
+    const bump = tileTex.clone()
+    bump.repeat.set(rep, 1.4)
+    bump.needsUpdate = true
     return (
       <meshStandardMaterial
         map={map}
-        roughness={0.42}
-        metalness={0.12}
+        bumpMap={bump}
+        bumpScale={2}
+        roughness={0.24}
+        metalness={0.35}
         side={THREE.DoubleSide}
-        envMapIntensity={0.8}
+        envMapIntensity={1.6}
       />
     )
   }
@@ -378,13 +383,18 @@ function Tiananmen({ position }: { position: [number, number, number] }) {
     const map = tileTex.clone()
     map.repeat.set(repX, 1.6)
     map.needsUpdate = true
+    const bump = tileTex.clone()
+    bump.repeat.set(repX, 1.6)
+    bump.needsUpdate = true
     return (
       <meshStandardMaterial
         map={map}
-        roughness={0.4}
-        metalness={0.18}
+        bumpMap={bump}
+        bumpScale={2}
+        roughness={0.26}
+        metalness={0.5}
         side={THREE.DoubleSide}
-        envMapIntensity={0.9}
+        envMapIntensity={1.7}
       />
     )
   }
