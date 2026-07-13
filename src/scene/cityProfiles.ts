@@ -2,6 +2,11 @@ import type { ComponentType } from 'react'
 import { useMemo } from 'react'
 import ShanghaiLandmarks from './landmarks/Shanghai'
 import BeijingLandmarks from './landmarks/Beijing'
+import GuangzhouLandmarks from './landmarks/Guangzhou'
+import XianLandmarks from './landmarks/Xian'
+import HangzhouLandmarks from './landmarks/Hangzhou'
+import ChongqingLandmarks from './landmarks/Chongqing'
+import TianjinLandmarks from './landmarks/Tianjin'
 import Cc0Downtown from './landmarks/Cc0Downtown'
 import { useStore } from '../data/store'
 import type { ClearZone, CalmZone } from './cityData'
@@ -45,6 +50,50 @@ export const CITY_PROFILES: CityProfile[] = [
       { x: 3.9, z: 1.6, r: 4.4, maxHeight: 1.6 }, // open sightline to Tiananmen
       { x: 4.1, z: -4.6, r: 3.6, maxHeight: 3.0 }, // CCTV silhouette breathing room
     ],
+  },
+  {
+    id: 'guangzhou',
+    match: /广州|guangzhou|canton/i,
+    Landmarks: GuangzhouLandmarks,
+    clearZones: [
+      { x: -1.5, z: -2.5, r: 2.0 }, // 广州塔 Canton Tower
+      { x: 3.2, z: -4.0, r: 1.2 }, // companion tower
+    ],
+    calmZones: [{ x: -1.5, z: -2.5, r: 5.5, maxHeight: 3.0 }],
+  },
+  {
+    id: 'xian',
+    match: /西安|xi'?an|xian/i,
+    Landmarks: XianLandmarks,
+    clearZones: [
+      { x: -3.4, z: 0.8, r: 2.6 }, // 大雁塔 Wild Goose Pagoda
+      { x: 3.6, z: -0.4, r: 2.2 }, // 钟楼 Bell Tower
+    ],
+    calmZones: [
+      { x: -3.4, z: 0.8, r: 4.8, maxHeight: 2.2 },
+      { x: 3.6, z: -0.4, r: 4.2, maxHeight: 2.2 },
+    ],
+  },
+  {
+    id: 'hangzhou',
+    match: /杭州|hangzhou/i,
+    Landmarks: HangzhouLandmarks,
+    clearZones: [{ x: -1.0, z: -1.6, r: 3.6 }], // 雷峰塔 Leifeng Pagoda + hill
+    calmZones: [{ x: -1.0, z: -1.6, r: 6.0, maxHeight: 2.2 }],
+  },
+  {
+    id: 'chongqing',
+    match: /重庆|chongqing/i,
+    Landmarks: ChongqingLandmarks,
+    clearZones: [{ x: 0, z: -3.2, r: 4.6 }], // 来福士 Raffles City cluster
+    calmZones: [{ x: 0, z: -3.2, r: 7.5, maxHeight: 3.2 }],
+  },
+  {
+    id: 'tianjin',
+    match: /天津|tianjin/i,
+    Landmarks: TianjinLandmarks,
+    clearZones: [{ x: 0, z: 2.2, r: 5.0 }], // 天津之眼 Ferris wheel over the river
+    calmZones: [{ x: 0, z: 0, r: 6.5, maxHeight: 2.6 }],
   },
   {
     // GLB demo: the whole Littlest Tokyo model as a drop-in landmark, proving
