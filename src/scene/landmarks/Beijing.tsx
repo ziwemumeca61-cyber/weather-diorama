@@ -691,13 +691,17 @@ function CctvLoop({ position }: { position: [number, number, number] }) {
 export default function BeijingLandmarks() {
   return (
     <group>
-      <group position={[-1.5, 0, -2]} scale={1.5}>
+      {/* front-left */}
+      <group position={[-3.8, 0, 1.4]} scale={1.32}>
         <TempleOfHeaven position={[0, 0, 0]} />
       </group>
-      <group position={[1.9, 0, 2.6]} scale={1.4}>
+      {/* front-right */}
+      <group position={[3.9, 0, 1.6]} scale={1.24}>
         <Tiananmen position={[0, 0, 0]} />
       </group>
+      {/* back-left */}
       <CiticTower position={[-5.3, 0, -5.2]} />
+      {/* back-right */}
       <group position={[4.1, 0, -4.6]} scale={1.35}>
         <CctvLoop position={[0, 0, 0]} />
       </group>

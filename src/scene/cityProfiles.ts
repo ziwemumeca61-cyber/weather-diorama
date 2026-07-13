@@ -35,14 +35,14 @@ export const CITY_PROFILES: CityProfile[] = [
     match: /北京|beijing/i,
     Landmarks: BeijingLandmarks,
     clearZones: [
-      { x: -1.5, z: -2, r: 3.1 }, // 祈年殿 Temple of Heaven
-      { x: 1.9, z: 2.6, r: 3.3 }, // 天安门 Tiananmen (incl. flanking walls)
-      { x: -5.3, z: -5.2, r: 1.6 }, // 中国尊 CITIC Tower
-      { x: 4.1, z: -4.6, r: 2.5 }, // 央视大楼 CCTV loop
+      { x: -3.8, z: 1.4, r: 3.0 }, // 祈年殿 Temple of Heaven (front-left)
+      { x: 3.9, z: 1.6, r: 3.2 }, // 天安门 Tiananmen (front-right, incl. flanking walls)
+      { x: -5.3, z: -5.2, r: 1.6 }, // 中国尊 CITIC Tower (back-left)
+      { x: 4.1, z: -4.6, r: 2.5 }, // 央视大楼 CCTV loop (back-right)
     ],
     calmZones: [
-      { x: -1.5, z: -2, r: 5.2, maxHeight: 2.0 }, // low-rise ring around the Temple
-      { x: 1.9, z: 2.6, r: 4.4, maxHeight: 1.6 }, // open sightline to Tiananmen
+      { x: -3.8, z: 1.4, r: 4.6, maxHeight: 2.0 }, // low-rise ring around the Temple
+      { x: 3.9, z: 1.6, r: 4.4, maxHeight: 1.6 }, // open sightline to Tiananmen
       { x: 4.1, z: -4.6, r: 3.6, maxHeight: 3.0 }, // CCTV silhouette breathing room
     ],
   },
