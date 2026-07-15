@@ -89,6 +89,17 @@ export function useEffectiveWeather(): WeatherState {
   return { kind, timeOfDay, intensity }
 }
 
+/**
+ * Reactive inputs for the continuous day/night clock: the demo-mode time
+ * override (locks the hour when set) and the loaded city's UTC offset (drives
+ * real local time when no override is active).
+ */
+export function useClockInputs(): { overrideTime: TimeOfDay | null; utcOffset: number | null } {
+  const overrideTime = useStore((s) => s.overrideTime)
+  const utcOffset = useStore((s) => s.current?.utcOffsetSeconds ?? null)
+  return { overrideTime, utcOffset }
+}
+
 export const useStore = create<AppState>((set, get) => ({
   status: 'idle',
   error: null,

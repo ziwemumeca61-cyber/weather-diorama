@@ -20,6 +20,8 @@ export interface CurrentWeather {
   temperature: number
   weatherCode: number
   isDay: boolean
+  /** seconds to add to UTC to get the place's local time (drives live day/night) */
+  utcOffsetSeconds: number
   /** local date string of the place, e.g. 12月25日 */
   dateLabelZh: string
   weather: WeatherState
@@ -70,6 +72,7 @@ export async function fetchWeather(place: GeoPlace): Promise<CurrentWeather> {
   const cur = data.current
   const code = Number(cur.weather_code)
   const isDay = Number(cur.is_day) === 1
+  const utcOffsetSeconds = Number(data.utc_offset_seconds ?? 0)
 
   // local time from the API's ISO string (already in place timezone)
   const localDate = new Date(cur.time)
@@ -86,6 +89,7 @@ export async function fetchWeather(place: GeoPlace): Promise<CurrentWeather> {
     temperature: Math.round(Number(cur.temperature_2m)),
     weatherCode: code,
     isDay,
+    utcOffsetSeconds,
     dateLabelZh: formatDateZh(localDate),
     weather,
   }

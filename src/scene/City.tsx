@@ -3,8 +3,9 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { generateCity, type BuildingInstance } from './cityData'
 import { getFacades } from './facades'
-import { useEffectiveWeather } from '../data/store'
+import { useClockInputs } from '../data/store'
 import { useCityProfile } from './cityProfiles'
+import { localHourNow, nightFactorAtHour, OVERRIDE_HOUR } from './dayNight'
 
 /** One category of buildings sharing a material (glass towers or concrete blocks). */
 function BuildingCluster({
@@ -162,9 +163,14 @@ export default function City() {
     return { glass, concrete }
   }, [buildings])
 
-  const { timeOfDay } = useEffectiveWeather()
+  // Window emissive tracks the same continuous day/night curve as the lighting,
+  // so the city lights fade up through dusk instead of switching on in a snap.
+  const { overrideTime, utcOffset } = useClockInputs()
   const emissiveTarget = useRef(0)
-  emissiveTarget.current = timeOfDay === 'night' ? 1.15 : timeOfDay === 'dusk' ? 0.5 : 0.0
+  useFrame(() => {
+    const hour = overrideTime != null ? OVERRIDE_HOUR[overrideTime] : localHourNow(utcOffset)
+    emissiveTarget.current = 1.15 * nightFactorAtHour(hour)
+  })
 
   return (
     // remount on profile switch: InstancedMesh capacity is fixed at construction

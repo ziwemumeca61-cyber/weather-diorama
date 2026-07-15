@@ -1,44 +1,9 @@
-import { useMemo, useRef } from 'react'
+import { useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
-import { useEffectiveWeather } from '../data/store'
-import type { WeatherKind, TimeOfDay } from '../weather/weatherCode'
-
-interface Look {
-  sky: THREE.Color
-  sun: THREE.Color
-  sunIntensity: number
-  ambient: THREE.Color
-  ambientIntensity: number
-  sunPos: THREE.Vector3
-}
-
-const TIME_BASE: Record<TimeOfDay, Omit<Look, never>> = {
-  day: {
-    sky: new THREE.Color('#bcd9ec'),
-    sun: new THREE.Color('#fff4e2'),
-    sunIntensity: 2.4,
-    ambient: new THREE.Color('#aecbe6'),
-    ambientIntensity: 0.55,
-    sunPos: new THREE.Vector3(9, 14, 6),
-  },
-  dusk: {
-    sky: new THREE.Color('#f2b184'),
-    sun: new THREE.Color('#ff9d5c'),
-    sunIntensity: 1.7,
-    ambient: new THREE.Color('#8f7ba0'),
-    ambientIntensity: 0.5,
-    sunPos: new THREE.Vector3(-13, 5, 8),
-  },
-  night: {
-    sky: new THREE.Color('#0c1524'),
-    sun: new THREE.Color('#546891'),
-    sunIntensity: 0.35,
-    ambient: new THREE.Color('#243049'),
-    ambientIntensity: 0.4,
-    sunPos: new THREE.Vector3(-8, 12, -6),
-  },
-}
+import { useEffectiveWeather, useClockInputs } from '../data/store'
+import type { WeatherKind } from '../weather/weatherCode'
+import { fillBaseLook, makeLook, localHourNow, OVERRIDE_HOUR } from './dayNight'
 
 // how much each weather kind dims / greys the scene
 const KIND_MOD: Record<WeatherKind, { sun: number; grey: number; darken: number }> = {
@@ -51,36 +16,22 @@ const KIND_MOD: Record<WeatherKind, { sun: number; grey: number; darken: number 
   thunder: { sun: 0.32, grey: 0.4, darken: 0.4 },
 }
 
-function computeLook(kind: WeatherKind, time: TimeOfDay): Look {
-  const base = TIME_BASE[time]
-  const mod = KIND_MOD[kind]
-  const grey = new THREE.Color('#9aa2ab')
-
-  const sky = base.sky.clone().lerp(grey, mod.grey).multiplyScalar(1 - mod.darken)
-  const sun = base.sun.clone().lerp(new THREE.Color('#cfd6de'), mod.grey * 0.6)
-  const ambient = base.ambient.clone().lerp(grey, mod.grey * 0.5)
-
-  return {
-    sky,
-    sun,
-    sunIntensity: base.sunIntensity * mod.sun,
-    ambient,
-    ambientIntensity: base.ambientIntensity * (1 + mod.grey * 0.4),
-    sunPos: base.sunPos,
-  }
-}
+// scratch colors reused every frame to avoid per-frame allocation
+const GREY = new THREE.Color('#9aa2ab')
+const SUN_GREY = new THREE.Color('#cfd6de')
 
 export default function Lighting() {
-  const { kind, timeOfDay } = useEffectiveWeather()
+  const { kind } = useEffectiveWeather()
+  const { overrideTime, utcOffset } = useClockInputs()
   const { scene } = useThree()
   const sunRef = useRef<THREE.DirectionalLight>(null)
   const ambRef = useRef<THREE.AmbientLight>(null)
   const hemiRef = useRef<THREE.HemisphereLight>(null)
 
-  // keep a mutable "current" look we damp toward the target
-  const cur = useRef<Look>(computeLook('clear', 'day'))
-
-  const target = useMemo(() => computeLook(kind, timeOfDay), [kind, timeOfDay])
+  // "cur" is damped toward "target" every frame; target is rebuilt live from the
+  // city's real local hour (or the locked demo hour) plus the weather modifier.
+  const cur = useRef(makeLook())
+  const target = useRef(makeLook())
 
   // ensure a background color object exists
   if (!(scene.background instanceof THREE.Color)) {
@@ -88,14 +39,28 @@ export default function Lighting() {
   }
 
   useFrame((_, dt) => {
+    // 1) base look from the current hour (continuous dawn→day→dusk→night)
+    const hour = overrideTime != null ? OVERRIDE_HOUR[overrideTime] : localHourNow(utcOffset)
+    const tg = target.current
+    fillBaseLook(tg, hour)
+
+    // 2) fold in the weather modifier
+    const mod = KIND_MOD[kind]
+    tg.sky.lerp(GREY, mod.grey).multiplyScalar(1 - mod.darken)
+    tg.sun.lerp(SUN_GREY, mod.grey * 0.6)
+    tg.ambient.lerp(GREY, mod.grey * 0.5)
+    tg.sunIntensity *= mod.sun
+    tg.ambientIntensity *= 1 + mod.grey * 0.4
+
+    // 3) damp toward it
     const c = cur.current
-    const k = 1 - Math.exp(-3 * dt) // damp factor
-    c.sky.lerp(target.sky, k)
-    c.sun.lerp(target.sun, k)
-    c.ambient.lerp(target.ambient, k)
-    c.sunIntensity += (target.sunIntensity - c.sunIntensity) * k
-    c.ambientIntensity += (target.ambientIntensity - c.ambientIntensity) * k
-    c.sunPos.lerp(target.sunPos, k)
+    const k = 1 - Math.exp(-3 * dt)
+    c.sky.lerp(tg.sky, k)
+    c.sun.lerp(tg.sun, k)
+    c.ambient.lerp(tg.ambient, k)
+    c.sunIntensity += (tg.sunIntensity - c.sunIntensity) * k
+    c.ambientIntensity += (tg.ambientIntensity - c.ambientIntensity) * k
+    c.sunPos.lerp(tg.sunPos, k)
 
     ;(scene.background as THREE.Color).copy(c.sky)
     if (sunRef.current) {
