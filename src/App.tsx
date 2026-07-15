@@ -62,12 +62,24 @@ function SceneEnvironment() {
   )
 }
 
+/**
+ * Cap the render resolution on phones: high-density mobile panels (DPR 2.5–3)
+ * would otherwise quadruple the fragment cost for little visible gain on a
+ * small screen. Desktops keep the crisper ceiling.
+ */
+function maxDpr(): number {
+  if (typeof window === 'undefined') return 2
+  const coarse = window.matchMedia?.('(pointer: coarse)').matches
+  const small = window.innerWidth < 820
+  return coarse || small ? 1.6 : 2
+}
+
 export default function App() {
   return (
     <div className="app">
       <Canvas
         shadows
-        dpr={[1, 2]}
+        dpr={[1, maxDpr()]}
         camera={{ position: [17, 12, 19], fov: 38 }}
         gl={{
           antialias: false,

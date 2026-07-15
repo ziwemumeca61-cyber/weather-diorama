@@ -1,13 +1,5 @@
 import type { ComponentType } from 'react'
-import { useMemo } from 'react'
-import ShanghaiLandmarks from './landmarks/Shanghai'
-import BeijingLandmarks from './landmarks/Beijing'
-import GuangzhouLandmarks from './landmarks/Guangzhou'
-import XianLandmarks from './landmarks/Xian'
-import HangzhouLandmarks from './landmarks/Hangzhou'
-import ChongqingLandmarks from './landmarks/Chongqing'
-import TianjinLandmarks from './landmarks/Tianjin'
-import Cc0Downtown from './landmarks/Cc0Downtown'
+import { lazy, useMemo } from 'react'
 import { useStore } from '../data/store'
 import type { ClearZone, CalmZone } from './cityData'
 import type { GltfModelSpec } from './landmarks/GltfLandmark'
@@ -28,6 +20,18 @@ export interface CityProfile {
   /** areas where generated buildings are height-capped so landmarks read clearly */
   calmZones?: CalmZone[]
 }
+
+// Each city's landmark ensemble is code-split into its own chunk and only
+// fetched when that city loads. Landmark.tsx already renders these inside a
+// <Suspense>, so lazy components suspend cleanly during the swap.
+const ShanghaiLandmarks = lazy(() => import('./landmarks/Shanghai'))
+const BeijingLandmarks = lazy(() => import('./landmarks/Beijing'))
+const GuangzhouLandmarks = lazy(() => import('./landmarks/Guangzhou'))
+const XianLandmarks = lazy(() => import('./landmarks/Xian'))
+const HangzhouLandmarks = lazy(() => import('./landmarks/Hangzhou'))
+const ChongqingLandmarks = lazy(() => import('./landmarks/Chongqing'))
+const TianjinLandmarks = lazy(() => import('./landmarks/Tianjin'))
+const Cc0Downtown = lazy(() => import('./landmarks/Cc0Downtown'))
 
 /**
  * Registry of city dioramas. Add an entry per city: a landmark ensemble
