@@ -1,77 +1,90 @@
 import { useMemo } from 'react'
 import * as THREE from 'three'
-import { CITY } from '../cityData'
 import { makeTowerSkin } from './towerSkin'
 import { useNightGlow } from './nightGlow'
 
+const STEEL = '#c8ccd6'
+const STEEL_DK = '#9aa1ac'
+const PEARL = '#c9366b'
+
 /**
- * 东方明珠 — Oriental Pearl: three legs, two spheres, shaft and antenna spire.
+ * 东方明珠 Oriental Pearl — splayed tripod columns, a big lower sphere, a slim
+ * upper sphere, a bead near the top and a tapering antenna spire.
  */
 function OrientalPearl({ position }: { position: [number, number, number] }) {
-  const glow = useNightGlow(2.5)
-  const legs = useMemo(() => Array.from({ length: 3 }).map((_, i) => (i / 3) * Math.PI * 2), [])
-  const bodyColor = '#c8ccd6'
-  const sphereColor = '#d24f7a'
-
+  const glow = useNightGlow(2.6)
+  const pearlMat = (emissive: number) => (
+    <meshStandardMaterial
+      ref={glow}
+      color={PEARL}
+      roughness={0.3}
+      metalness={0.35}
+      emissive={'#ff4f92'}
+      emissiveIntensity={emissive}
+    />
+  )
   return (
-    <group position={position} scale={0.82}>
-      {legs.map((rot, i) => (
-        <mesh
-          key={i}
-          position={[Math.cos(rot) * 0.55, 1.4, Math.sin(rot) * 0.55]}
-          rotation={[Math.sign(Math.sin(rot)) * 0.12, 0, -Math.sign(Math.cos(rot)) * 0.12]}
-          castShadow
-        >
-          <cylinderGeometry args={[0.12, 0.16, 2.9, 8]} />
-          <meshStandardMaterial color={bodyColor} roughness={0.6} metalness={0.2} />
-        </mesh>
-      ))}
-      <mesh position={[0, 3.4, 0]} castShadow>
-        <cylinderGeometry args={[0.16, 0.22, 6.8, 12]} />
-        <meshStandardMaterial color={bodyColor} roughness={0.55} metalness={0.25} />
+    <group position={position}>
+      {/* base plinth */}
+      <mesh position={[0, 0.12, 0]} receiveShadow castShadow>
+        <cylinderGeometry args={[1.05, 1.2, 0.24, 24]} />
+        <meshStandardMaterial color={STEEL_DK} roughness={0.7} metalness={0.2} />
       </mesh>
-      {/* lower big sphere */}
-      <mesh position={[0, 2.9, 0]} castShadow>
-        <sphereGeometry args={[0.85, 24, 24]} />
+
+      {/* three splayed legs meeting just under the lower sphere */}
+      {[0, 1, 2].map((i) => {
+        const th = (i / 3) * Math.PI * 2 + Math.PI / 6
+        return (
+          <group key={i} rotation={[0, th, 0]}>
+            <mesh position={[0.465, 1.35, 0]} rotation={[0, 0, 0.207]} castShadow>
+              <cylinderGeometry args={[0.17, 0.24, 2.76, 12]} />
+              <meshStandardMaterial color={STEEL} roughness={0.5} metalness={0.3} />
+            </mesh>
+          </group>
+        )
+      })}
+      {/* collar where legs gather */}
+      <mesh position={[0, 2.55, 0]} castShadow>
+        <cylinderGeometry args={[0.26, 0.3, 0.3, 16]} />
+        <meshStandardMaterial color={STEEL_DK} roughness={0.55} metalness={0.35} />
+      </mesh>
+
+      {/* central shaft threading both spheres */}
+      <mesh position={[0, 5.1, 0]} castShadow>
+        <cylinderGeometry args={[0.13, 0.2, 5.4, 16]} />
+        <meshStandardMaterial color={STEEL} roughness={0.5} metalness={0.35} />
+      </mesh>
+
+      {/* big lower sphere */}
+      <mesh position={[0, 3.15, 0]} castShadow>
+        <sphereGeometry args={[1.02, 28, 28]} />
+        {pearlMat(0.06)}
+      </mesh>
+      {/* upper sphere */}
+      <mesh position={[0, 5.95, 0]} castShadow>
+        <sphereGeometry args={[0.62, 24, 24]} />
+        {pearlMat(0.3)}
+      </mesh>
+      {/* small bead */}
+      <mesh position={[0, 7.25, 0]} castShadow>
+        <sphereGeometry args={[0.3, 18, 18]} />
+        {pearlMat(0.5)}
+      </mesh>
+
+      {/* antenna spire + beacon */}
+      <mesh position={[0, 9.0, 0]} castShadow>
+        <coneGeometry args={[0.12, 3.3, 12]} />
         <meshStandardMaterial
           ref={glow}
-          color={sphereColor}
-          roughness={0.35}
-          metalness={0.3}
-          emissive={'#ff5c93'}
-          emissiveIntensity={0.05}
-        />
-      </mesh>
-      {/* upper small sphere */}
-      <mesh position={[0, 5.6, 0]} castShadow>
-        <sphereGeometry args={[0.5, 20, 20]} />
-        <meshStandardMaterial
-          ref={glow}
-          color={sphereColor}
-          roughness={0.35}
-          metalness={0.3}
-          emissive={'#ff5c93'}
-          emissiveIntensity={0.4}
-        />
-      </mesh>
-      {/* top node + antenna spire */}
-      <mesh position={[0, 7.1, 0]} castShadow>
-        <sphereGeometry args={[0.28, 16, 16]} />
-        <meshStandardMaterial color={bodyColor} roughness={0.5} metalness={0.3} />
-      </mesh>
-      <mesh position={[0, 8.4, 0]} castShadow>
-        <cylinderGeometry args={[0.015, 0.09, 2.4, 8]} />
-        <meshStandardMaterial
-          ref={glow}
-          color={'#ffffff'}
+          color={STEEL}
+          metalness={0.5}
+          roughness={0.4}
           emissive={'#ffe08a'}
           emissiveIntensity={0.05}
-          roughness={0.4}
-          metalness={0.4}
         />
       </mesh>
-      <mesh position={[0, 9.65, 0]}>
-        <sphereGeometry args={[0.08, 10, 10]} />
+      <mesh position={[0, 10.85, 0]}>
+        <sphereGeometry args={[0.09, 12, 12]} />
         <meshStandardMaterial color={'#ff4d4d'} emissive={'#ff2a2a'} emissiveIntensity={2} />
       </mesh>
     </group>
@@ -79,84 +92,87 @@ function OrientalPearl({ position }: { position: [number, number, number] }) {
 }
 
 /**
- * 上海中心 Shanghai Tower — tapering glass tower with a gentle spiral twist,
- * approximated by stacked rounded-triangle sections rotating with height.
+ * 上海中心 Shanghai Tower — the supertall with a rounded-triangular section that
+ * spirals as it rises and tapers; approximated by stacked twisting prisms.
  */
 function ShanghaiTower({ position }: { position: [number, number, number] }) {
   const glow = useNightGlow(1.9)
   const skin = useMemo(
-    () => makeTowerSkin({ base: '#9fb6c8', pane: '#7e99ad', grid: '#c4d4e0', diagrid: false }),
+    () => makeTowerSkin({ base: '#9fb8cb', pane: '#7d9aae', grid: '#c8d8e4', diagrid: false }),
     [],
   )
-  const SECTIONS = 8
-  const H = 9.4
+  const SECTIONS = 16
+  const H = 12
   const segH = H / SECTIONS
   const sections = useMemo(
     () =>
       Array.from({ length: SECTIONS }).map((_, i) => ({
-        rBot: THREE.MathUtils.lerp(0.62, 0.28, i / SECTIONS),
-        rTop: THREE.MathUtils.lerp(0.62, 0.28, (i + 1) / SECTIONS),
+        rBot: THREE.MathUtils.lerp(0.92, 0.34, i / SECTIONS),
+        rTop: THREE.MathUtils.lerp(0.92, 0.34, (i + 1) / SECTIONS),
         y: segH / 2 + i * segH,
-        rotY: (i / SECTIONS) * 1.2, // cumulative twist
+        rotY: (i / SECTIONS) * 2.4, // cumulative spiral (~137°)
       })),
     [segH],
   )
-  const mats = useMemo(() => {
-    return sections.map(() => {
-      const map = skin.map.clone()
-      map.repeat.set(3, 2)
-      map.needsUpdate = true
-      const emap = skin.emissiveMap.clone()
-      emap.repeat.copy(map.repeat)
-      emap.needsUpdate = true
-      return { map, emap }
-    })
-  }, [sections, skin])
+  const mats = useMemo(
+    () =>
+      sections.map(() => {
+        const map = skin.map.clone()
+        map.repeat.set(3, 1.5)
+        map.needsUpdate = true
+        const emap = skin.emissiveMap.clone()
+        emap.repeat.copy(map.repeat)
+        emap.needsUpdate = true
+        return { map, emap }
+      }),
+    [sections, skin],
+  )
   return (
     <group position={position}>
       {sections.map((s, i) => (
         <mesh key={i} position={[0, s.y, 0]} rotation={[0, s.rotY, 0]} castShadow>
-          <cylinderGeometry args={[s.rTop, s.rBot, segH * 1.02, 6]} />
+          <cylinderGeometry args={[s.rTop, s.rBot, segH * 1.04, 3]} />
           <meshStandardMaterial
             ref={glow}
             map={mats[i].map}
-            metalness={0.75}
-            roughness={0.28}
-            envMapIntensity={1.5}
+            metalness={0.78}
+            roughness={0.26}
+            envMapIntensity={1.6}
             emissive={'#cfe4ff'}
             emissiveMap={mats[i].emap}
             emissiveIntensity={0.03}
           />
         </mesh>
       ))}
-      {/* open crown */}
-      <mesh position={[0, H + 0.12, 0]} rotation={[0, 1.2, 0]} castShadow>
-        <cylinderGeometry args={[0.3, 0.28, 0.24, 6, 1, true]} />
-        <meshStandardMaterial color={'#8fa8bc'} metalness={0.7} roughness={0.35} side={THREE.DoubleSide} />
+      {/* rounded crown cap */}
+      <mesh position={[0, H + 0.15, 0]} rotation={[0, 2.4, 0]} castShadow>
+        <cylinderGeometry args={[0.14, 0.34, 0.5, 3]} />
+        <meshStandardMaterial color={'#8fa8bc'} metalness={0.7} roughness={0.35} />
       </mesh>
     </group>
   )
 }
 
 /**
- * 金茂大厦 Jin Mao Tower — pagoda-inspired tiered setbacks and a crown spire.
+ * 金茂大厦 Jin Mao Tower — pagoda-inspired octagonal shaft with accelerating
+ * setbacks toward the crown, capped by a mast.
  */
 function JinMao({ position }: { position: [number, number, number] }) {
   const glow = useNightGlow(1.9)
   const skin = useMemo(
-    () => makeTowerSkin({ base: '#b9bec6', pane: '#8e979f', grid: '#d9dde2', diagrid: false }),
+    () => makeTowerSkin({ base: '#c2c6cd', pane: '#949ba3', grid: '#dde1e6', diagrid: false }),
     [],
   )
   const tiers = useMemo(() => {
     const list: { r: number; h: number; y: number }[] = []
     let y = 0
-    let r = 0.52
-    let h = 1.9
-    for (let i = 0; i < 5; i++) {
+    let r = 0.62
+    let h = 2.2
+    for (let i = 0; i < 7; i++) {
       list.push({ r, h, y: y + h / 2 })
       y += h
-      r *= 0.84
-      h *= 0.72
+      r *= 0.87
+      h *= 0.78
     }
     return { list, top: y }
   }, [])
@@ -164,7 +180,7 @@ function JinMao({ position }: { position: [number, number, number] }) {
     () =>
       tiers.list.map((t) => {
         const map = skin.map.clone()
-        map.repeat.set(3, Math.max(1, Math.round(t.h * 1.6)))
+        map.repeat.set(4, Math.max(1, Math.round(t.h * 1.6)))
         map.needsUpdate = true
         const emap = skin.emissiveMap.clone()
         emap.repeat.copy(map.repeat)
@@ -177,28 +193,28 @@ function JinMao({ position }: { position: [number, number, number] }) {
     <group position={position}>
       {tiers.list.map((t, i) => (
         <group key={i}>
-          <mesh position={[0, t.y, 0]} castShadow>
-            <cylinderGeometry args={[t.r * 0.96, t.r, t.h, 8]} />
+          <mesh position={[0, t.y, 0]} rotation={[0, Math.PI / 8, 0]} castShadow>
+            <cylinderGeometry args={[t.r * 0.97, t.r, t.h, 8]} />
             <meshStandardMaterial
               ref={glow}
               map={mats[i].map}
-              metalness={0.7}
-              roughness={0.32}
-              envMapIntensity={1.4}
+              metalness={0.72}
+              roughness={0.3}
+              envMapIntensity={1.5}
               emissive={'#ffe9c4'}
               emissiveMap={mats[i].emap}
               emissiveIntensity={0.03}
             />
           </mesh>
-          {/* setback lip between tiers */}
-          <mesh position={[0, t.y + t.h / 2, 0]}>
-            <cylinderGeometry args={[t.r * 1.04, t.r * 1.04, 0.05, 8]} />
-            <meshStandardMaterial color={'#7e858d'} metalness={0.6} roughness={0.4} />
+          {/* setback lip */}
+          <mesh position={[0, t.y + t.h / 2, 0]} rotation={[0, Math.PI / 8, 0]}>
+            <cylinderGeometry args={[t.r * 1.05, t.r * 1.05, 0.06, 8]} />
+            <meshStandardMaterial color={'#7c838b'} metalness={0.6} roughness={0.4} />
           </mesh>
         </group>
       ))}
-      <mesh position={[0, tiers.top + 0.35, 0]} castShadow>
-        <coneGeometry args={[0.09, 0.7, 8]} />
+      <mesh position={[0, tiers.top + 0.5, 0]} castShadow>
+        <coneGeometry args={[0.08, 1.0, 8]} />
         <meshStandardMaterial color={'#cfd4da'} metalness={0.8} roughness={0.25} />
       </mesh>
     </group>
@@ -206,12 +222,13 @@ function JinMao({ position }: { position: [number, number, number] }) {
 }
 
 /**
- * 环球金融中心 SWFC — sleek tapering slab with the slanted crown & aperture.
+ * 环球金融中心 SWFC — the "bottle-opener": a tapering slab with a trapezoidal
+ * aperture cut through the crown.
  */
 function SWFC({ position }: { position: [number, number, number] }) {
   const glow = useNightGlow(1.9)
   const skin = useMemo(
-    () => makeTowerSkin({ base: '#7d8894', pane: '#5d6873', grid: '#a7b2bd', diagrid: false }),
+    () => makeTowerSkin({ base: '#818c98', pane: '#5f6a75', grid: '#a9b4bf', diagrid: false }),
     [],
   )
   const mat = (repX: number, repY: number) => {
@@ -225,9 +242,9 @@ function SWFC({ position }: { position: [number, number, number] }) {
       <meshStandardMaterial
         ref={glow}
         map={map}
-        metalness={0.75}
-        roughness={0.3}
-        envMapIntensity={1.5}
+        metalness={0.76}
+        roughness={0.28}
+        envMapIntensity={1.6}
         emissive={'#ffe9c4'}
         emissiveMap={emap}
         emissiveIntensity={0.03}
@@ -235,39 +252,49 @@ function SWFC({ position }: { position: [number, number, number] }) {
     )
   }
   return (
-    <group position={position} rotation={[0, 0.4, 0]}>
-      {/* tapering shaft in two sections */}
-      <mesh position={[0, 2.2, 0]} castShadow>
-        <boxGeometry args={[1.15, 4.4, 0.95]} />
-        {mat(3, 7)}
+    <group position={position} rotation={[0, 0.5, 0]}>
+      {/* tapering shaft: broad base narrowing as it rises (two-face taper) */}
+      <mesh position={[0, 2.5, 0]} castShadow>
+        <boxGeometry args={[1.4, 5.0, 1.0]} />
+        {mat(4, 8)}
       </mesh>
-      <mesh position={[0, 5.9, 0]} castShadow>
-        <boxGeometry args={[0.95, 3.0, 0.7]} />
-        {mat(3, 5)}
+      <mesh position={[0, 6.4, 0]} castShadow>
+        <boxGeometry args={[1.5, 2.8, 0.72]} />
+        {mat(4, 5)}
       </mesh>
-      {/* crown: two prongs framing the aperture, capped by a slanted top */}
-      {[-0.28, 0.28].map((x) => (
-        <mesh key={x} position={[x, 7.85, 0]} castShadow>
-          <boxGeometry args={[0.32, 0.9, 0.55]} />
-          {mat(1.4, 2)}
+      {/* aperture crown: two prongs + sill + lintel frame the trapezoidal hole */}
+      {[-0.5, 0.5].map((x) => (
+        <mesh key={x} position={[x, 8.35, 0]} castShadow>
+          <boxGeometry args={[0.5, 1.7, 0.6]} />
+          {mat(1.4, 2.2)}
         </mesh>
       ))}
-      <mesh position={[0, 8.36, 0]} castShadow>
-        <boxGeometry args={[0.88, 0.14, 0.55]} />
-        <meshStandardMaterial color={'#67727e'} metalness={0.7} roughness={0.35} />
+      {/* sill (bottom of the hole) */}
+      <mesh position={[0, 7.75, 0]} castShadow>
+        <boxGeometry args={[1.5, 0.4, 0.64]} />
+        {mat(4, 1)}
+      </mesh>
+      {/* lintel / slanted top edge */}
+      <mesh position={[0, 9.35, 0]} rotation={[0, 0, 0.06]} castShadow>
+        <boxGeometry args={[1.55, 0.34, 0.62]} />
+        <meshStandardMaterial color={'#66707b'} metalness={0.7} roughness={0.35} />
       </mesh>
     </group>
   )
 }
 
-/** Shanghai landmark ensemble — Oriental Pearl plus the Lujiazui supertall trio. */
+/**
+ * Shanghai landmark ensemble laid out like the Bund view: the Oriental Pearl
+ * stands alone toward the river (front-left), with the Lujiazui supertall trio
+ * clustered behind to the right.
+ */
 export default function ShanghaiLandmarks() {
   return (
     <group>
-      <OrientalPearl position={[CITY.landmark.x, 0, CITY.landmark.z]} />
-      <ShanghaiTower position={[-3.6, 0, -3.4]} />
-      <JinMao position={[-1.7, 0, -4.9]} />
-      <SWFC position={[0.5, 0, -4.1]} />
+      <OrientalPearl position={[-3.7, 0, -1.2]} />
+      <ShanghaiTower position={[1.7, 0, -5.1]} />
+      <JinMao position={[-0.1, 0, -4.2]} />
+      <SWFC position={[2.9, 0, -3.7]} />
     </group>
   )
 }

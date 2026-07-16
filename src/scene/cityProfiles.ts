@@ -116,13 +116,14 @@ export const CITY_PROFILES: CityProfile[] = [
     match: /上海|shanghai/i,
     Landmarks: ShanghaiLandmarks,
     clearZones: [
-      { x: -1.5, z: -2, r: 1.5 }, // 东方明珠 Oriental Pearl
-      { x: -3.6, z: -3.4, r: 1.2 }, // 上海中心 Shanghai Tower
-      { x: -1.7, z: -4.9, r: 1.1 }, // 金茂大厦 Jin Mao
-      { x: 0.5, z: -4.1, r: 1.2 }, // 环球金融中心 SWFC
+      { x: -3.7, z: -1.2, r: 2.2 }, // 东方明珠 Oriental Pearl (riverside, alone)
+      { x: 1.7, z: -5.1, r: 1.6 }, // 上海中心 Shanghai Tower
+      { x: -0.1, z: -4.2, r: 1.4 }, // 金茂大厦 Jin Mao
+      { x: 2.9, z: -3.7, r: 1.4 }, // 环球金融中心 SWFC
     ],
     calmZones: [
-      { x: -1.5, z: -3.5, r: 3.6, maxHeight: 3.2 }, // keep the Lujiazui cluster readable
+      { x: 0.8, z: -4.3, r: 5.6, maxHeight: 3.2 }, // keep the Lujiazui trio dominant
+      { x: -3.7, z: -1.2, r: 3.0, maxHeight: 2.0 }, // open sightline to the Pearl
     ],
   },
   {

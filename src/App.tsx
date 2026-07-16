@@ -120,9 +120,9 @@ export default function App() {
         />
         <EffectComposer multisampling={0}>
           <DepthOfField
-            target={[0, 2, -1]}
-            focalLength={0.05}
-            bokehScale={2.1}
+            target={[0, 3.2, -2.4]}
+            focalLength={0.11}
+            bokehScale={1.6}
             height={480}
           />
           <Bloom intensity={0.6} luminanceThreshold={0.62} luminanceSmoothing={0.2} mipmapBlur />
