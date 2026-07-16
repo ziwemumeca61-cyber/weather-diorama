@@ -8,6 +8,7 @@ import Landmark from './Landmark'
 import Props from './Props'
 import People from './People'
 import Extras from './Extras'
+import NightSky from './NightSky'
 
 const GROUND = {
   x0: -9.9,
@@ -184,6 +185,7 @@ export default function Diorama() {
         <meshStandardMaterial map={groundTex} roughness={0.9} metalness={0} />
       </mesh>
 
+      <NightSky />
       <Water />
       <Boats />
       <City />
