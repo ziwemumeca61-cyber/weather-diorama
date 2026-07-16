@@ -24,19 +24,26 @@ import Credit from './ui/Credit'
 import Loading from './ui/Loading'
 import { useStore } from './data/store'
 import { fetchWeatherByCity } from './data/api'
+import { readCityParam, writeCityParam } from './data/urlCity'
 
 function InitialLoad() {
   const setLoading = useStore((s) => s.setLoading)
   const setCurrent = useStore((s) => s.setCurrent)
   const setError = useStore((s) => s.setError)
+  const addRecent = useStore((s) => s.addRecent)
 
   useEffect(() => {
     let cancelled = false
+    // A shared ?city= link reopens that city; otherwise default to Shanghai.
+    const requested = readCityParam() ?? 'Shanghai'
     ;(async () => {
       setLoading()
       try {
-        const w = await fetchWeatherByCity('Shanghai')
-        if (!cancelled) setCurrent(w)
+        const w = await fetchWeatherByCity(requested)
+        if (cancelled) return
+        setCurrent(w)
+        addRecent(w.place)
+        writeCityParam(w.place.name)
       } catch (err: any) {
         if (!cancelled) setError(err?.message ?? '加载失败')
       }
@@ -44,7 +51,7 @@ function InitialLoad() {
     return () => {
       cancelled = true
     }
-  }, [setLoading, setCurrent, setError])
+  }, [setLoading, setCurrent, setError, addRecent])
 
   return null
 }

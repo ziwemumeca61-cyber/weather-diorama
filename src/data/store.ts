@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { CurrentWeather } from './api'
+import type { CurrentWeather, GeoPlace } from './api'
 import type { WeatherKind, WeatherState, TimeOfDay } from '../weather/weatherCode'
 
 type Status = 'idle' | 'loading' | 'ready' | 'error'
@@ -45,6 +45,32 @@ function saveAvatar(avatar: Appearance) {
   }
 }
 
+const RECENTS_KEY = 'weather-diorama.recents'
+const RECENTS_MAX = 6
+
+function loadRecents(): GeoPlace[] {
+  try {
+    const raw = localStorage.getItem(RECENTS_KEY)
+    if (raw) return JSON.parse(raw) as GeoPlace[]
+  } catch {
+    /* ignore */
+  }
+  return []
+}
+
+function saveRecents(recents: GeoPlace[]) {
+  try {
+    localStorage.setItem(RECENTS_KEY, JSON.stringify(recents))
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Same place if name + country + admin1 line up (coords may jitter). */
+function samePlace(a: GeoPlace, b: GeoPlace): boolean {
+  return a.name === b.name && a.country === b.country && a.admin1 === b.admin1
+}
+
 interface AppState {
   status: Status
   error: string | null
@@ -57,6 +83,9 @@ interface AppState {
   /** The user's customizable hero character appearance. */
   avatar: Appearance
 
+  /** Recently viewed places (most-recent first), persisted for quick recall. */
+  recents: GeoPlace[]
+
   /** The effective weather driving the scene (live merged with overrides). */
   effectiveWeather: () => WeatherState
 
@@ -67,6 +96,7 @@ interface AppState {
   setOverrideTime: (t: TimeOfDay | null) => void
   clearOverrides: () => void
   setAvatar: (patch: Partial<Appearance>) => void
+  addRecent: (place: GeoPlace) => void
 }
 
 const DEFAULT_WEATHER: WeatherState = {
@@ -107,6 +137,7 @@ export const useStore = create<AppState>((set, get) => ({
   overrideKind: null,
   overrideTime: null,
   avatar: loadAvatar(),
+  recents: loadRecents(),
 
   effectiveWeather: () => {
     const s = get()
@@ -129,5 +160,14 @@ export const useStore = create<AppState>((set, get) => ({
       const avatar = { ...s.avatar, ...patch }
       saveAvatar(avatar)
       return { avatar }
+    }),
+  addRecent: (place) =>
+    set((s) => {
+      const recents = [place, ...s.recents.filter((p) => !samePlace(p, place))].slice(
+        0,
+        RECENTS_MAX,
+      )
+      saveRecents(recents)
+      return { recents }
     }),
 }))

@@ -136,8 +136,14 @@ canvas {
   gap: 8px;
 }
 
-.search-row input {
+.search-field {
+  position: relative;
   flex: 1;
+  min-width: 0;
+}
+
+.search-row input {
+  width: 100%;
   min-width: 0;
   padding: 10px 12px;
   border-radius: 12px;
@@ -150,6 +156,68 @@ canvas {
 
 .search-row input::placeholder {
   color: rgba(244, 247, 251, 0.45);
+}
+
+.suggests {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 5px;
+  list-style: none;
+  background: rgba(22, 27, 36, 0.92);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.45);
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.suggests-head {
+  padding: 6px 10px 4px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+.suggests-empty {
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.suggest {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.suggest.active {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.suggest-name {
+  font-size: 14.5px;
+  color: var(--text);
+}
+
+.suggest-pin {
+  margin-right: 6px;
+  opacity: 0.7;
+  font-size: 12px;
+}
+
+.suggest-sub {
+  font-size: 12px;
+  color: var(--text-dim);
 }
 
 .search-row button {
