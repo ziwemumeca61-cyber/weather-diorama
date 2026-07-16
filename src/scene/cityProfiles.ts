@@ -3,6 +3,7 @@ import { lazy, useMemo } from 'react'
 import { useStore } from '../data/store'
 import type { ClearZone, CalmZone } from './cityData'
 import type { GltfModelSpec } from './landmarks/GltfLandmark'
+import { resolveWater, type ResolvedWater, type WaterSpec } from './water'
 
 export interface CityProfile {
   id: string
@@ -19,6 +20,8 @@ export interface CityProfile {
   clearZones: ClearZone[]
   /** areas where generated buildings are height-capped so landmarks read clearly */
   calmZones?: CalmZone[]
+  /** the city's water body (river band / lake / none); default: Shanghai-style river */
+  water?: WaterSpec
 }
 
 // Each city's landmark ensemble is code-split into its own chunk and only
@@ -54,6 +57,8 @@ export const CITY_PROFILES: CityProfile[] = [
       { x: 3.9, z: 1.6, r: 4.4, maxHeight: 1.6 }, // open sightline to Tiananmen
       { x: 4.1, z: -4.6, r: 3.6, maxHeight: 3.0 }, // CCTV silhouette breathing room
     ],
+    // inland capital: a narrow moat instead of a big river
+    water: { kind: 'river', z0: 9.0, boats: false, bridge: false },
   },
   {
     id: 'guangzhou',
@@ -77,13 +82,20 @@ export const CITY_PROFILES: CityProfile[] = [
       { x: -3.4, z: 0.8, r: 4.8, maxHeight: 2.2 },
       { x: 3.6, z: -0.4, r: 4.2, maxHeight: 2.2 },
     ],
+    // walled inland city: city moat, no shipping
+    water: { kind: 'river', z0: 9.0, boats: false, bridge: false },
   },
   {
     id: 'hangzhou',
     match: /杭州|hangzhou/i,
     Landmarks: HangzhouLandmarks,
-    clearZones: [{ x: -1.0, z: -1.6, r: 3.6 }], // 雷峰塔 Leifeng Pagoda + hill
+    clearZones: [
+      { x: -1.0, z: -1.6, r: 3.6 }, // 雷峰塔 Leifeng Pagoda + hill
+      { x: 0.6, z: 3.4, r: 3.9 }, // 西湖 West Lake footprint
+    ],
     calmZones: [{ x: -1.0, z: -1.6, r: 6.0, maxHeight: 2.2 }],
+    // West Lake beside the pagoda instead of a river
+    water: { kind: 'lake', x: 0.6, z: 3.4, rx: 3.6, rz: 2.4 },
   },
   {
     id: 'chongqing',
@@ -91,13 +103,18 @@ export const CITY_PROFILES: CityProfile[] = [
     Landmarks: ChongqingLandmarks,
     clearZones: [{ x: 0, z: -3.2, r: 4.6 }], // 来福士 Raffles City cluster
     calmZones: [{ x: 0, z: -3.2, r: 7.5, maxHeight: 3.2 }],
+    // mountain river city: a broad Yangtze-style waterway
+    water: { kind: 'river', z0: 6.2 },
   },
   {
     id: 'tianjin',
     match: /天津|tianjin/i,
     Landmarks: TianjinLandmarks,
-    clearZones: [{ x: 0, z: 2.2, r: 5.0 }], // 天津之眼 Ferris wheel over the river
-    calmZones: [{ x: 0, z: 0, r: 6.5, maxHeight: 2.6 }],
+    clearZones: [],
+    // low waterfront so the wheel (now genuinely over the Hai River) stays visible
+    calmZones: [{ x: 0, z: 3.5, r: 6.0, maxHeight: 2.2 }],
+    // the wheel carries its own bridge deck; keep the shipping lanes clear of it
+    water: { kind: 'river', boats: false, bridge: false },
   },
   {
     // GLB demo: the whole Littlest Tokyo model as a drop-in landmark, proving
@@ -149,4 +166,10 @@ export function profileForCity(name: string | undefined): CityProfile {
 export function useCityProfile(): CityProfile {
   const name = useStore((s) => s.current?.place.name)
   return useMemo(() => profileForCity(name), [name])
+}
+
+/** Reactive hook: the resolved water layout for the current city. */
+export function useWater(): ResolvedWater {
+  const profile = useCityProfile()
+  return useMemo(() => resolveWater(profile.water), [profile])
 }

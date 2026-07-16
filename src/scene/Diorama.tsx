@@ -9,23 +9,22 @@ import Props from './Props'
 import People from './People'
 import Extras from './Extras'
 import NightSky from './NightSky'
+import { useWater } from './cityProfiles'
+import type { ResolvedWater } from './water'
 
-const GROUND = {
-  x0: -9.9,
-  x1: 9.9,
-  z0: CITY.minZ - 1.3,
-  z1: CITY.riverZ,
-}
+const GROUND_X0 = -9.9
+const GROUND_X1 = 9.9
+const GROUND_Z0 = CITY.minZ - 1.3
 
 /** Canvas texture: warm pavement, green plots and a street grid aligned to the city. */
-function makeGroundTexture(): THREE.Texture {
+function makeGroundTexture(z1: number): THREE.Texture {
   const S = 1024
   const c = document.createElement('canvas')
   c.width = c.height = S
   const ctx = c.getContext('2d')!
-  const wx = GROUND.x1 - GROUND.x0
-  const wz = GROUND.z1 - GROUND.z0
-  const toPx = (x: number, z: number) => [((x - GROUND.x0) / wx) * S, ((z - GROUND.z0) / wz) * S]
+  const wx = GROUND_X1 - GROUND_X0
+  const wz = z1 - GROUND_Z0
+  const toPx = (x: number, z: number) => [((x - GROUND_X0) / wx) * S, ((z - GROUND_Z0) / wz) * S]
 
   // base pavement
   ctx.fillStyle = '#c4c2bb'
@@ -38,8 +37,8 @@ function makeGroundTexture(): THREE.Texture {
   })()
   ctx.fillStyle = '#8fb37e'
   for (let i = 0; i < 60; i++) {
-    const gx = GROUND.x0 + rnd() * wx
-    const gz = GROUND.z0 + rnd() * wz
+    const gx = GROUND_X0 + rnd() * wx
+    const gz = GROUND_Z0 + rnd() * wz
     const [px, pz] = toPx(gx, gz)
     const w = (0.4 + rnd() * 0.8) * (S / wx)
     ctx.globalAlpha = 0.5 + rnd() * 0.4
@@ -87,14 +86,8 @@ function makeGroundTexture(): THREE.Texture {
   return tex
 }
 
-function Water() {
+function WaterSurface({ water }: { water: ResolvedWater }) {
   const matRef = useRef<THREE.MeshStandardMaterial>(null)
-  const z0 = CITY.riverZ
-  const z1 = CITY.trayHalf
-  const cx = 0
-  const cz = (z0 + z1) / 2
-  const w = 22
-  const d = z1 - z0
 
   useFrame(({ clock }) => {
     if (matRef.current) {
@@ -103,34 +96,54 @@ function Water() {
     }
   })
 
+  const material = (
+    <meshStandardMaterial
+      ref={matRef}
+      color={'#3f6f97'}
+      roughness={0.15}
+      metalness={0.5}
+      emissive={'#2b5a86'}
+      emissiveIntensity={0.05}
+      transparent
+      opacity={0.92}
+    />
+  )
+
+  if (water.lake) {
+    return (
+      <mesh
+        position={[water.lake.x, 0.02, water.lake.z]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        scale={[water.lake.rx, water.lake.rz, 1]}
+        receiveShadow
+      >
+        <circleGeometry args={[1, 48]} />
+        {material}
+      </mesh>
+    )
+  }
+  if (water.riverZ0 == null) return null
+  const z0 = water.riverZ0
+  const z1 = CITY.trayHalf
   return (
-    <mesh position={[cx, 0.015, cz]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-      <planeGeometry args={[w, d]} />
-      <meshStandardMaterial
-        ref={matRef}
-        color={'#3f6f97'}
-        roughness={0.15}
-        metalness={0.5}
-        emissive={'#2b5a86'}
-        emissiveIntensity={0.05}
-        transparent
-        opacity={0.92}
-      />
+    <mesh position={[0, 0.015, (z0 + z1) / 2]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+      <planeGeometry args={[22, z1 - z0]} />
+      {material}
     </mesh>
   )
 }
 
-function Boats() {
+function Boats({ z0 }: { z0: number }) {
   const boats = useMemo(
     () =>
       Array.from({ length: 6 }).map((_, i) => ({
-        z: CITY.riverZ + 0.7 + (i % 3) * 1.0, // three lanes inside the narrower band
+        z: z0 + 0.7 + (i % 3) * 1.0, // three lanes inside the band
         speed: 0.25 + (i % 4) * 0.08,
         offset: (i * 0.31) % 1,
         color: ['#e8e8e8', '#d7b24a', '#c96b4a'][i % 3],
         dir: i % 2 === 0 ? 1 : -1,
       })),
-    [],
+    [z0],
   )
   const refs = useRef<(THREE.Group | null)[]>([])
   useFrame(({ clock }) => {
@@ -163,7 +176,8 @@ function Boats() {
 }
 
 export default function Diorama() {
-  const groundTex = useMemo(() => makeGroundTexture(), [])
+  const water = useWater()
+  const groundTex = useMemo(() => makeGroundTexture(water.groundZ1), [water.groundZ1])
 
   return (
     <group>
@@ -180,14 +194,18 @@ export default function Diorama() {
       </RoundedBox>
 
       {/* inner rim / land tray top */}
-      <mesh position={[0, 0.005, (GROUND.z0 + GROUND.z1) / 2]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[GROUND.x1 - GROUND.x0, GROUND.z1 - GROUND.z0]} />
+      <mesh
+        position={[0, 0.005, (GROUND_Z0 + water.groundZ1) / 2]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        receiveShadow
+      >
+        <planeGeometry args={[GROUND_X1 - GROUND_X0, water.groundZ1 - GROUND_Z0]} />
         <meshStandardMaterial map={groundTex} roughness={0.9} metalness={0} />
       </mesh>
 
       <NightSky />
-      <Water />
-      <Boats />
+      <WaterSurface water={water} />
+      {water.boats && water.riverZ0 != null && <Boats z0={water.riverZ0} />}
       <City />
       <Landmark />
       <Props />

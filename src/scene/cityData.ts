@@ -69,6 +69,7 @@ export function generateCity(
   seed = 20251225,
   clearZones: ClearZone[] = DEFAULT_CLEAR_ZONES,
   calmZones: CalmZone[] = [],
+  maxZ = CITY.maxZ, // buildable rows end here (varies with the city's water layout)
 ): BuildingInstance[] {
   const rand = mulberry32(seed)
   const buildings: BuildingInstance[] = []
@@ -79,7 +80,7 @@ export function generateCity(
   let ix = 0
   for (let x = CITY.minX; x <= CITY.maxX; x += step, ix++) {
     let iz = 0
-    for (let z = CITY.minZ; z <= CITY.maxZ; z += step, iz++) {
+    for (let z = CITY.minZ; z <= maxZ; z += step, iz++) {
       // leave street corridors
       if (ix % roadEvery === 0 || iz % roadEvery === 0) continue
       // keep landmark footprints clear

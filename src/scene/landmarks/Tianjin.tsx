@@ -33,7 +33,8 @@ export default function TianjinLandmarks() {
   })
 
   return (
-    <group position={[0, 0, 2.2]}>
+    // planted in the Hai River band (z 7.4–10.5), wheel rising over the water
+    <group position={[0, 0, 8.9]}>
       {/* bridge deck over the water */}
       <mesh position={[0, 0.12, 0]} receiveShadow castShadow>
         <boxGeometry args={[9, 0.24, 2.0]} />

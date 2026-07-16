@@ -5,6 +5,8 @@ import { generatePedestrians, type PedestrianAppearance } from './cityData'
 import { useEffectiveWeather } from '../data/store'
 import { useStore } from '../data/store'
 import { lightningPulse } from '../weather/effects/Lightning'
+import { useWater } from './cityProfiles'
+import { pathCrossesLake } from './water'
 
 type Mode = 'walk' | 'run' | 'trudge' | 'umbrella'
 
@@ -202,7 +204,12 @@ function modeFor(kind: string, hasUmbrella: boolean): Mode {
 }
 
 export default function People() {
-  const pedestrians = useMemo(() => generatePedestrians(), [])
+  const water = useWater()
+  const pedestrians = useMemo(
+    // nobody wades through the lake (paths run full street lengths)
+    () => generatePedestrians().filter((p) => !pathCrossesLake(water, p.a[0], p.a[2], p.b[0], p.b[2])),
+    [water],
+  )
   const { kind } = useEffectiveWeather()
   const avatar = useStore((s) => s.avatar)
 

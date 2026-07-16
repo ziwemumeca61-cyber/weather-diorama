@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { CITY } from './cityData'
 import { useEffectiveWeather } from '../data/store'
+import { useWater } from './cityProfiles'
 
 /* ---------- birds circling the landmark on nice days ---------- */
 
@@ -103,13 +104,14 @@ function Balloon() {
 
 function SnowCover({ active }: { active: boolean }) {
   const matRef = useRef<THREE.MeshStandardMaterial>(null)
+  const { groundZ1 } = useWater() // blanket exactly the land, whatever the water layout
   useFrame((_, dt) => {
     if (!matRef.current) return
     matRef.current.opacity = THREE.MathUtils.damp(matRef.current.opacity, active ? 0.55 : 0, 1.2, dt)
   })
   return (
-    <mesh position={[0, 0.025, (CITY.minZ - 1.3 + CITY.riverZ) / 2]} rotation={[-Math.PI / 2, 0, 0]}>
-      <planeGeometry args={[19.8, CITY.riverZ - (CITY.minZ - 1.3)]} />
+    <mesh position={[0, 0.025, (CITY.minZ - 1.3 + groundZ1) / 2]} rotation={[-Math.PI / 2, 0, 0]}>
+      <planeGeometry args={[19.8, groundZ1 - (CITY.minZ - 1.3)]} />
       <meshStandardMaterial
         ref={matRef}
         color={'#f4f7fb'}

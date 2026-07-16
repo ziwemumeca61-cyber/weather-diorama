@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { generateCity, type BuildingInstance } from './cityData'
 import { getFacades } from './facades'
 import { useClockInputs } from '../data/store'
-import { useCityProfile } from './cityProfiles'
+import { useCityProfile, useWater } from './cityProfiles'
 import { localHourNow, nightFactorAtHour, OVERRIDE_HOUR } from './dayNight'
 
 /** One category of buildings sharing a material (glass towers or concrete blocks). */
@@ -152,9 +152,10 @@ function Rooftops({ buildings }: { buildings: BuildingInstance[] }) {
 
 export default function City() {
   const profile = useCityProfile()
+  const water = useWater()
   const buildings = useMemo(
-    () => generateCity(20251225, profile.clearZones, profile.calmZones ?? []),
-    [profile],
+    () => generateCity(20251225, profile.clearZones, profile.calmZones ?? [], water.cityMaxZ),
+    [profile, water],
   )
   const { glass, concrete } = useMemo(() => {
     const glass: BuildingInstance[] = []

@@ -1,10 +1,15 @@
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { CITY, generateTrees } from './cityData'
+import { generateTrees } from './cityData'
+import { useWater } from './cityProfiles'
+import { inLake, pathCrossesLake, type ResolvedWater } from './water'
 
-function Trees() {
-  const trees = useMemo(() => generateTrees(), [])
+function Trees({ water }: { water: ResolvedWater }) {
+  const trees = useMemo(
+    () => generateTrees().filter((t) => !inLake(water, t.position[0], t.position[2])),
+    [water],
+  )
   const foliageRef = useRef<THREE.InstancedMesh>(null)
   const trunkRef = useRef<THREE.InstancedMesh>(null)
 
@@ -51,8 +56,8 @@ interface CarLane {
   offset: number
 }
 
-function Cars() {
-  // A few cars ping-ponging along street corridors.
+function Cars({ water }: { water: ResolvedWater }) {
+  // A few cars ping-ponging along street corridors (skipping flooded ones).
   const lanes = useMemo<CarLane[]>(() => {
     const colors = ['#e0d24f', '#e05b5b', '#5fbf7a', '#4f8fe0', '#ececec', '#e0a24f']
     const defs: [number, number, number, number][] = [
@@ -64,14 +69,16 @@ function Cars() {
       [2.35, -8, 2.35, 3.5],
       [6.35, -8, 6.35, 2],
     ]
-    return defs.map((d, i) => ({
-      a: new THREE.Vector3(d[0], 0.11, d[1]),
-      b: new THREE.Vector3(d[2], 0.11, d[3]),
-      color: colors[i % colors.length],
-      speed: 0.35 + (i % 3) * 0.12,
-      offset: (i * 0.37) % 1,
-    }))
-  }, [])
+    return defs
+      .filter((d) => !pathCrossesLake(water, d[0], d[1], d[2], d[3]))
+      .map((d, i) => ({
+        a: new THREE.Vector3(d[0], 0.11, d[1]),
+        b: new THREE.Vector3(d[2], 0.11, d[3]),
+        color: colors[i % colors.length],
+        speed: 0.35 + (i % 3) * 0.12,
+        offset: (i * 0.37) % 1,
+      }))
+  }, [water])
 
   const refs = useRef<(THREE.Group | null)[]>([])
   useFrame(({ clock }) => {
@@ -107,9 +114,9 @@ function Cars() {
   )
 }
 
-function Bridge() {
-  // Truss bridge spanning the river along x.
-  const z = CITY.riverZ + 1.8
+function Bridge({ z0 }: { z0: number }) {
+  // Truss bridge over the river band.
+  const z = z0 + 1.8
   const railColor = '#d7b24a'
   return (
     <group position={[3, 0, z]}>
@@ -145,11 +152,12 @@ function Bridge() {
 }
 
 export default function Props() {
+  const water = useWater()
   return (
     <group>
-      <Trees />
-      <Cars />
-      <Bridge />
+      <Trees water={water} />
+      <Cars water={water} />
+      {water.bridge && water.riverZ0 != null && <Bridge z0={water.riverZ0} />}
     </group>
   )
 }
