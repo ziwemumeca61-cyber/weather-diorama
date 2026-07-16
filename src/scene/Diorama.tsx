@@ -124,7 +124,7 @@ function Boats() {
   const boats = useMemo(
     () =>
       Array.from({ length: 6 }).map((_, i) => ({
-        z: CITY.riverZ + 0.8 + (i % 3) * 1.6,
+        z: CITY.riverZ + 0.7 + (i % 3) * 1.0, // three lanes inside the narrower band
         speed: 0.25 + (i % 4) * 0.08,
         offset: (i * 0.31) % 1,
         color: ['#e8e8e8', '#d7b24a', '#c96b4a'][i % 3],

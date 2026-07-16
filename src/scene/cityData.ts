@@ -28,8 +28,8 @@ export const CITY = {
   minX: -9,
   maxX: 9,
   minZ: -9,
-  maxZ: 4,
-  riverZ: 4.4, // river starts here toward +z
+  maxZ: 6.6, // two extra waterfront block rows (grid rows at 4.95 / 6.5)
+  riverZ: 7.4, // river starts here toward +z (narrow band, not a third of the tray)
   trayHalf: 10.5,
   landmark: new THREE.Vector3(-1.5, 0, -2), // downtown core focus
 }
