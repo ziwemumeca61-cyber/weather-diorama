@@ -1,19 +1,40 @@
 import { useLayoutEffect, useMemo, useRef } from 'react'
+import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useNightGlow } from './nightGlow'
+import { makeTowerSkin } from './towerSkin'
+import { useClockInputs } from '../../data/store'
+import { localHourNow, nightFactorAtHour, OVERRIDE_HOUR } from '../dayNight'
 
 /**
  * 广州塔「小蛮腰」Canton Tower — a hyperboloid lattice: straight struts between
- * an offset top and bottom ring create the pinched-waist twist, topped by a
- * slender antenna mast.
+ * an offset top and bottom ring create the pinched-waist twist. At night the
+ * lattice cycles through rainbow hues like the real tower's LED skin.
  */
 function CantonTower({ position }: { position: [number, number, number] }) {
   const glow = useNightGlow(2.2)
+  const { overrideTime, utcOffset } = useClockInputs()
   const N = 26
   const rb = 1.05
   const rt = 0.5
   const H = 8.6
   const twist = 1.15
+
+  // materials that cycle hue at night (struts, rings, deck trim)
+  const hueMats = useRef<Set<THREE.MeshStandardMaterial>>(new Set())
+  const hueRef = (m: THREE.MeshStandardMaterial | null) => {
+    if (m) hueMats.current.add(m)
+  }
+  useFrame(({ clock }) => {
+    const hour = overrideTime != null ? OVERRIDE_HOUR[overrideTime] : localHourNow(utcOffset)
+    const nf = nightFactorAtHour(hour)
+    // by day: steady pale blue; by night: slow rainbow sweep
+    const hue = (clock.elapsedTime * 0.045) % 1
+    hueMats.current.forEach((m) => {
+      if (nf > 0.25) m.emissive.setHSL(hue, 0.85, 0.55)
+      else m.emissive.set('#7ad0ff')
+    })
+  })
 
   const { struts, rings } = useMemo(() => {
     const up = new THREE.Vector3(0, 1, 0)
@@ -37,6 +58,14 @@ function CantonTower({ position }: { position: [number, number, number] }) {
     return { struts, rings }
   }, [])
 
+  // radius of the hyperboloid at a given height fraction (for the core/decks)
+  const radiusAt = (f: number) => {
+    const p0b = new THREE.Vector3(rb, 0, 0)
+    const p0t = new THREE.Vector3(Math.cos(twist) * rt, H, Math.sin(twist) * rt)
+    const p = new THREE.Vector3().lerpVectors(p0b, p0t, f)
+    return Math.hypot(p.x, p.z)
+  }
+
   const meshRef = useRef<THREE.InstancedMesh>(null)
   useLayoutEffect(() => {
     const m = meshRef.current!
@@ -53,10 +82,34 @@ function CantonTower({ position }: { position: [number, number, number] }) {
 
   return (
     <group position={position}>
+      {/* landscaped podium plaza */}
+      <mesh position={[0, 0.09, 0]} receiveShadow>
+        <cylinderGeometry args={[1.9, 2.05, 0.18, 24]} />
+        <meshStandardMaterial color={'#9aa5ad'} roughness={0.7} metalness={0.3} />
+      </mesh>
+
+      {/* inner glass core threading the lattice */}
+      <mesh position={[0, H / 2, 0]} castShadow>
+        <cylinderGeometry args={[radiusAt(0.94) * 0.55, radiusAt(0.04) * 0.6, H * 0.96, 14]} />
+        <meshStandardMaterial
+          ref={glow}
+          color={'#5d707f'}
+          metalness={0.7}
+          roughness={0.35}
+          transparent
+          opacity={0.85}
+          emissive={'#9ad4ff'}
+          emissiveIntensity={0.03}
+        />
+      </mesh>
+
       <instancedMesh ref={meshRef} args={[undefined, undefined, struts.length]} castShadow>
         <cylinderGeometry args={[0.028, 0.028, 1, 6]} />
         <meshStandardMaterial
-          ref={glow}
+          ref={(m: THREE.MeshStandardMaterial | null) => {
+            glow(m)
+            hueRef(m)
+          }}
           color={'#b9c2cc'}
           metalness={0.85}
           roughness={0.3}
@@ -69,7 +122,10 @@ function CantonTower({ position }: { position: [number, number, number] }) {
         <mesh key={i} position={[0, r.y, 0]} rotation={[Math.PI / 2, 0, 0]}>
           <torusGeometry args={[r.r, 0.03, 6, 40]} />
           <meshStandardMaterial
-            ref={glow}
+            ref={(m: THREE.MeshStandardMaterial | null) => {
+              glow(m)
+              hueRef(m)
+            }}
             color={'#aab4bf'}
             metalness={0.8}
             roughness={0.32}
@@ -78,6 +134,28 @@ function CantonTower({ position }: { position: [number, number, number] }) {
           />
         </mesh>
       ))}
+
+      {/* observation decks at the summit (white slabs + glass drum) */}
+      <mesh position={[0, H * 0.965, 0]} castShadow>
+        <cylinderGeometry args={[radiusAt(0.98) + 0.16, radiusAt(0.96) + 0.12, 0.1, 20]} />
+        <meshStandardMaterial color={'#e8ecef'} metalness={0.4} roughness={0.4} />
+      </mesh>
+      <mesh position={[0, H * 0.93, 0]}>
+        <cylinderGeometry args={[radiusAt(0.95) + 0.06, radiusAt(0.92) + 0.06, 0.26, 20]} />
+        <meshStandardMaterial
+          ref={glow}
+          color={'#6d8494'}
+          metalness={0.6}
+          roughness={0.3}
+          emissive={'#ffe2b0'}
+          emissiveIntensity={0.04}
+        />
+      </mesh>
+      <mesh position={[0, H + 0.06, 0]}>
+        <cylinderGeometry args={[radiusAt(1) + 0.1, radiusAt(0.99) + 0.12, 0.08, 20]} />
+        <meshStandardMaterial color={'#dfe4e8'} metalness={0.45} roughness={0.4} />
+      </mesh>
+
       {/* antenna mast + beacons */}
       <mesh position={[0, H + 2.0, 0]} castShadow>
         <cylinderGeometry args={[0.02, 0.06, 4.0, 8]} />
@@ -93,26 +171,49 @@ function CantonTower({ position }: { position: [number, number, number] }) {
   )
 }
 
-/** A shorter companion office tower so the skyline isn't a lone spike. */
+/** 广州周大福金融中心 East Tower stand-in — chamfered slab with a flat crown. */
 function CompanionTower({ position }: { position: [number, number, number] }) {
   const glow = useNightGlow(1.6)
+  const skin = useMemo(
+    () => makeTowerSkin({ base: '#8e9aa8', pane: '#6f7d8c', grid: '#bac6d2', diagrid: false }),
+    [],
+  )
+  const mats = useMemo(() => {
+    const map = skin.map.clone()
+    map.repeat.set(3, 8)
+    map.needsUpdate = true
+    const emap = skin.emissiveMap.clone()
+    emap.repeat.copy(map.repeat)
+    emap.needsUpdate = true
+    return { map, emap }
+  }, [skin])
   return (
-    <group position={position}>
-      <mesh position={[0, 2.6, 0]} castShadow>
-        <boxGeometry args={[0.9, 5.2, 0.9]} />
+    <group position={position} rotation={[0, 0.3, 0]}>
+      <mesh position={[0, 0.25, 0]} castShadow receiveShadow>
+        <boxGeometry args={[1.5, 0.5, 1.5]} />
+        <meshStandardMaterial color={'#97a3ae'} metalness={0.5} roughness={0.45} />
+      </mesh>
+      <mesh position={[0, 3.1, 0]} rotation={[0, Math.PI / 8, 0]} castShadow>
+        <cylinderGeometry args={[0.62, 0.66, 5.7, 8]} />
         <meshStandardMaterial
           ref={glow}
-          color={'#7f8b9a'}
-          metalness={0.7}
+          map={mats.map}
+          metalness={0.72}
           roughness={0.3}
           envMapIntensity={1.3}
           emissive={'#ffd98a'}
+          emissiveMap={mats.emap}
           emissiveIntensity={0.03}
         />
       </mesh>
-      <mesh position={[0, 5.4, 0]} castShadow>
-        <coneGeometry args={[0.5, 0.6, 4]} />
-        <meshStandardMaterial color={'#6d7784'} metalness={0.6} roughness={0.4} />
+      {/* stepped flat crown */}
+      <mesh position={[0, 6.08, 0]} rotation={[0, Math.PI / 8, 0]} castShadow>
+        <cylinderGeometry args={[0.5, 0.62, 0.4, 8]} />
+        <meshStandardMaterial color={'#77828e'} metalness={0.6} roughness={0.38} />
+      </mesh>
+      <mesh position={[0, 6.4, 0]} rotation={[0, Math.PI / 8, 0]}>
+        <cylinderGeometry args={[0.36, 0.48, 0.28, 8]} />
+        <meshStandardMaterial color={'#88939f'} metalness={0.6} roughness={0.38} />
       </mesh>
     </group>
   )

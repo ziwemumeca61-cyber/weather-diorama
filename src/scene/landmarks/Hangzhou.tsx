@@ -54,6 +54,38 @@ function LeifengPagoda({ position }: { position: [number, number, number] }) {
             <cylinderGeometry args={[t.r, t.r, t.h, 8]} />
             <meshStandardMaterial ref={glow} color={'#a8442f'} roughness={0.6} emissive={'#ff9a5c'} emissiveIntensity={0.03} />
           </mesh>
+          {/* arched window niches on alternating faces, lit at night */}
+          {[0, 1, 2, 3].map((f) => {
+            const a = (f * Math.PI) / 2 + (i % 2 ? Math.PI / 4 : 0)
+            const rr = t.r * 0.985
+            return (
+              <group key={f} position={[Math.sin(a) * rr, t.y, Math.cos(a) * rr]} rotation={[0, a, 0]}>
+                <mesh position={[0, -0.02, 0]}>
+                  <boxGeometry args={[0.14, t.h * 0.46, 0.03]} />
+                  <meshStandardMaterial
+                    ref={glow}
+                    color={'#33231a'}
+                    roughness={0.9}
+                    emissive={'#ffb066'}
+                    emissiveIntensity={0.04}
+                  />
+                </mesh>
+                <mesh position={[0, t.h * 0.19, 0]} rotation={[Math.PI / 2, 0, 0]}>
+                  <cylinderGeometry args={[0.07, 0.07, 0.03, 10, 1, false, 0, Math.PI]} />
+                  <meshStandardMaterial color={'#33231a'} roughness={0.9} />
+                </mesh>
+              </group>
+            )
+          })}
+          {/* balcony slab + slatted rail */}
+          <mesh position={[0, t.y - t.h / 2 + 0.02, 0]} castShadow>
+            <cylinderGeometry args={[t.r + 0.14, t.r + 0.16, 0.05, 8]} />
+            <meshStandardMaterial color={'#8a5a38'} roughness={0.8} />
+          </mesh>
+          <mesh position={[0, t.y - t.h / 2 + 0.11, 0]}>
+            <cylinderGeometry args={[t.r + 0.13, t.r + 0.13, 0.1, 8, 1, true]} />
+            <meshStandardMaterial color={'#6e452a'} roughness={0.85} transparent opacity={0.5} side={THREE.DoubleSide} />
+          </mesh>
           {/* gilt band */}
           <mesh position={[0, t.y + t.h / 2, 0]}>
             <cylinderGeometry args={[t.r + 0.01, t.r + 0.01, 0.06, 8]} />

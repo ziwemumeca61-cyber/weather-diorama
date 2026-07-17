@@ -49,12 +49,46 @@ export default function ChongqingLandmarks() {
 
   return (
     <group position={[0, 0, -3.2]}>
-      {/* carrier towers (flat tops, meeting the sail) */}
+      {/* "The Crystal"-style glass retail podium threading the whole row */}
+      <mesh position={[0, 0.45, 0]} castShadow receiveShadow>
+        <boxGeometry args={[9.4, 0.9, 2.1]} />
+        <meshStandardMaterial
+          ref={glow}
+          color={'#9db6c9'}
+          metalness={0.7}
+          roughness={0.25}
+          envMapIntensity={1.6}
+          transparent
+          opacity={0.92}
+          emissive={'#ffe2b0'}
+          emissiveIntensity={0.04}
+        />
+      </mesh>
+      <mesh position={[0, 0.94, 0]}>
+        <boxGeometry args={[9.5, 0.1, 2.2]} />
+        <meshStandardMaterial color={'#5f7183'} metalness={0.7} roughness={0.35} />
+      </mesh>
+
+      {/* carrier towers with a slight outward flare at the top (the real
+          towers curve like sails as they rise to meet the conservatory) */}
       {carriers.map((x, i) => (
-        <mesh key={i} position={[x, CARRIER_H / 2, 0]} castShadow>
-          <boxGeometry args={[TW, CARRIER_H, TW]} />
-          {towerMaterial}
-        </mesh>
+        <group key={i}>
+          <mesh position={[x, CARRIER_H / 2, 0]} castShadow>
+            <boxGeometry args={[TW, CARRIER_H, TW]} />
+            {towerMaterial}
+          </mesh>
+          <mesh position={[x, CARRIER_H - 1.1, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
+            <cylinderGeometry args={[(TW / 2) * 1.42, (TW / 2) * 1.05, 2.2, 4]} />
+            <meshStandardMaterial color={'#a9c0d4'} metalness={0.72} roughness={0.28} envMapIntensity={1.5} />
+          </mesh>
+          {/* white facade fins on the outer faces */}
+          {[-1, 1].map((s) => (
+            <mesh key={s} position={[x + s * (TW / 2 + 0.015), CARRIER_H / 2, 0]}>
+              <boxGeometry args={[0.03, CARRIER_H * 0.94, TW * 0.72]} />
+              <meshStandardMaterial color={'#e6ecf1'} metalness={0.5} roughness={0.4} />
+            </mesh>
+          ))}
+        </group>
       ))}
       {/* shorter side towers */}
       {sideTowers.map((t, i) => (
@@ -63,6 +97,12 @@ export default function ChongqingLandmarks() {
             <boxGeometry args={[TW, t.h, TW]} />
             {towerMaterial}
           </mesh>
+          {[-1, 1].map((s) => (
+            <mesh key={s} position={[t.x + s * (TW / 2 + 0.015), t.h / 2, 0]}>
+              <boxGeometry args={[0.03, t.h * 0.92, TW * 0.72]} />
+              <meshStandardMaterial color={'#e6ecf1'} metalness={0.5} roughness={0.4} />
+            </mesh>
+          ))}
           <mesh position={[t.x, t.h + 0.08, 0]}>
             <boxGeometry args={[TW, 0.16, TW]} />
             <meshStandardMaterial color={'#5f7183'} metalness={0.7} roughness={0.35} />
@@ -97,10 +137,28 @@ export default function ChongqingLandmarks() {
             <meshStandardMaterial color={'#6f8194'} metalness={0.7} roughness={0.35} />
           </mesh>
         ))}
-        {/* rooftop garden strip */}
+        {/* glowing observation window band along both faces */}
+        {[-1, 1].map((s) => (
+          <mesh key={s} position={[0, 0.06, s * 0.585]}>
+            <boxGeometry args={[sailW - 0.5, 0.3, 0.02]} />
+            <meshStandardMaterial
+              ref={glow}
+              color={'#c3d8ea'}
+              metalness={0.6}
+              roughness={0.25}
+              emissive={'#ffe2b0'}
+              emissiveIntensity={0.05}
+            />
+          </mesh>
+        ))}
+        {/* rooftop garden strip with rail */}
         <mesh position={[0, sailH / 2 + 0.05, 0]}>
           <boxGeometry args={[sailW - 0.6, 0.08, 0.7]} />
           <meshStandardMaterial color={'#6f9f63'} roughness={0.9} />
+        </mesh>
+        <mesh position={[0, sailH / 2 + 0.16, 0]}>
+          <boxGeometry args={[sailW - 0.55, 0.1, 0.78]} />
+          <meshStandardMaterial color={'#dfe7ee'} metalness={0.5} roughness={0.4} transparent opacity={0.45} />
         </mesh>
       </group>
     </group>

@@ -28,18 +28,31 @@ export default function TianjinLandmarks() {
     [],
   )
 
+  const cabinRefs = useRef<(THREE.Group | null)[]>([])
   useFrame((_, dt) => {
-    if (wheelRef.current) wheelRef.current.rotation.z += dt * 0.12
+    if (!wheelRef.current) return
+    wheelRef.current.rotation.z += dt * 0.12
+    // counter-rotate each cabin so it hangs upright as the wheel turns
+    const rz = wheelRef.current.rotation.z
+    cabinRefs.current.forEach((c) => {
+      if (c) c.rotation.z = -rz
+    })
   })
 
   return (
     // planted in the Hai River band (z 7.4–10.5), wheel rising over the water
     <group position={[0, 0, 8.9]}>
-      {/* bridge deck over the water */}
+      {/* bridge deck over the water, with side rails */}
       <mesh position={[0, 0.12, 0]} receiveShadow castShadow>
         <boxGeometry args={[9, 0.24, 2.0]} />
         <meshStandardMaterial color={'#8b8f98'} roughness={0.8} />
       </mesh>
+      {[-1, 1].map((s) => (
+        <mesh key={s} position={[0, 0.34, s * 0.96]}>
+          <boxGeometry args={[8.8, 0.2, 0.05]} />
+          <meshStandardMaterial color={'#dfe4ea'} metalness={0.5} roughness={0.4} transparent opacity={0.6} />
+        </mesh>
+      ))}
       {[-3.5, 3.5].map((x) => (
         <mesh key={x} position={[x, -0.4, 0]}>
           <boxGeometry args={[0.4, 1.0, 1.6]} />
@@ -83,21 +96,37 @@ export default function TianjinLandmarks() {
             <meshStandardMaterial color={'#b9c2cc'} metalness={0.5} roughness={0.5} />
           </mesh>
         ))}
-        {/* cabins on the rim, kept upright via counter-rotation is skipped for stylisation */}
+        {/* cabins hang from the rim and stay upright (counter-rotated per frame) */}
         {Array.from({ length: CABINS }).map((_, i) => {
           const a = (i / CABINS) * Math.PI * 2
           return (
-            <mesh key={i} position={[Math.cos(a) * R, Math.sin(a) * R, 0]} castShadow>
-              <boxGeometry args={[0.34, 0.28, 0.5]} />
-              <meshStandardMaterial
-                ref={glow}
-                color={cabinColors[i % cabinColors.length]}
-                roughness={0.45}
-                metalness={0.2}
-                emissive={cabinColors[i % cabinColors.length]}
-                emissiveIntensity={0.04}
-              />
-            </mesh>
+            <group
+              key={i}
+              position={[Math.cos(a) * R, Math.sin(a) * R, 0]}
+              ref={(el) => (cabinRefs.current[i] = el)}
+            >
+              {/* hanger arm */}
+              <mesh position={[0, -0.08, 0]}>
+                <cylinderGeometry args={[0.015, 0.015, 0.16, 5]} />
+                <meshStandardMaterial color={'#b9c2cc'} metalness={0.5} roughness={0.5} />
+              </mesh>
+              <mesh position={[0, -0.28, 0]} castShadow>
+                <boxGeometry args={[0.34, 0.28, 0.5]} />
+                <meshStandardMaterial
+                  ref={glow}
+                  color={cabinColors[i % cabinColors.length]}
+                  roughness={0.45}
+                  metalness={0.2}
+                  emissive={cabinColors[i % cabinColors.length]}
+                  emissiveIntensity={0.04}
+                />
+              </mesh>
+              {/* cabin window strip */}
+              <mesh position={[0, -0.26, 0.26]}>
+                <boxGeometry args={[0.26, 0.12, 0.01]} />
+                <meshStandardMaterial color={'#d9e6ef'} metalness={0.4} roughness={0.25} />
+              </mesh>
+            </group>
           )
         })}
       </group>

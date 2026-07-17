@@ -22,11 +22,26 @@ function WildGoosePagoda({ position }: { position: [number, number, number] }) {
   }, [])
   return (
     <group position={position}>
-      {/* stone platform */}
+      {/* stone platform with staircase */}
       <mesh position={[0, 0.25, 0]} receiveShadow castShadow>
         <boxGeometry args={[2.7, 0.5, 2.7]} />
         <meshStandardMaterial color={'#b9b3a4'} roughness={0.9} />
       </mesh>
+      <mesh position={[0, 0.18, 1.65]} rotation={[0.4, 0, 0]} receiveShadow>
+        <boxGeometry args={[0.9, 0.06, 0.85]} />
+        <meshStandardMaterial color={'#c4beac'} roughness={0.9} />
+      </mesh>
+      {/* arched entrance on the ground tier */}
+      <group position={[0, 0.78, 1.008]}>
+        <mesh>
+          <boxGeometry args={[0.3, 0.5, 0.03]} />
+          <meshStandardMaterial color={'#2a2018'} roughness={0.95} />
+        </mesh>
+        <mesh position={[0, 0.25, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.15, 0.15, 0.03, 12, 1, false, 0, Math.PI]} />
+          <meshStandardMaterial color={'#2a2018'} roughness={0.95} />
+        </mesh>
+      </group>
       {tiers.list.map((t, i) => (
         <group key={i}>
           <mesh position={[0, t.y, 0]} castShadow>
@@ -90,10 +105,22 @@ function BellTower({ position }: { position: [number, number, number] }) {
         <boxGeometry args={[2.4, 1.0, 2.4]} />
         <meshStandardMaterial color={'#9a8f7c'} roughness={0.9} />
       </mesh>
-      <mesh position={[0, 0.42, 1.205]}>
-        <boxGeometry args={[0.5, 0.62, 0.04]} />
-        <meshStandardMaterial color={'#2a2018'} roughness={0.9} />
-      </mesh>
+      {/* arched passages through all four faces */}
+      {[0, 1, 2, 3].map((f) => {
+        const a = (f * Math.PI) / 2
+        return (
+          <group key={f} position={[Math.sin(a) * 1.205, 0.42, Math.cos(a) * 1.205]} rotation={[0, a, 0]}>
+            <mesh>
+              <boxGeometry args={[0.5, 0.62, 0.04]} />
+              <meshStandardMaterial color={'#2a2018'} roughness={0.9} />
+            </mesh>
+            <mesh position={[0, 0.31, 0]} rotation={[Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[0.25, 0.25, 0.04, 14, 1, false, 0, Math.PI]} />
+              <meshStandardMaterial color={'#2a2018'} roughness={0.9} />
+            </mesh>
+          </group>
+        )
+      })}
       {/* body + tier 1 */}
       <mesh position={[0, 1.3, 0]} castShadow>
         <boxGeometry args={[1.9, 0.6, 1.9]} />
