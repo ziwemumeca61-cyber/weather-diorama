@@ -38,6 +38,10 @@ const ShenzhenLandmarks = lazy(() => import('./landmarks/Shenzhen'))
 const WuhanLandmarks = lazy(() => import('./landmarks/Wuhan'))
 const ChengduLandmarks = lazy(() => import('./landmarks/Chengdu'))
 const SuzhouLandmarks = lazy(() => import('./landmarks/Suzhou'))
+const NanjingLandmarks = lazy(() => import('./landmarks/Nanjing'))
+const HarbinLandmarks = lazy(() => import('./landmarks/Harbin'))
+const HongKongLandmarks = lazy(() => import('./landmarks/HongKong'))
+const QingdaoLandmarks = lazy(() => import('./landmarks/Qingdao'))
 const Cc0Downtown = lazy(() => import('./landmarks/Cc0Downtown'))
 
 /**
@@ -175,6 +179,61 @@ export const CITY_PROFILES: CityProfile[] = [
       { x: -3.4, z: 0.5, r: 4.6, maxHeight: 1.8 },
     ],
     // canal city keeps the default waterway
+  },
+  {
+    id: 'nanjing',
+    match: /南京|nanjing/i,
+    Landmarks: NanjingLandmarks,
+    clearZones: [
+      { x: 2.8, z: -4.2, r: 1.9 }, // 紫峰大厦 Zifeng Tower
+      { x: -3.2, z: 0.8, r: 3.1 }, // 中华门 city wall gate
+    ],
+    calmZones: [
+      { x: 2.8, z: -4.2, r: 3.6, maxHeight: 3.0 },
+      { x: -3.2, z: 0.8, r: 4.6, maxHeight: 1.6 },
+    ],
+    // 秦淮河/长江 keeps the default waterway
+  },
+  {
+    id: 'harbin',
+    match: /哈尔滨|harbin|haerbin/i,
+    Landmarks: HarbinLandmarks,
+    clearZones: [
+      { x: -3.2, z: 0.6, r: 3.0 }, // 圣索菲亚 Saint Sophia + plaza
+      { x: 3.4, z: -3.2, r: 2.2 }, // 防洪纪念塔 colonnade
+    ],
+    calmZones: [
+      { x: -3.2, z: 0.6, r: 4.6, maxHeight: 1.8 },
+      { x: 3.4, z: -3.2, r: 3.6, maxHeight: 2.2 },
+    ],
+    // 松花江 — a broad northern river
+    water: { kind: 'river', z0: 6.6 },
+  },
+  {
+    id: 'hongkong',
+    match: /香港|hong\s?kong|xianggang/i,
+    Landmarks: HongKongLandmarks,
+    clearZones: [
+      { x: 2.6, z: -3.6, r: 1.8 }, // 中银大厦 Bank of China
+      { x: -2.4, z: -4.0, r: 1.8 }, // 国金二期 Two IFC
+    ],
+    calmZones: [{ x: 0, z: -3.8, r: 6.0, maxHeight: 3.6 }],
+    // 维多利亚港 Victoria Harbour with the ferries
+    water: { kind: 'river', z0: 6.0 },
+  },
+  {
+    id: 'qingdao',
+    match: /青岛|qingdao|tsingtao/i,
+    Landmarks: QingdaoLandmarks,
+    clearZones: [
+      { x: -2.6, z: 6.5, r: 1.6 }, // 栈桥 pier root on the shore
+      { x: 3.0, z: -2.6, r: 2.0 }, // 五月的风 May Wind plaza
+    ],
+    calmZones: [
+      { x: -2.6, z: 5.8, r: 3.2, maxHeight: 1.6 }, // open seafront behind the pier
+      { x: 3.0, z: -2.6, r: 3.4, maxHeight: 2.4 },
+    ],
+    // the bay keeps the default waterfront (boats as the harbour traffic)
   },
   {
     // GLB demo: the whole Littlest Tokyo model as a drop-in landmark, proving
