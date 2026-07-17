@@ -40,6 +40,15 @@ function PingAn({ position }: { position: [number, number, number] }) {
   )
   return (
     <group position={position}>
+      {/* podium: two chamfered plinths with an entrance slot */}
+      <mesh position={[0, 0.3, 0]} rotation={[0, Math.PI / 8, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[1.5, 1.62, 0.6, 8]} />
+        <meshStandardMaterial color={'#9fabb6'} metalness={0.5} roughness={0.45} />
+      </mesh>
+      <mesh position={[0, 0.2, 1.32]}>
+        <boxGeometry args={[0.8, 0.4, 0.5]} />
+        <meshStandardMaterial color={'#3c454e'} metalness={0.6} roughness={0.35} />
+      </mesh>
       {sections.map((s, i) => (
         // octagonal prism rotated to read as a chamfered square plan
         <mesh key={i} position={[0, s.y, 0]} rotation={[0, Math.PI / 8, 0]} castShadow>
@@ -56,14 +65,47 @@ function PingAn({ position }: { position: [number, number, number] }) {
           />
         </mesh>
       ))}
+      {/* the signature stainless corner ribs, following the taper */}
+      {sections.map((s, i) =>
+        [0, 1, 2, 3].map((k) => {
+          const a = (k * Math.PI) / 2 + Math.PI / 4
+          const rMid = ((s.rBot + s.rTop) / 2) * 0.92
+          return (
+            <mesh
+              key={`${i}-${k}`}
+              position={[Math.cos(a) * rMid, s.y, Math.sin(a) * rMid]}
+              rotation={[0, -a, 0]}
+            >
+              <boxGeometry args={[0.07, segH * 1.03, 0.07]} />
+              <meshStandardMaterial color={'#dde4ea'} metalness={0.85} roughness={0.22} envMapIntensity={1.8} />
+            </mesh>
+          )
+        }),
+      )}
+      {/* glowing crown band under the pyramid */}
+      <mesh position={[0, H + 0.06, 0]} rotation={[0, Math.PI / 8, 0]}>
+        <cylinderGeometry args={[0.5, 0.53, 0.14, 8]} />
+        <meshStandardMaterial
+          ref={glow}
+          color={'#c3ccd4'}
+          emissive={'#cfe4ff'}
+          emissiveIntensity={0.08}
+          metalness={0.7}
+          roughness={0.3}
+        />
+      </mesh>
       {/* pyramidal crown + needle */}
-      <mesh position={[0, H + 0.55, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
-        <coneGeometry args={[0.52, 1.2, 4]} />
+      <mesh position={[0, H + 0.68, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
+        <coneGeometry args={[0.5, 1.1, 4]} />
         <meshStandardMaterial color={'#aab6c0'} metalness={0.75} roughness={0.3} />
       </mesh>
-      <mesh position={[0, H + 1.65, 0]}>
+      <mesh position={[0, H + 1.75, 0]}>
         <cylinderGeometry args={[0.02, 0.05, 1.1, 6]} />
         <meshStandardMaterial color={'#cfd6de'} metalness={0.8} roughness={0.3} />
+      </mesh>
+      <mesh position={[0, H + 2.32, 0]}>
+        <sphereGeometry args={[0.05, 8, 8]} />
+        <meshStandardMaterial color={'#ff4d4d'} emissive={'#ff2a2a'} emissiveIntensity={1.6} />
       </mesh>
     </group>
   )
@@ -98,6 +140,11 @@ function Kk100({ position }: { position: [number, number, number] }) {
   }
   return (
     <group position={position} rotation={[0, -0.3, 0]}>
+      {/* podium */}
+      <mesh position={[0, 0.25, 0]} castShadow receiveShadow>
+        <boxGeometry args={[2.2, 0.5, 1.6]} />
+        <meshStandardMaterial color={'#97a6b2'} metalness={0.5} roughness={0.45} />
+      </mesh>
       <mesh position={[0, 3.4, 0]} castShadow>
         <boxGeometry args={[1.5, 6.8, 1.0]} />
         {mat(4, 9)}
@@ -146,15 +193,32 @@ function DiWang({ position }: { position: [number, number, number] }) {
           emissiveIntensity={0.03}
         />
       </mesh>
-      {/* crown deck + the signature twin masts */}
+      {/* crown deck + the signature twin masts on their base spheres */}
       <mesh position={[0, 8.9, 0]} castShadow>
         <boxGeometry args={[1.75, 0.2, 0.78]} />
         <meshStandardMaterial color={'#5f7568'} metalness={0.7} roughness={0.35} />
       </mesh>
       {[-0.6, 0.6].map((x) => (
-        <mesh key={x} position={[x, 9.9, 0]}>
-          <cylinderGeometry args={[0.025, 0.05, 1.9, 6]} />
-          <meshStandardMaterial color={'#cfd6de'} metalness={0.8} roughness={0.3} />
+        <group key={x}>
+          <mesh position={[x, 9.12, 0]}>
+            <sphereGeometry args={[0.14, 12, 12]} />
+            <meshStandardMaterial color={'#cfd6de'} metalness={0.8} roughness={0.25} />
+          </mesh>
+          <mesh position={[x, 10.05, 0]}>
+            <cylinderGeometry args={[0.025, 0.05, 1.9, 6]} />
+            <meshStandardMaterial color={'#cfd6de'} metalness={0.8} roughness={0.3} />
+          </mesh>
+          <mesh position={[x, 11.05, 0]}>
+            <sphereGeometry args={[0.04, 8, 8]} />
+            <meshStandardMaterial color={'#ff4d4d'} emissive={'#ff2a2a'} emissiveIntensity={1.6} />
+          </mesh>
+        </group>
+      ))}
+      {/* edge fins on the narrow faces */}
+      {[-0.88, 0.88].map((x) => (
+        <mesh key={x} position={[x, 4.4, 0]} castShadow>
+          <boxGeometry args={[0.06, 8.8, 0.5]} />
+          <meshStandardMaterial color={'#7e9a8c'} metalness={0.7} roughness={0.3} />
         </mesh>
       ))}
     </group>

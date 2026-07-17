@@ -31,11 +31,34 @@ function Panda({ position }: { position: [number, number, number] }) {
           <sphereGeometry args={[0.72, 24, 20]} />
           <meshStandardMaterial color={FUR_W} roughness={0.9} />
         </mesh>
-        {/* ears */}
+        {/* pale tummy patch */}
+        <mesh position={[0, 0.1, 0.62]} scale={[0.72, 0.8, 0.45]}>
+          <sphereGeometry args={[0.72, 18, 14]} />
+          <meshStandardMaterial color={'#faf8f2'} roughness={0.88} />
+        </mesh>
+        {/* tail */}
+        <mesh position={[0, -0.55, -0.92]}>
+          <sphereGeometry args={[0.22, 12, 10]} />
+          <meshStandardMaterial color={FUR_W} roughness={0.9} />
+        </mesh>
+        {/* ears with inner discs */}
         {[-0.42, 0.42].map((x) => (
-          <mesh key={x} position={[x, 1.92, 0.05]} castShadow>
-            <sphereGeometry args={[0.2, 14, 12]} />
-            <meshStandardMaterial color={FUR_B} roughness={0.9} />
+          <group key={x}>
+            <mesh position={[x, 1.92, 0.05]} castShadow>
+              <sphereGeometry args={[0.2, 14, 12]} />
+              <meshStandardMaterial color={FUR_B} roughness={0.9} />
+            </mesh>
+            <mesh position={[x * 0.92, 1.9, 0.21]} scale={[0.6, 0.6, 0.3]}>
+              <sphereGeometry args={[0.14, 10, 8]} />
+              <meshStandardMaterial color={'#4a4a50'} roughness={0.9} />
+            </mesh>
+          </group>
+        ))}
+        {/* blush cheeks */}
+        {[-0.4, 0.4].map((x) => (
+          <mesh key={x} position={[x, 1.16, 0.55]} scale={[0.5, 0.35, 0.25]}>
+            <sphereGeometry args={[0.16, 10, 8]} />
+            <meshStandardMaterial color={'#e8b09a'} roughness={0.9} />
           </mesh>
         ))}
         {/* eye patches */}
@@ -95,11 +118,23 @@ function Panda({ position }: { position: [number, number, number] }) {
         </group>
       </group>
 
+      {/* a rock and a fallen bamboo shoot for the enclosure feel */}
+      <mesh position={[1.6, 0.32, 1.1]} rotation={[0.3, 0.8, 0.2]} castShadow>
+        <dodecahedronGeometry args={[0.34, 0]} />
+        <meshStandardMaterial color={'#9a958a'} roughness={0.95} />
+      </mesh>
+      <mesh position={[0.9, 0.2, 1.7]} rotation={[0, 0.6, Math.PI / 2.2]}>
+        <cylinderGeometry args={[0.04, 0.05, 0.9, 6]} />
+        <meshStandardMaterial color={'#8fae55'} roughness={0.8} />
+      </mesh>
+
       {/* bamboo clump beside the mound */}
       {[
         [-1.7, 0.55, 0.9],
         [-1.45, 0.7, 1.15],
         [-1.9, 0.65, 1.25],
+        [-2.1, 0.5, 0.95],
+        [-1.6, 0.8, 1.45],
       ].map(([x, h, z], i) => (
         <group key={i} position={[x, 0, z]}>
           <mesh position={[0, h, 0]}>
@@ -147,15 +182,36 @@ function TianfuTwinTowers({ position }: { position: [number, number, number] }) 
           emissiveIntensity={0.03}
         />
       </mesh>
-      {/* slanted crown blade */}
+      {/* slanted crown blade with a lit edge */}
       <mesh position={[mirror * 0.12, 9.0, 0]} rotation={[0, 0, mirror * 0.18]} castShadow>
         <boxGeometry args={[1.15, 0.75, 0.95]} />
         <meshStandardMaterial color={'#93a6b6'} metalness={0.7} roughness={0.32} />
+      </mesh>
+      <mesh position={[mirror * 0.19, 9.42, 0]} rotation={[0, 0, mirror * 0.18]}>
+        <boxGeometry args={[1.1, 0.07, 0.9]} />
+        <meshStandardMaterial
+          ref={glow}
+          color={'#aebfce'}
+          emissive={'#bfe0ff'}
+          emissiveIntensity={0.08}
+          metalness={0.6}
+          roughness={0.3}
+        />
+      </mesh>
+      {/* antenna */}
+      <mesh position={[mirror * 0.2, 10.2, 0]}>
+        <cylinderGeometry args={[0.015, 0.04, 1.3, 6]} />
+        <meshStandardMaterial color={'#cfd6de'} metalness={0.8} roughness={0.3} />
       </mesh>
     </group>
   )
   return (
     <group position={position} rotation={[0, 0.35, 0]}>
+      {/* shared podium linking the pair */}
+      <mesh position={[0, 0.3, 0]} castShadow receiveShadow>
+        <boxGeometry args={[3.4, 0.6, 1.5]} />
+        <meshStandardMaterial color={'#98a7b5'} metalness={0.5} roughness={0.45} />
+      </mesh>
       {tower(-0.95, 1)}
       {tower(0.95, -1)}
     </group>
