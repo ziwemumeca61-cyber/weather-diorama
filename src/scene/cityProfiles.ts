@@ -34,6 +34,10 @@ const XianLandmarks = lazy(() => import('./landmarks/Xian'))
 const HangzhouLandmarks = lazy(() => import('./landmarks/Hangzhou'))
 const ChongqingLandmarks = lazy(() => import('./landmarks/Chongqing'))
 const TianjinLandmarks = lazy(() => import('./landmarks/Tianjin'))
+const ShenzhenLandmarks = lazy(() => import('./landmarks/Shenzhen'))
+const WuhanLandmarks = lazy(() => import('./landmarks/Wuhan'))
+const ChengduLandmarks = lazy(() => import('./landmarks/Chengdu'))
+const SuzhouLandmarks = lazy(() => import('./landmarks/Suzhou'))
 const Cc0Downtown = lazy(() => import('./landmarks/Cc0Downtown'))
 
 /**
@@ -115,6 +119,62 @@ export const CITY_PROFILES: CityProfile[] = [
     calmZones: [{ x: 0, z: 3.5, r: 6.0, maxHeight: 2.2 }],
     // the wheel carries its own bridge deck; keep the shipping lanes clear of it
     water: { kind: 'river', boats: false, bridge: false },
+  },
+  {
+    id: 'shenzhen',
+    match: /深圳|shenzhen/i,
+    Landmarks: ShenzhenLandmarks,
+    clearZones: [
+      { x: 0.4, z: -4.4, r: 1.9 }, // 平安金融中心 Ping An
+      { x: -2.9, z: -3.6, r: 1.5 }, // 京基100 KK100
+      { x: 3.6, z: -3.0, r: 1.5 }, // 地王大厦 Di Wang
+    ],
+    calmZones: [{ x: 0.4, z: -3.8, r: 6.0, maxHeight: 3.4 }],
+    // Shenzhen Bay keeps the default waterfront
+  },
+  {
+    id: 'wuhan',
+    match: /武汉|wuhan/i,
+    Landmarks: WuhanLandmarks,
+    clearZones: [
+      { x: -3.4, z: 0.6, r: 3.0 }, // 黄鹤楼 Yellow Crane Tower terrace
+      { x: 3.2, z: -4.2, r: 1.6 }, // 绿地中心 Greenland Center
+    ],
+    calmZones: [
+      { x: -3.4, z: 0.6, r: 4.8, maxHeight: 2.0 },
+      { x: 3.2, z: -4.2, r: 3.4, maxHeight: 3.0 },
+    ],
+    // 长江 — the broad Yangtze with the big bridge
+    water: { kind: 'river', z0: 6.2 },
+  },
+  {
+    id: 'chengdu',
+    match: /成都|chengdu/i,
+    Landmarks: ChengduLandmarks,
+    clearZones: [
+      { x: -3.2, z: 0.8, r: 2.9 }, // panda mound + bamboo
+      { x: 2.8, z: -4.0, r: 2.4 }, // 天府双塔 twin towers
+    ],
+    calmZones: [
+      { x: -3.2, z: 0.8, r: 4.6, maxHeight: 1.8 },
+      { x: 2.8, z: -4.0, r: 3.8, maxHeight: 3.0 },
+    ],
+    // 锦江 — a modest stream, no shipping
+    water: { kind: 'river', z0: 8.4, boats: false, bridge: false },
+  },
+  {
+    id: 'suzhou',
+    match: /苏州|suzhou/i,
+    Landmarks: SuzhouLandmarks,
+    clearZones: [
+      { x: 2.9, z: -3.8, r: 2.2 }, // 东方之门 Gate of the Orient
+      { x: -3.4, z: 0.5, r: 2.9 }, // 虎丘塔 Tiger Hill
+    ],
+    calmZones: [
+      { x: 2.9, z: -3.8, r: 4.0, maxHeight: 2.8 },
+      { x: -3.4, z: 0.5, r: 4.6, maxHeight: 1.8 },
+    ],
+    // canal city keeps the default waterway
   },
   {
     // GLB demo: the whole Littlest Tokyo model as a drop-in landmark, proving
