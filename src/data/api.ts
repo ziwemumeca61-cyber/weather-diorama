@@ -30,8 +30,7 @@ export interface CurrentWeather {
 const GEOCODE_URL = 'https://geocoding-api.open-meteo.com/v1/search'
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast'
 
-/** Look up a place by name. Returns the best match (or throws). */
-export async function geocodeCity(query: string): Promise<GeoPlace[]> {
+async function geocodeOnce(query: string): Promise<GeoPlace[]> {
   const url = `${GEOCODE_URL}?name=${encodeURIComponent(query)}&count=6&language=zh&format=json`
   const res = await fetch(url)
   if (!res.ok) throw new Error(`geocode failed: ${res.status}`)
@@ -45,6 +44,23 @@ export async function geocodeCity(query: string): Promise<GeoPlace[]> {
     longitude: r.longitude,
     timezone: r.timezone,
   }))
+}
+
+/**
+ * Look up a place by name. County-level Chinese cities are often indexed with
+ * an administrative suffix (曲阜 → 曲阜市), so a bare CJK query that comes up
+ * empty is retried with 市 / 县 appended.
+ */
+export async function geocodeCity(query: string): Promise<GeoPlace[]> {
+  const first = await geocodeOnce(query)
+  if (first.length) return first
+  if (/[一-鿿]$/.test(query) && !/[市县区]$/.test(query)) {
+    for (const suffix of ['市', '县']) {
+      const retry = await geocodeOnce(query + suffix)
+      if (retry.length) return retry
+    }
+  }
+  return first
 }
 
 /** Derive a coarse time-of-day bucket from the local hour + is_day flag. */

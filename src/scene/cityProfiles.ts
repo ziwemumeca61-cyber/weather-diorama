@@ -42,6 +42,10 @@ const NanjingLandmarks = lazy(() => import('./landmarks/Nanjing'))
 const HarbinLandmarks = lazy(() => import('./landmarks/Harbin'))
 const HongKongLandmarks = lazy(() => import('./landmarks/HongKong'))
 const QingdaoLandmarks = lazy(() => import('./landmarks/Qingdao'))
+const JinanLandmarks = lazy(() => import('./landmarks/Jinan'))
+const TaianLandmarks = lazy(() => import('./landmarks/Taian'))
+const QufuLandmarks = lazy(() => import('./landmarks/Qufu'))
+const YantaiLandmarks = lazy(() => import('./landmarks/Yantai'))
 const Cc0Downtown = lazy(() => import('./landmarks/Cc0Downtown'))
 
 /**
@@ -220,6 +224,52 @@ export const CITY_PROFILES: CityProfile[] = [
     calmZones: [{ x: 0, z: -3.8, r: 6.0, maxHeight: 3.6 }],
     // 维多利亚港 Victoria Harbour with the ferries
     water: { kind: 'river', z0: 6.0 },
+  },
+  {
+    id: 'jinan',
+    match: /济南|jinan/i,
+    Landmarks: JinanLandmarks,
+    clearZones: [
+      { x: -3.3, z: 0.8, r: 2.6 }, // 趵突泉 Baotu Spring
+      { x: 3.2, z: 0.1, r: 2.4 }, // 超然楼 Chaoran Tower
+      { x: 1.8, z: 3.6, r: 3.4 }, // 大明湖 Daming Lake footprint
+    ],
+    calmZones: [
+      { x: -3.3, z: 0.8, r: 4.2, maxHeight: 1.8 },
+      { x: 3.2, z: 0.6, r: 4.2, maxHeight: 2.0 },
+    ],
+    // 大明湖 — the spring-fed lake instead of a river
+    water: { kind: 'lake', x: 1.8, z: 3.6, rx: 3.1, rz: 2.2 },
+  },
+  {
+    id: 'taian',
+    match: /泰安|tai[’']an|taian/i,
+    Landmarks: TaianLandmarks,
+    clearZones: [{ x: -1.5, z: -4.4, r: 4.7 }], // 泰山 the massif itself
+    calmZones: [{ x: -1.5, z: -4.4, r: 7.0, maxHeight: 1.8 }], // town stays at its foot
+    // inland mountain town — no waterway, the blocks run to the tray edge
+    water: { kind: 'none' },
+  },
+  {
+    id: 'qufu',
+    match: /曲阜|qufu/i,
+    Landmarks: QufuLandmarks,
+    clearZones: [
+      { x: -3.2, z: 0.6, r: 3.0 }, // 大成殿 Dacheng Hall terraces
+      { x: 3.2, z: -0.4, r: 2.8 }, // 万仞宫墙 gate
+    ],
+    // the ancient town stays low everywhere so the temple roofs dominate
+    calmZones: [{ x: 0, z: -1, r: 9.5, maxHeight: 2.3 }],
+    // 护城河 moat, no shipping
+    water: { kind: 'river', z0: 9.0, boats: false, bridge: false },
+  },
+  {
+    id: 'yantai',
+    match: /烟台|yantai/i,
+    Landmarks: YantaiLandmarks,
+    clearZones: [{ x: -2.7, z: 4.9, r: 2.8 }], // lighthouse headland on the shore
+    calmZones: [{ x: -2.7, z: 4.2, r: 4.4, maxHeight: 1.6 }], // keep the seafront open
+    // the bay keeps the default waterfront with shipping
   },
   {
     id: 'qingdao',
