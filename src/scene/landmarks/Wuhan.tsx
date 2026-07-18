@@ -3,59 +3,7 @@ import * as THREE from 'three'
 import { useNightGlow } from './nightGlow'
 import { makeHipRoof, makeTileTexture, glazedRoofMaterial } from './roofKit'
 import { makeTowerSkin } from './towerSkin'
-
-/**
- * Red lattice-window wall for the Yellow Crane Tower: painted beam band on
- * top, gilt-latticed window bays that glow warmly at night.
- */
-function makeLatticeWall(): { map: THREE.Texture; emissiveMap: THREE.Texture } {
-  const W = 256
-  const H = 128
-  const make = (emissive: boolean) => {
-    const c = document.createElement('canvas')
-    c.width = W
-    c.height = H
-    const g = c.getContext('2d')!
-    g.fillStyle = emissive ? '#000000' : '#a8402f'
-    g.fillRect(0, 0, W, H)
-    if (!emissive) {
-      // painted beam band with gilt studs
-      g.fillStyle = '#2f4d33'
-      g.fillRect(0, 6, W, 16)
-      g.fillStyle = '#c8a24a'
-      for (let i = 0; i < 16; i++) g.fillRect(6 + i * 16, 10, 8, 8)
-      // edge pilasters
-      g.fillStyle = '#8f3325'
-      g.fillRect(0, 0, 8, H)
-      g.fillRect(W - 8, 0, 8, H)
-    }
-    // window bays with lattice mullions
-    const bays = 6
-    const bw = (W - 24) / bays
-    for (let i = 0; i < bays; i++) {
-      const x = 12 + i * bw + 3
-      const w = bw - 6
-      g.fillStyle = emissive ? '#ffb066' : '#5a2418'
-      g.fillRect(x, 32, w, 66)
-      g.strokeStyle = emissive ? '#b06a3a' : '#c8a24a'
-      g.lineWidth = 2
-      for (let m = 1; m <= 3; m++) {
-        g.beginPath()
-        g.moveTo(x + (m * w) / 4 + 0.5, 32)
-        g.lineTo(x + (m * w) / 4 + 0.5, 98)
-        g.stroke()
-      }
-      g.beginPath()
-      g.moveTo(x, 65)
-      g.lineTo(x + w, 65)
-      g.stroke()
-    }
-    const t = new THREE.CanvasTexture(c)
-    t.wrapS = t.wrapT = THREE.RepeatWrapping
-    return t
-  }
-  return { map: make(false), emissiveMap: make(true) }
-}
+import { makeHallWall } from './wallKit'
 
 /** Blue-and-gold name plaque, canvas-drawn: 黄鹤楼. */
 function makePlaqueTexture(): THREE.Texture {
@@ -83,7 +31,7 @@ function makePlaqueTexture(): THREE.Texture {
 function YellowCraneTower({ position }: { position: [number, number, number] }) {
   const glow = useNightGlow(1.7)
   const tileTex = useMemo(() => makeTileTexture('#caa032', '#a67f22'), [])
-  const wall = useMemo(() => makeLatticeWall(), [])
+  const wall = useMemo(() => makeHallWall(), [])
   const plaque = useMemo(() => makePlaqueTexture(), [])
   const tiers = useMemo(() => {
     const list: { w: number; bodyH: number; y: number }[] = []

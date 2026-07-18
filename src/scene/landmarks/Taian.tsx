@@ -41,19 +41,31 @@ function MountTai({ position }: { position: [number, number, number] }) {
 
   return (
     <group position={position}>
-      {/* massif: three stacked rocky cones */}
+      {/* massif: three stacked rounded ridges */}
       <mesh position={[0, 1.7, 0]} castShadow receiveShadow>
-        <coneGeometry args={[4.3, 3.4, 10]} />
-        <meshStandardMaterial color={ROCK} roughness={0.95} flatShading />
+        <coneGeometry args={[4.3, 3.4, 26]} />
+        <meshStandardMaterial color={'#7d8873'} roughness={0.95} />
       </mesh>
       <mesh position={[0.3, 3.7, -0.3]} castShadow>
-        <coneGeometry args={[2.9, 3.1, 9]} />
-        <meshStandardMaterial color={ROCK_DK} roughness={0.95} flatShading />
+        <coneGeometry args={[2.9, 3.1, 22]} />
+        <meshStandardMaterial color={ROCK_DK} roughness={0.95} />
       </mesh>
       <mesh position={[0.1, 5.6, -0.1]} castShadow>
-        <coneGeometry args={[1.7, 2.7, 8]} />
-        <meshStandardMaterial color={ROCK} roughness={0.95} flatShading />
+        <coneGeometry args={[1.7, 2.7, 18]} />
+        <meshStandardMaterial color={ROCK} roughness={0.95} />
       </mesh>
+      {/* rocky outcrops breaking the silhouette */}
+      {[
+        [2.1, 2.2, 1.6, 0.9],
+        [-2.4, 1.8, -1.2, 1.1],
+        [-1.2, 3.4, 1.5, 0.7],
+        [1.5, 4.4, -1.1, 0.6],
+      ].map(([x, y, z, s], i) => (
+        <mesh key={i} position={[x, y, z]} rotation={[0.4 * i, 0.8 * i, 0.3]} castShadow>
+          <dodecahedronGeometry args={[s, 0]} />
+          <meshStandardMaterial color={i % 2 ? ROCK_DK : '#8a927e'} roughness={0.95} flatShading />
+        </mesh>
+      ))}
 
       {/* pine patches */}
       {pines.map((p, i) => (
@@ -86,6 +98,11 @@ function MountTai({ position }: { position: [number, number, number] }) {
 
       {/* 玉皇顶 summit temple + 五岳独尊 stele */}
       <group position={[0.1, 6.95, -0.1]}>
+        {/* rock neck so the platform grows out of the peak instead of floating */}
+        <mesh position={[0, -0.45, 0]} castShadow>
+          <cylinderGeometry args={[0.55, 1.05, 1.1, 12]} />
+          <meshStandardMaterial color={ROCK_DK} roughness={0.95} />
+        </mesh>
         <mesh position={[0, 0.08, 0]} castShadow>
           <boxGeometry args={[1.5, 0.2, 1.2]} />
           <meshStandardMaterial color={'#a8a294'} roughness={0.9} />
