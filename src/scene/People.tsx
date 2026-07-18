@@ -130,6 +130,7 @@ function Person({ a, b, speed, phase, mode, appearance, hero, emoji, zones }: Pe
         const now = clock.elapsedTime
         if (tapPending.current) {
           tapPending.current = false
+          const prev = taps.current[taps.current.length - 1]
           taps.current = taps.current.filter((t0) => now - t0 < 2.4)
           taps.current.push(now)
           if (taps.current.length >= 5) {
@@ -139,7 +140,16 @@ function Person({ a, b, speed, phase, mode, appearance, hero, emoji, zones }: Pe
             showBubble('🎆')
           } else {
             tapAt.current = now
-            showBubble(emoji ?? '👋')
+            // manual double-tap detection: a moving chibi is too small for the
+            // native dblclick to land twice, so two taps <0.45s apart toggle
+            // the follow camera (an even number of toggles during the 5-tap
+            // combo cancels itself out)
+            if (prev !== undefined && now - prev < 0.45) {
+              followState.on = !followState.on
+              showBubble(followState.on ? '🎥' : emoji ?? '👋')
+            } else {
+              showBubble(emoji ?? '👋')
+            }
           }
         }
         const p = (now - tapAt.current) / 1.1
@@ -201,19 +211,18 @@ function Person({ a, b, speed, phase, mode, appearance, hero, emoji, zones }: Pe
             }
           : undefined
       }
-      onDoubleClick={
-        hero
-          ? (e) => {
-              e.stopPropagation()
-              followState.on = !followState.on
-            }
-          : undefined
-      }
     >
       {hero && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, 0]}>
           <ringGeometry args={[0.16, 0.21, 24]} />
           <meshBasicMaterial color={appearance.shirt} transparent opacity={0.85} />
+        </mesh>
+      )}
+      {hero && (
+        // generous invisible hit target so taps land on a small moving chibi
+        <mesh position={[0, 0.28, 0]}>
+          <sphereGeometry args={[0.4, 8, 8]} />
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
         </mesh>
       )}
       {hero && bubbleEmoji && (
