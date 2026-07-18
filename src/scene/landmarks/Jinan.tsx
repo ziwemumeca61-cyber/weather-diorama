@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useNightGlow } from './nightGlow'
 import { makeHipRoof, makeTileTexture, glazedRoofMaterial } from './roofKit'
+import { makeHallWall, wallMaps } from './wallKit'
 
 /**
  * 趵突泉 Baotu Spring — the square stone spring pool with its three gushing
@@ -11,6 +12,8 @@ function BaotuSpring({ position }: { position: [number, number, number] }) {
   const tileTex = useMemo(() => makeTileTexture('#5a6a60', '#414f47'), [])
   const roof = useMemo(() => makeHipRoof(1.7, 1.2, 0.34, 0.26, 0.26), [])
   const roofMat = useMemo(() => glazedRoofMaterial(tileTex, 2.4, 1.2, 0.25), [tileTex])
+  const wall = useMemo(() => makeHallWall({ bays: 4 }), [])
+  const pavWall = useMemo(() => wallMaps(wall, 3), [wall])
   return (
     <group position={position}>
       {/* stone pool rim */}
@@ -65,7 +68,14 @@ function BaotuSpring({ position }: { position: [number, number, number] }) {
       <group position={[0, 0, -1.75]}>
         <mesh position={[0, 0.45, 0]} castShadow>
           <boxGeometry args={[1.5, 0.9, 1.0]} />
-          <meshStandardMaterial ref={glow} color={'#a8442f'} roughness={0.7} emissive={'#ffb066'} emissiveIntensity={0.04} />
+          <meshStandardMaterial
+            ref={glow}
+            map={pavWall.map}
+            emissive={'#ffb066'}
+            emissiveMap={pavWall.emissiveMap}
+            emissiveIntensity={0.04}
+            roughness={0.7}
+          />
         </mesh>
         <mesh geometry={roof} material={roofMat} position={[0, 0.9, 0]} castShadow />
       </group>
@@ -84,8 +94,27 @@ function ChaoranTower({ position }: { position: [number, number, number] }) {
     [],
   )
   const mats = useMemo(() => roofs.map((_, i) => glazedRoofMaterial(tileTex, 3 - i * 0.5, 1.3, 0.35)), [roofs, tileTex])
-  const body = (
-    <meshStandardMaterial ref={glow} color={'#7c4a30'} roughness={0.7} emissive={'#ffc27a'} emissiveIntensity={0.05} />
+  const wallKit = useMemo(
+    () =>
+      makeHallWall({
+        wall: '#7c4a30',
+        pillar: '#63402a',
+        beam: '#3a5a46',
+        pane: '#3a2818',
+        bays: 5,
+      }),
+    [],
+  )
+  const tierWalls = useMemo(() => [wallMaps(wallKit, 4), wallMaps(wallKit, 3), wallMaps(wallKit, 3)], [wallKit])
+  const body = (i: number) => (
+    <meshStandardMaterial
+      ref={glow}
+      map={tierWalls[i].map}
+      emissive={'#ffc27a'}
+      emissiveMap={tierWalls[i].emissiveMap}
+      emissiveIntensity={0.05}
+      roughness={0.7}
+    />
   )
   return (
     <group position={position}>
@@ -97,19 +126,19 @@ function ChaoranTower({ position }: { position: [number, number, number] }) {
       {/* tier 1 */}
       <mesh position={[0, 1.05, 0]} castShadow>
         <boxGeometry args={[2.2, 0.9, 1.7]} />
-        {body}
+        {body(0)}
       </mesh>
       <mesh geometry={roofs[0]} material={mats[0]} position={[0, 1.5, 0]} castShadow />
       {/* tier 2 */}
       <mesh position={[0, 2.0, 0]} castShadow>
         <boxGeometry args={[1.8, 0.75, 1.35]} />
-        {body}
+        {body(1)}
       </mesh>
       <mesh geometry={roofs[1]} material={mats[1]} position={[0, 2.38, 0]} castShadow />
       {/* top tier */}
       <mesh position={[0, 2.85, 0]} castShadow>
         <boxGeometry args={[1.35, 0.65, 1.0]} />
-        {body}
+        {body(2)}
       </mesh>
       <mesh geometry={roofs[2]} material={mats[2]} position={[0, 3.18, 0]} castShadow />
       <mesh position={[0, 3.72, 0]}>

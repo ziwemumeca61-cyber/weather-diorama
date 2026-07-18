@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useNightGlow } from './nightGlow'
 import { makeHipRoof, makeTileTexture, glazedRoofMaterial } from './roofKit'
+import { makeHallWall, wallMaps } from './wallKit'
 
 /**
  * 大成殿 Dacheng Hall — the double-eaved heart of the Confucius Temple:
@@ -11,6 +12,9 @@ function DachengHall({ position }: { position: [number, number, number] }) {
   const tileTex = useMemo(() => makeTileTexture('#caa032', '#a67f22'), [])
   const roofs = useMemo(() => [makeHipRoof(4.0, 2.9, 0.5, 0.28, 0.28), makeHipRoof(3.2, 2.2, 0.5, 0.28, 0.3)], [])
   const mats = useMemo(() => roofs.map((_, i) => glazedRoofMaterial(tileTex, 4 - i, 1.4, 0.32)), [roofs, tileTex])
+  const wall = useMemo(() => makeHallWall({ beam: '#274a6b', bays: 7 }), [])
+  const wallLo = useMemo(() => wallMaps(wall, 6), [wall])
+  const wallHi = useMemo(() => wallMaps(wall, 5), [wall])
   return (
     <group position={position}>
       {/* two-step white stone terrace */}
@@ -29,17 +33,31 @@ function DachengHall({ position }: { position: [number, number, number] }) {
           <meshStandardMaterial color={'#8f3a28'} roughness={0.6} />
         </mesh>
       ))}
-      {/* hall body */}
+      {/* hall body with lattice-window walls */}
       <mesh position={[0, 1.15, 0]} castShadow>
         <boxGeometry args={[3.3, 1.05, 2.1]} />
-        <meshStandardMaterial ref={glow} color={'#a8402f'} roughness={0.7} emissive={'#ffb066'} emissiveIntensity={0.04} />
+        <meshStandardMaterial
+          ref={glow}
+          map={wallLo.map}
+          emissive={'#ffb066'}
+          emissiveMap={wallLo.emissiveMap}
+          emissiveIntensity={0.04}
+          roughness={0.7}
+        />
       </mesh>
       {/* lower eave */}
       <mesh geometry={roofs[0]} material={mats[0]} position={[0, 1.68, 0]} castShadow />
       {/* clerestory + upper roof */}
       <mesh position={[0, 2.15, 0]} castShadow>
         <boxGeometry args={[2.6, 0.55, 1.6]} />
-        <meshStandardMaterial ref={glow} color={'#a8402f'} roughness={0.7} emissive={'#ffb066'} emissiveIntensity={0.04} />
+        <meshStandardMaterial
+          ref={glow}
+          map={wallHi.map}
+          emissive={'#ffb066'}
+          emissiveMap={wallHi.emissiveMap}
+          emissiveIntensity={0.04}
+          roughness={0.7}
+        />
       </mesh>
       <mesh geometry={roofs[1]} material={mats[1]} position={[0, 2.44, 0]} castShadow />
       {/* main ridge with gold end knobs */}
@@ -66,6 +84,8 @@ function GongQiangGate({ position }: { position: [number, number, number] }) {
   const tileTex = useMemo(() => makeTileTexture('#55605a', '#3c4640'), [])
   const roof = useMemo(() => makeHipRoof(2.0, 1.2, 0.4, 0.28, 0.26), [])
   const roofMat = useMemo(() => glazedRoofMaterial(tileTex, 2.6, 1.3, 0.25), [tileTex])
+  const wall = useMemo(() => makeHallWall({ bays: 5 }), [])
+  const towerWall = useMemo(() => wallMaps(wall, 3), [wall])
   const LEN = 5.0
   return (
     <group position={position}>
@@ -88,11 +108,18 @@ function GongQiangGate({ position }: { position: [number, number, number] }) {
         <cylinderGeometry args={[0.28, 0.28, 0.04, 14, 1, false, 0, Math.PI]} />
         <meshStandardMaterial color={'#241c14'} roughness={0.95} />
       </mesh>
-      {/* gate tower */}
+      {/* gate tower with lattice walls */}
       <group position={[0, 1.4, 0]}>
         <mesh position={[0, 0.33, 0]} castShadow>
           <boxGeometry args={[1.7, 0.66, 0.95]} />
-          <meshStandardMaterial ref={glow} color={'#a8442f'} roughness={0.7} emissive={'#ffb066'} emissiveIntensity={0.04} />
+          <meshStandardMaterial
+            ref={glow}
+            map={towerWall.map}
+            emissive={'#ffb066'}
+            emissiveMap={towerWall.emissiveMap}
+            emissiveIntensity={0.04}
+            roughness={0.7}
+          />
         </mesh>
         <mesh geometry={roof} material={roofMat} position={[0, 0.66, 0]} castShadow />
       </group>

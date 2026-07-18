@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useNightGlow } from './nightGlow'
 import { makeHipRoof, makeTileTexture, glazedRoofMaterial } from './roofKit'
+import { makeHallWall, wallMaps } from './wallKit'
 
 const BRICK = '#cdb488'
 const BRICK_DK = '#b89c6f'
@@ -98,6 +99,18 @@ function BellTower({ position }: { position: [number, number, number] }) {
     [],
   )
   const mats = useMemo(() => roofs.map((_, i) => glazedRoofMaterial(tileTex, 3 - i * 0.4, 1.4, 0.3)), [roofs, tileTex])
+  const wall = useMemo(() => makeHallWall({ beam: '#274a3d', bays: 5 }), [])
+  const tierWalls = useMemo(() => [wallMaps(wall, 4), wallMaps(wall, 3), wallMaps(wall, 2)], [wall])
+  const tierMat = (i: number) => (
+    <meshStandardMaterial
+      ref={glow}
+      map={tierWalls[i].map}
+      emissive={'#ff9a5c'}
+      emissiveMap={tierWalls[i].emissiveMap}
+      emissiveIntensity={0.03}
+      roughness={0.7}
+    />
+  )
   return (
     <group position={position}>
       {/* brick platform with arch */}
@@ -124,19 +137,19 @@ function BellTower({ position }: { position: [number, number, number] }) {
       {/* body + tier 1 */}
       <mesh position={[0, 1.3, 0]} castShadow>
         <boxGeometry args={[1.9, 0.6, 1.9]} />
-        <meshStandardMaterial ref={glow} color={'#a83a30'} roughness={0.7} emissive={'#ff9a5c'} emissiveIntensity={0.03} />
+        {tierMat(0)}
       </mesh>
       <mesh geometry={roofs[0]} material={mats[0]} position={[0, 1.6, 0]} castShadow />
       {/* tier 2 */}
       <mesh position={[0, 2.1, 0]} castShadow>
         <boxGeometry args={[1.4, 0.5, 1.4]} />
-        <meshStandardMaterial ref={glow} color={'#a83a30'} roughness={0.7} emissive={'#ff9a5c'} emissiveIntensity={0.03} />
+        {tierMat(1)}
       </mesh>
       <mesh geometry={roofs[1]} material={mats[1]} position={[0, 2.36, 0]} castShadow />
       {/* tier 3 */}
       <mesh position={[0, 2.78, 0]} castShadow>
         <boxGeometry args={[0.95, 0.42, 0.95]} />
-        <meshStandardMaterial ref={glow} color={'#a83a30'} roughness={0.7} emissive={'#ff9a5c'} emissiveIntensity={0.03} />
+        {tierMat(2)}
       </mesh>
       <mesh geometry={roofs[2]} material={mats[2]} position={[0, 3.0, 0]} castShadow />
       <mesh position={[0, 3.4, 0]}>

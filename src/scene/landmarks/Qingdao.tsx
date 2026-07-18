@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import { useNightGlow } from './nightGlow'
 import { makeConcaveRoof } from './roofKit'
 import { CITY } from '../cityData'
+import { makeHallWall, wallMaps } from './wallKit'
 
 /**
  * 栈桥·回澜阁 Zhanqiao Pier — a long stone pier reaching into the bay, ending
@@ -21,6 +22,18 @@ function ZhanqiaoPier({ position }: { position: [number, number, number] }) {
         envMapIntensity: 1.4,
       }),
     [],
+  )
+  const wall = useMemo(() => makeHallWall({ bays: 4 }), [])
+  const pavWalls = useMemo(() => [wallMaps(wall, 3), wallMaps(wall, 2)], [wall])
+  const pavMat = (i: number) => (
+    <meshStandardMaterial
+      ref={glow}
+      map={pavWalls[i].map}
+      emissive={'#ffb066'}
+      emissiveMap={pavWalls[i].emissiveMap}
+      emissiveIntensity={0.04}
+      roughness={0.65}
+    />
   )
   const PIER_LEN = 3.0
   const pierStart = CITY.riverZ - 0.5 // rooted on the shore
@@ -52,12 +65,12 @@ function ZhanqiaoPier({ position }: { position: [number, number, number] }) {
       <group position={[0, 0.32, pierStart + PIER_LEN + 0.5]}>
         <mesh position={[0, 0.32, 0]} castShadow>
           <cylinderGeometry args={[0.72, 0.78, 0.64, 8]} />
-          <meshStandardMaterial ref={glow} color={'#a8442f'} roughness={0.65} emissive={'#ffb066'} emissiveIntensity={0.04} />
+          {pavMat(0)}
         </mesh>
         <mesh geometry={roofs[0]} material={roofMat} position={[0, 0.68, 0]} castShadow />
         <mesh position={[0, 0.98, 0]} castShadow>
           <cylinderGeometry args={[0.5, 0.56, 0.5, 8]} />
-          <meshStandardMaterial ref={glow} color={'#a8442f'} roughness={0.65} emissive={'#ffb066'} emissiveIntensity={0.04} />
+          {pavMat(1)}
         </mesh>
         <mesh geometry={roofs[1]} material={roofMat} position={[0, 1.26, 0]} castShadow />
         <mesh position={[0, 1.68, 0]}>

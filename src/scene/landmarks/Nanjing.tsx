@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import { useNightGlow } from './nightGlow'
 import { makeTowerSkin } from './towerSkin'
 import { makeHipRoof, makeTileTexture, glazedRoofMaterial } from './roofKit'
+import { makeHallWall, wallMaps } from './wallKit'
 
 /** 紫峰大厦 Zifeng Tower — tapering shaft, stepped shoulder, needle spire. */
 function ZifengTower({ position }: { position: [number, number, number] }) {
@@ -103,6 +104,18 @@ function CityWallGate({ position }: { position: [number, number, number] }) {
   const tileTex = useMemo(() => makeTileTexture('#55605a', '#3c4640'), [])
   const roofs = useMemo(() => [makeHipRoof(2.2, 1.3, 0.4, 0.28, 0.26), makeHipRoof(1.7, 1.0, 0.36, 0.26, 0.26)], [])
   const mats = useMemo(() => roofs.map((_, i) => glazedRoofMaterial(tileTex, 3 - i * 0.6, 1.3, 0.25)), [roofs, tileTex])
+  const wall = useMemo(() => makeHallWall({ bays: 5 }), [])
+  const tierWalls = useMemo(() => [wallMaps(wall, 4), wallMaps(wall, 3)], [wall])
+  const tierMat = (i: number) => (
+    <meshStandardMaterial
+      ref={glow}
+      map={tierWalls[i].map}
+      emissive={'#ffb066'}
+      emissiveMap={tierWalls[i].emissiveMap}
+      emissiveIntensity={0.04}
+      roughness={0.7}
+    />
+  )
   const LEN = 5.6
   return (
     <group position={position}>
@@ -131,12 +144,12 @@ function CityWallGate({ position }: { position: [number, number, number] }) {
       <group position={[0, 1.3, 0]}>
         <mesh position={[0, 0.35, 0]} castShadow>
           <boxGeometry args={[1.9, 0.7, 1.05]} />
-          <meshStandardMaterial ref={glow} color={'#a8402f'} roughness={0.7} emissive={'#ffb066'} emissiveIntensity={0.04} />
+          {tierMat(0)}
         </mesh>
         <mesh geometry={roofs[0]} material={mats[0]} position={[0, 0.7, 0]} castShadow />
         <mesh position={[0, 1.28, 0]} castShadow>
           <boxGeometry args={[1.4, 0.5, 0.8]} />
-          <meshStandardMaterial ref={glow} color={'#a8402f'} roughness={0.7} emissive={'#ffb066'} emissiveIntensity={0.04} />
+          {tierMat(1)}
         </mesh>
         <mesh geometry={roofs[1]} material={mats[1]} position={[0, 1.54, 0]} castShadow />
       </group>
