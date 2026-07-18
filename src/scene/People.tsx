@@ -1,6 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { useNightGlow } from './landmarks/nightGlow'
 import { useCityProfile } from './cityProfiles'
@@ -9,6 +8,24 @@ import type { ClearZone } from './cityData'
 /** Hero's live world position, shared with the dog and the follow camera. */
 export const heroState = { pos: new THREE.Vector3(0, 0, 3.9) }
 const followState = { on: false }
+
+/** Canvas-drawn emoji sprite texture (cached) — no DOM, so it never blocks taps. */
+const emojiTexCache = new Map<string, THREE.Texture>()
+function emojiTexture(e: string): THREE.Texture {
+  let t = emojiTexCache.get(e)
+  if (!t) {
+    const c = document.createElement('canvas')
+    c.width = c.height = 128
+    const g = c.getContext('2d')!
+    g.font = '96px serif'
+    g.textAlign = 'center'
+    g.textBaseline = 'middle'
+    g.fillText(e, 64, 70)
+    t = new THREE.CanvasTexture(c)
+    emojiTexCache.set(e, t)
+  }
+  return t
+}
 
 /** Festival window by real date: Spring Festival (±3d) / Mid-Autumn (±1d). */
 function currentFestival(): 'cny' | 'ma' | null {
@@ -72,8 +89,8 @@ function Person({ a, b, speed, phase, mode, appearance, hero, emoji, zones }: Pe
   // snowball tosses in snow; a lantern glows at night
   const [bubbleEmoji, setBubbleEmoji] = useState<string | null>(null)
   const bubbleTimer = useRef<ReturnType<typeof setTimeout>>()
-  const tapPending = useRef(false)
-  const taps = useRef<number[]>([])
+  const pendingAct = useRef<null | 'tap' | 'follow' | 'flip'>(null)
+  const tapsMs = useRef<number[]>([])
   const tapAt = useRef(-10)
   const flipAt = useRef(-10)
   const zoneCooldown = useRef<Record<number, number>>({})
@@ -128,28 +145,17 @@ function Person({ a, b, speed, phase, mode, appearance, hero, emoji, zones }: Pe
       if (hero) {
         heroState.pos.copy(pos)
         const now = clock.elapsedTime
-        if (tapPending.current) {
-          tapPending.current = false
-          const prev = taps.current[taps.current.length - 1]
-          taps.current = taps.current.filter((t0) => now - t0 < 2.4)
-          taps.current.push(now)
-          if (taps.current.length >= 5) {
-            // combo easter egg: backflip
-            taps.current = []
+        // consume the action decided inside the click handler (real event
+        // timing — frame-rate independent, unlike clock-based detection)
+        if (pendingAct.current) {
+          const act = pendingAct.current
+          pendingAct.current = null
+          if (act === 'flip') {
             flipAt.current = now
             showBubble('🎆')
           } else {
             tapAt.current = now
-            // manual double-tap detection: a moving chibi is too small for the
-            // native dblclick to land twice, so two taps <0.45s apart toggle
-            // the follow camera (an even number of toggles during the 5-tap
-            // combo cancels itself out)
-            if (prev !== undefined && now - prev < 0.45) {
-              followState.on = !followState.on
-              showBubble(followState.on ? '🎥' : emoji ?? '👋')
-            } else {
-              showBubble(emoji ?? '👋')
-            }
+            showBubble(act === 'follow' ? '🎥' : emoji ?? '👋')
           }
         }
         const p = (now - tapAt.current) / 1.1
@@ -207,7 +213,21 @@ function Person({ a, b, speed, phase, mode, appearance, hero, emoji, zones }: Pe
         hero
           ? (e) => {
               e.stopPropagation()
-              tapPending.current = true
+              // all timing decisions use real event time so low frame rates
+              // (phones, heavy scenes) can't stretch the double-tap window
+              const ms = performance.now()
+              tapsMs.current = tapsMs.current.filter((t0) => ms - t0 < 2400)
+              const prevMs = tapsMs.current[tapsMs.current.length - 1]
+              tapsMs.current.push(ms)
+              if (tapsMs.current.length >= 5) {
+                tapsMs.current = []
+                pendingAct.current = 'flip'
+              } else if (prevMs !== undefined && ms - prevMs < 450) {
+                followState.on = !followState.on
+                pendingAct.current = followState.on ? 'follow' : 'tap'
+              } else {
+                pendingAct.current = 'tap'
+              }
             }
           : undefined
       }
@@ -226,9 +246,9 @@ function Person({ a, b, speed, phase, mode, appearance, hero, emoji, zones }: Pe
         </mesh>
       )}
       {hero && bubbleEmoji && (
-        <Html center position={[0, 0.66, 0]} style={{ pointerEvents: 'none' }}>
-          <div style={{ fontSize: 24, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.45))' }}>{bubbleEmoji}</div>
-        </Html>
+        <sprite position={[0, 0.72, 0]} scale={[0.3, 0.3, 0.3]}>
+          <spriteMaterial map={emojiTexture(bubbleEmoji)} transparent depthWrite={false} />
+        </sprite>
       )}
       {hero && (
         <group ref={snowball} visible={false}>
