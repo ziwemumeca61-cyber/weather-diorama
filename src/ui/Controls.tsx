@@ -7,7 +7,7 @@ import {
   geolocate,
   type GeoPlace,
 } from '../data/api'
-import { writeCityParam } from '../data/urlCity'
+import { readCityParam, writeCityParam } from '../data/urlCity'
 import type { WeatherKind, TimeOfDay } from '../weather/weatherCode'
 import { labelForKind } from '../weather/weatherCode'
 import type { Appearance } from '../data/store'
@@ -52,8 +52,27 @@ export default function Controls() {
   const setOverrideTime = useStore((s) => s.setOverrideTime)
   const clearOverrides = useStore((s) => s.clearOverrides)
   const error = useStore((s) => s.error)
+  const current = useStore((s) => s.current)
   const avatar = useStore((s) => s.avatar)
   const setAvatar = useStore((s) => s.setAvatar)
+
+  /** Re-run the last meaningful request after a network failure. */
+  async function retry() {
+    setLoading()
+    try {
+      if (current) {
+        const w = await fetchWeather(current.place)
+        setCurrent(w)
+        return
+      }
+      const q = query.trim() || readCityParam() || 'Shanghai'
+      const places = await geocodeCity(q)
+      if (!places.length) throw new Error('未找到该城市')
+      await selectPlace(places[0])
+    } catch (err: any) {
+      setError(err?.message ?? '仍然失败，请稍后再试')
+    }
+  }
 
   // The dropdown shows live geocode matches while typing, else recent places.
   const list = query.trim() ? suggests : recents
@@ -210,7 +229,14 @@ export default function Controls() {
             <button type="button" onClick={locate} title="定位">📍</button>
           </form>
 
-          {error && <div className="err">{error}</div>}
+          {error && (
+            <div className="err">
+              {error}
+              <button className="err-retry" onClick={retry}>
+                重试
+              </button>
+            </div>
+          )}
 
           <div className="chips-label">天气特效</div>
           <div className="chips">

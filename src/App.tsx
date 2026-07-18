@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import {
   OrbitControls,
@@ -81,12 +81,50 @@ function maxDpr(): number {
   return coarse || small ? 1.6 : 2
 }
 
+/** One-time capability probe so old browsers get a message, not a black page. */
+function webglSupported(): boolean {
+  try {
+    const c = document.createElement('canvas')
+    return !!(c.getContext('webgl2') || c.getContext('webgl'))
+  } catch {
+    return false
+  }
+}
+
 export default function App() {
+  const supported = useMemo(() => webglSupported(), [])
+  const [contextLost, setContextLost] = useState(false)
+
+  if (!supported) {
+    return (
+      <div className="app">
+        <div className="fatal">
+          <div className="fatal-title">🏙️ 微缩城市天气</div>
+          <div className="fatal-text">
+            当前浏览器不支持 WebGL，无法渲染 3D 城市。请改用较新的 Chrome / Edge / Safari 打开。
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="app">
       <Canvas
         shadows
         dpr={[1, maxDpr()]}
+        onCreated={({ gl }) => {
+          // mobile browsers may reclaim the GL context in the background;
+          // surface a reload prompt instead of leaving a frozen canvas
+          gl.domElement.addEventListener(
+            'webglcontextlost',
+            (e) => {
+              e.preventDefault()
+              setContextLost(true)
+            },
+            false,
+          )
+        }}
         camera={{ position: [17, 12, 19], fov: 38 }}
         gl={{
           antialias: false,
@@ -138,6 +176,16 @@ export default function App() {
       </div>
       <Loading />
       <InitialLoad />
+
+      {contextLost && (
+        <div className="fatal">
+          <div className="fatal-title">渲染已中断</div>
+          <div className="fatal-text">3D 画面被系统回收（常见于手机切换后台后）。</div>
+          <button className="fatal-btn" onClick={() => window.location.reload()}>
+            刷新页面
+          </button>
+        </div>
+      )}
     </div>
   )
 }

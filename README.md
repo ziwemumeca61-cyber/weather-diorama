@@ -52,7 +52,15 @@ npm install
 npm run dev      # 启动开发服务器 http://localhost:5173
 npm run build    # 类型检查 + 生产构建到 dist/
 npm run preview  # 预览生产构建
+npm run smoke    # 无头冒烟测试（构建产物能渲染出场景、无 JS 报错）
 ```
+
+## 部署
+
+纯静态站，`dist/` 可托管在任何静态平台（Vercel / Netlify / Cloudflare Pages / GitHub Pages）。
+
+- 已内置 **GitHub Pages 自动部署**：合并到 `main` 即触发 `.github/workflows/deploy.yml`。一次性设置：仓库 Settings → Pages → Source 选 "GitHub Actions"。
+- CI（`ci.yml`）在每个 PR 上跑 构建 + 无头渲染冒烟。
 
 > 天气数据通过 Open-Meteo 直连获取，需要可访问外网的环境。默认加载"上海"，无网络时场景以晴天回退，手动天气切换始终可用。
 

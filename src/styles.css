@@ -355,8 +355,63 @@ canvas {
   letter-spacing: 0.3px;
   color: rgba(244, 247, 251, 0.55);
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
-  pointer-events: none;
   user-select: none;
+}
+
+.credit a {
+  color: inherit;
+  pointer-events: auto;
+}
+
+/* ---------- Fatal overlays (no WebGL / context lost) ---------- */
+.fatal {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  text-align: center;
+  background: rgba(11, 18, 32, 0.94);
+  color: var(--text);
+}
+
+.fatal-title {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.fatal-text {
+  max-width: 420px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: rgba(244, 247, 251, 0.75);
+}
+
+.fatal-btn {
+  margin-top: 6px;
+  padding: 10px 26px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: var(--accent);
+  color: #0b1220;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.err-retry {
+  margin-left: 10px;
+  padding: 3px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 156, 156, 0.5);
+  background: rgba(255, 156, 156, 0.12);
+  color: #ffb9b9;
+  font-size: 12px;
+  cursor: pointer;
 }
 
 /* ---------- Boot loader ---------- */
