@@ -88,7 +88,7 @@ function BaotuSpring({ position }: { position: [number, number, number] }) {
  */
 function ChaoranTower({ position }: { position: [number, number, number] }) {
   const glow = useNightGlow(1.7)
-  const tileTex = useMemo(() => makeTileTexture('#9c7a30', '#775a1f'), [])
+  const tileTex = useMemo(() => makeTileTexture('#5f5426', '#403713'), [])
   const roofs = useMemo(
     () => [makeHipRoof(2.6, 2.0, 0.45, 0.28, 0.28), makeHipRoof(2.1, 1.6, 0.4, 0.28, 0.28), makeHipRoof(1.6, 1.2, 0.42, 0.26, 0.28)],
     [],
@@ -97,10 +97,10 @@ function ChaoranTower({ position }: { position: [number, number, number] }) {
   const wallKit = useMemo(
     () =>
       makeHallWall({
-        wall: '#7c4a30',
-        pillar: '#63402a',
-        beam: '#3a5a46',
-        pane: '#3a2818',
+        wall: '#cdc7ba',
+        pillar: '#8f4a34',
+        beam: '#4a3a28',
+        pane: '#3a2f22',
         bays: 5,
       }),
     [],
@@ -153,10 +153,10 @@ function ChaoranTower({ position }: { position: [number, number, number] }) {
 export default function JinanLandmarks() {
   return (
     <group>
-      <group position={[-3.3, 0, 0.8]} scale={1.1}>
+      <group position={[-3.3, 0, 0.8]} scale={1.1} rotation={[0, 0.35, 0]}>
         <BaotuSpring position={[0, 0, 0]} />
       </group>
-      <group position={[3.2, 0, 0.1]} scale={1.15}>
+      <group position={[3.2, 0, 0.1]} scale={1.15} rotation={[0, -0.42, 0]}>
         <ChaoranTower position={[0, 0, 0]} />
       </group>
     </group>

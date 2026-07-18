@@ -48,7 +48,7 @@ export default function ChongqingLandmarks() {
   )
 
   return (
-    <group position={[0, 0, -3.2]}>
+    <group position={[0, 0, -3.2]} rotation={[0, -0.16, 0]}>
       {/* "The Crystal"-style glass retail podium threading the whole row */}
       <mesh position={[0, 0.45, 0]} castShadow receiveShadow>
         <boxGeometry args={[9.4, 0.9, 2.1]} />

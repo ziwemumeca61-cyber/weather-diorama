@@ -163,10 +163,10 @@ function BellTower({ position }: { position: [number, number, number] }) {
 export default function XianLandmarks() {
   return (
     <group>
-      <group position={[-3.4, 0, 0.8]} scale={1.15}>
+      <group position={[-3.4, 0, 0.8]} scale={1.15} rotation={[0, 0.2, 0]}>
         <WildGoosePagoda position={[0, 0, 0]} />
       </group>
-      <group position={[3.6, 0, -0.4]} scale={1.1}>
+      <group position={[3.6, 0, -0.4]} scale={1.1} rotation={[0, -0.3, 0]}>
         <BellTower position={[0, 0, 0]} />
       </group>
     </group>
