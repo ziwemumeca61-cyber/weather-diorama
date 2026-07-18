@@ -443,17 +443,34 @@ function FollowCam() {
   const controls = useThree((s) => s.controls) as unknown as {
     target: THREE.Vector3
     autoRotate: boolean
+    minDistance: number
     update?: () => void
   } | null
+  const camera = useThree((s) => s.camera)
   const tmp = useMemo(() => new THREE.Vector3(), [])
-  useFrame(() => {
+  const dir = useMemo(() => new THREE.Vector3(), [])
+  const savedMin = useRef<number | null>(null)
+  useFrame((_, dt) => {
     if (!controls) return
     controls.autoRotate = !followState.on
     if (followState.on) {
+      // dolly in close so following reads unmistakably as a follow shot;
+      // dt-based damping keeps convergence speed frame-rate independent
+      if (savedMin.current === null) {
+        savedMin.current = controls.minDistance
+        controls.minDistance = 4
+      }
       tmp.copy(heroState.pos)
       tmp.y += 0.5
-      controls.target.lerp(tmp, 0.06)
+      controls.target.lerp(tmp, 1 - Math.exp(-6 * dt))
+      dir.copy(camera.position).sub(controls.target)
+      const d = dir.length()
+      const nd = THREE.MathUtils.damp(d, 7.5, 3, dt)
+      camera.position.copy(controls.target).addScaledVector(dir.normalize(), nd)
       controls.update?.()
+    } else if (savedMin.current !== null) {
+      controls.minDistance = savedMin.current
+      savedMin.current = null
     }
   })
   return null
