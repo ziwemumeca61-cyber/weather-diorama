@@ -86,20 +86,55 @@ function makeGroundTexture(z1: number): THREE.Texture {
   return tex
 }
 
+/** Streaky ripple texture for flowing water (scrolled every frame). */
+function makeFlowTexture(): THREE.Texture {
+  const c = document.createElement('canvas')
+  c.width = 256
+  c.height = 128
+  const g = c.getContext('2d')!
+  g.fillStyle = '#3f6f97'
+  g.fillRect(0, 0, 256, 128)
+  let a = 4242
+  const rnd = () => ((a = (a * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff)
+  for (let i = 0; i < 46; i++) {
+    const y = rnd() * 128
+    const x = rnd() * 256
+    const len = 18 + rnd() * 50
+    g.strokeStyle = `rgba(${180 + rnd() * 60}, ${210 + rnd() * 40}, 255, ${0.10 + rnd() * 0.16})`
+    g.lineWidth = 1 + rnd() * 1.6
+    g.beginPath()
+    g.moveTo(x, y)
+    g.quadraticCurveTo(x + len / 2, y + (rnd() - 0.5) * 5, x + len, y)
+    g.stroke()
+  }
+  const t = new THREE.CanvasTexture(c)
+  t.wrapS = t.wrapT = THREE.RepeatWrapping
+  return t
+}
+
 function WaterSurface({ water }: { water: ResolvedWater }) {
   const matRef = useRef<THREE.MeshStandardMaterial>(null)
+  const flow = useMemo(() => {
+    const t = makeFlowTexture()
+    t.repeat.set(water.lake ? 3 : 6, water.lake ? 3 : 2)
+    return t
+  }, [water])
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock }, dt) => {
     if (matRef.current) {
       // subtle shimmer
       matRef.current.emissiveIntensity = 0.04 + Math.sin(clock.elapsedTime * 0.8) * 0.02
     }
+    // current: rivers run along x with the boats; lakes drift slowly
+    flow.offset.x -= dt * (water.lake ? 0.008 : 0.045)
+    if (water.lake) flow.offset.y += dt * 0.004
   })
 
   const material = (
     <meshStandardMaterial
       ref={matRef}
-      color={'#3f6f97'}
+      map={flow}
+      color={'#e9f0f5'}
       roughness={0.15}
       metalness={0.5}
       emissive={'#2b5a86'}

@@ -1,6 +1,8 @@
-import { useMemo, useRef } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
+import { Html } from '@react-three/drei'
 import * as THREE from 'three'
+import { useNightGlow } from './landmarks/nightGlow'
 import { generatePedestrians, type PedestrianAppearance } from './cityData'
 import { useEffectiveWeather } from '../data/store'
 import { useStore } from '../data/store'
@@ -28,9 +30,11 @@ interface PersonProps {
   mode: Mode
   appearance: PedestrianAppearance
   hero?: boolean
+  /** weather-mood emoji shown in the hero's tap bubble */
+  emoji?: string
 }
 
-function Person({ a, b, speed, phase, mode, appearance, hero }: PersonProps) {
+function Person({ a, b, speed, phase, mode, appearance, hero, emoji }: PersonProps) {
   const root = useRef<THREE.Group>(null)
   const bob = useRef<THREE.Group>(null)
   const legL = useRef<THREE.Group>(null)
@@ -47,7 +51,13 @@ function Person({ a, b, speed, phase, mode, appearance, hero }: PersonProps) {
 
   const showUmbrella = mode === 'umbrella'
 
-  useFrame((_, dtRaw) => {
+  // hero fun: tap → jump-spin + a weather-mood bubble; a lantern glows at night
+  const [bubble, setBubble] = useState(false)
+  const tapPending = useRef(false)
+  const tapAt = useRef(-10)
+  const lantern = useNightGlow(3)
+
+  useFrame(({ clock }, dtRaw) => {
     const dt = Math.min(dtRaw, 0.05)
     const tune = MODE_TUNING[mode]
     const v = speed * tune.speed
@@ -85,6 +95,22 @@ function Person({ a, b, speed, phase, mode, appearance, hero }: PersonProps) {
       const startle = lightningPulse.value > 0.45 ? lightningPulse.value * 0.09 : 0
       bob.current.position.y = Math.abs(Math.sin(gait.current)) * tune.bob + startle
       bob.current.rotation.x = tune.lean
+
+      if (hero) {
+        if (tapPending.current) {
+          tapPending.current = false
+          tapAt.current = clock.elapsedTime
+          setBubble(true)
+          setTimeout(() => setBubble(false), 1900)
+        }
+        const p = (clock.elapsedTime - tapAt.current) / 1.1
+        if (p >= 0 && p < 1) {
+          bob.current.position.y += Math.sin(Math.PI * p) * 0.24
+          bob.current.rotation.y = p * Math.PI * 2
+        } else if (bob.current.rotation.y !== 0) {
+          bob.current.rotation.y = 0
+        }
+      }
     }
   })
 
@@ -92,14 +118,48 @@ function Person({ a, b, speed, phase, mode, appearance, hero }: PersonProps) {
   const scale = (hero ? 1.15 : 1) * BASE_SCALE
 
   return (
-    <group ref={root} scale={scale}>
+    <group
+      ref={root}
+      scale={scale}
+      onClick={
+        hero
+          ? (e) => {
+              e.stopPropagation()
+              tapPending.current = true
+            }
+          : undefined
+      }
+    >
       {hero && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, 0]}>
           <ringGeometry args={[0.16, 0.21, 24]} />
           <meshBasicMaterial color={appearance.shirt} transparent opacity={0.85} />
         </mesh>
       )}
+      {hero && bubble && (
+        <Html center position={[0, 0.66, 0]} style={{ pointerEvents: 'none' }}>
+          <div style={{ fontSize: 24, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.45))' }}>{emoji ?? '👋'}</div>
+        </Html>
+      )}
       <group ref={bob}>
+        {hero && (
+          <group position={[0.115, 0.3, 0.03]}>
+            <mesh castShadow>
+              <sphereGeometry args={[0.036, 10, 8]} />
+              <meshStandardMaterial
+                ref={lantern}
+                color={'#c8321e'}
+                emissive={'#ff8a3c'}
+                emissiveIntensity={0.05}
+                roughness={0.5}
+              />
+            </mesh>
+            <mesh position={[0, 0.04, 0]}>
+              <cylinderGeometry args={[0.008, 0.008, 0.03, 6]} />
+              <meshStandardMaterial color={'#caa94a'} metalness={0.6} roughness={0.4} />
+            </mesh>
+          </group>
+        )}
         {/* legs */}
         <group ref={legL} position={[0.045, 0.14, 0]}>
           <mesh position={[0, -0.07, 0]} castShadow>
@@ -213,6 +273,9 @@ export default function People() {
   const { kind } = useEffectiveWeather()
   const avatar = useStore((s) => s.avatar)
 
+  const moodEmoji =
+    kind === 'thunder' ? '😱' : kind === 'rain' ? '☔' : kind === 'snow' ? '⛄' : kind === 'fog' ? '🌫️' : kind === 'clear' ? '😎' : '🙂'
+
   return (
     <group>
       {pedestrians.map((p, i) => {
@@ -230,6 +293,7 @@ export default function People() {
             mode={modeFor(kind, hasUmbrella)}
             appearance={appearance}
             hero={hero}
+            emoji={hero ? moodEmoji : undefined}
           />
         )
       })}
