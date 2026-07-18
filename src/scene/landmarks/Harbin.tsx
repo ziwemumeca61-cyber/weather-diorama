@@ -166,10 +166,12 @@ function FloodMonument({ position }: { position: [number, number, number] }) {
 export default function HarbinLandmarks() {
   return (
     <group>
-      <group position={[-3.2, 0, 0.6]} scale={1.05}>
+      <group position={[-3.2, 0, 0.6]} scale={1.05} rotation={[0, 0.38, 0]}>
         <SaintSophia position={[0, 0, 0]} />
       </group>
-      <FloodMonument position={[3.4, 0, -3.2]} />
+      <group position={[3.4, 0, -3.2]} rotation={[0, -0.35, 0]}>
+        <FloodMonument position={[0, 0, 0]} />
+      </group>
     </group>
   )
 }

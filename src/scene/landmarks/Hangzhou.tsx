@@ -114,7 +114,7 @@ function LeifengPagoda({ position }: { position: [number, number, number] }) {
 
 export default function HangzhouLandmarks() {
   return (
-    <group position={[-1.0, 0, -1.6]} scale={1.25}>
+    <group position={[-1.0, 0, -1.6]} scale={1.25} rotation={[0, 0.4, 0]}>
       <LeifengPagoda position={[0, 0, 0]} />
     </group>
   )

@@ -180,7 +180,9 @@ export default function SuzhouLandmarks() {
   return (
     <group>
       <GateOfTheOrient position={[2.9, 0, -3.8]} />
-      <TigerHillPagoda position={[-3.4, 0, 0.5]} />
+      <group position={[-3.4, 0, 0.5]} rotation={[0, 0.3, 0]}>
+        <TigerHillPagoda position={[0, 0, 0]} />
+      </group>
     </group>
   )
 }

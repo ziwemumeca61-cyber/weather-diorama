@@ -223,7 +223,7 @@ function GreenlandCenter({ position }: { position: [number, number, number] }) {
 export default function WuhanLandmarks() {
   return (
     <group>
-      <group position={[-3.4, 0, 0.6]} scale={1.12}>
+      <group position={[-3.4, 0, 0.6]} scale={1.12} rotation={[0, 0.32, 0]}>
         <YellowCraneTower position={[0, 0, 0]} />
       </group>
       <GreenlandCenter position={[3.2, 0, -4.2]} />

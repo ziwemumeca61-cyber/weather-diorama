@@ -131,10 +131,10 @@ function GongQiangGate({ position }: { position: [number, number, number] }) {
 export default function QufuLandmarks() {
   return (
     <group>
-      <group position={[-3.2, 0, 0.6]} scale={1.05}>
+      <group position={[-3.2, 0, 0.6]} scale={1.05} rotation={[0, -0.24, 0]}>
         <DachengHall position={[0, 0, 0]} />
       </group>
-      <group position={[3.2, 0, -0.4]} rotation={[0, -0.1, 0]}>
+      <group position={[3.2, 0, -0.4]} rotation={[0, 0.32, 0]}>
         <GongQiangGate position={[0, 0, 0]} />
       </group>
     </group>

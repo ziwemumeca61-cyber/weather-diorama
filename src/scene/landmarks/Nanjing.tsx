@@ -161,8 +161,10 @@ function CityWallGate({ position }: { position: [number, number, number] }) {
 export default function NanjingLandmarks() {
   return (
     <group>
-      <ZifengTower position={[2.8, 0, -4.2]} />
-      <group position={[-3.2, 0, 0.8]} rotation={[0, 0.12, 0]}>
+      <group position={[2.8, 0, -4.2]} rotation={[0, 0.55, 0]}>
+        <ZifengTower position={[0, 0, 0]} />
+      </group>
+      <group position={[-3.2, 0, 0.8]} rotation={[0, -0.3, 0]}>
         <CityWallGate position={[0, 0, 0]} />
       </group>
     </group>

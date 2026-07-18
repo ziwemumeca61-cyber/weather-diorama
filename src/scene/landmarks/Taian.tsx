@@ -136,7 +136,7 @@ function MountTai({ position }: { position: [number, number, number] }) {
 /** Tai'an — the sacred mountain towering over the town at its foot. */
 export default function TaianLandmarks() {
   return (
-    <group position={[-1.5, 0, -4.4]} scale={1.05}>
+    <group position={[-1.5, 0, -4.4]} scale={1.05} rotation={[0, 0.45, 0]}>
       <MountTai position={[0, 0, 0]} />
     </group>
   )

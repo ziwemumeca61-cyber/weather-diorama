@@ -229,7 +229,9 @@ function DiWang({ position }: { position: [number, number, number] }) {
 export default function ShenzhenLandmarks() {
   return (
     <group>
-      <PingAn position={[0.4, 0, -4.4]} />
+      <group position={[0.4, 0, -4.4]} rotation={[0, 0.18, 0]}>
+        <PingAn position={[0, 0, 0]} />
+      </group>
       <Kk100 position={[-2.9, 0, -3.6]} />
       <DiWang position={[3.6, 0, -3.0]} />
     </group>
