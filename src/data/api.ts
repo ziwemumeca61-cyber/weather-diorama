@@ -13,6 +13,8 @@ export interface GeoPlace {
   latitude: number
   longitude: number
   timezone?: string
+  /** population, when the geocoder reports it — used to rank matches */
+  population?: number
 }
 
 export interface CurrentWeather {
@@ -43,24 +45,46 @@ async function geocodeOnce(query: string): Promise<GeoPlace[]> {
     latitude: r.latitude,
     longitude: r.longitude,
     timezone: r.timezone,
+    population: typeof r.population === 'number' ? r.population : undefined,
   }))
 }
 
+/** Merge result lists, drop near-duplicate coordinates, keep first-seen order. */
+function dedupePlaces(...lists: GeoPlace[][]): GeoPlace[] {
+  const seen = new Set<string>()
+  const out: GeoPlace[] = []
+  for (const list of lists)
+    for (const p of list) {
+      const key = `${p.latitude.toFixed(2)},${p.longitude.toFixed(2)}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      out.push(p)
+    }
+  return out
+}
+
 /**
- * Look up a place by name. County-level Chinese cities are often indexed with
- * an administrative suffix (曲阜 → 曲阜市), so a bare CJK query that comes up
- * empty is retried with 市 / 县 appended.
+ * Look up a place by name. Chinese prefecture cities are indexed inconsistently:
+ * some resolve bare (临沂), others only with a 市 suffix (枣庄市), and a bare
+ * query can even surface a tiny same-named village in another province ahead of
+ * the real city (枣庄 → 河南 枣庄村 before 山东 枣庄市). So for a bare CJK query
+ * we fetch the 市 variant too, merge both, and rank by population — the
+ * prefecture-level city carries real population data that the villages lack.
  */
 export async function geocodeCity(query: string): Promise<GeoPlace[]> {
-  const first = await geocodeOnce(query)
-  if (first.length) return first
-  if (/[一-鿿]$/.test(query) && !/[市县区]$/.test(query)) {
-    for (const suffix of ['市', '县']) {
-      const retry = await geocodeOnce(query + suffix)
-      if (retry.length) return retry
-    }
+  const bareCjk = /[一-鿿]$/.test(query) && !/[市县区]$/.test(query)
+  const [bare, city] = await Promise.all([
+    geocodeOnce(query).catch(() => [] as GeoPlace[]),
+    bareCjk ? geocodeOnce(query + '市').catch(() => [] as GeoPlace[]) : Promise.resolve([]),
+  ])
+  const merged = dedupePlaces(city, bare).sort((a, b) => (b.population ?? 0) - (a.population ?? 0))
+  if (merged.length) return merged
+  // nothing matched — last resort, try the 县 (county) suffix
+  if (bareCjk) {
+    const county = await geocodeOnce(query + '县').catch(() => [] as GeoPlace[])
+    if (county.length) return county
   }
-  return first
+  return merged
 }
 
 /** Derive a coarse time-of-day bucket from the local hour + is_day flag. */

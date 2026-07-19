@@ -46,6 +46,18 @@ const JinanLandmarks = lazy(() => import('./landmarks/Jinan'))
 const TaianLandmarks = lazy(() => import('./landmarks/Taian'))
 const QufuLandmarks = lazy(() => import('./landmarks/Qufu'))
 const YantaiLandmarks = lazy(() => import('./landmarks/Yantai'))
+const ZiboLandmarks = lazy(() => import('./landmarks/Zibo'))
+const ZaozhuangLandmarks = lazy(() => import('./landmarks/Zaozhuang'))
+const DongyingLandmarks = lazy(() => import('./landmarks/Dongying'))
+const WeifangLandmarks = lazy(() => import('./landmarks/Weifang'))
+const JiningLandmarks = lazy(() => import('./landmarks/Jining'))
+const WeihaiLandmarks = lazy(() => import('./landmarks/Weihai'))
+const RizhaoLandmarks = lazy(() => import('./landmarks/Rizhao'))
+const LinyiLandmarks = lazy(() => import('./landmarks/Linyi'))
+const DezhouLandmarks = lazy(() => import('./landmarks/Dezhou'))
+const LiaochengLandmarks = lazy(() => import('./landmarks/Liaocheng'))
+const BinzhouLandmarks = lazy(() => import('./landmarks/Binzhou'))
+const HezeLandmarks = lazy(() => import('./landmarks/Heze'))
 const Cc0Downtown = lazy(() => import('./landmarks/Cc0Downtown'))
 
 /**
@@ -270,6 +282,158 @@ export const CITY_PROFILES: CityProfile[] = [
     clearZones: [{ x: -2.7, z: 4.9, r: 2.8 }], // lighthouse headland on the shore
     calmZones: [{ x: -2.7, z: 4.2, r: 4.4, maxHeight: 1.6 }], // keep the seafront open
     // the bay keeps the default waterfront with shipping
+  },
+  {
+    id: 'zibo',
+    match: /淄博|zibo/i,
+    Landmarks: ZiboLandmarks,
+    clearZones: [
+      { x: -3.1, z: 0.4, r: 2.4 }, // 海岱楼 Haidai Tower
+      { x: 3.4, z: -3.6, r: 1.4 }, // 琉璃 glass-art sculpture
+      { x: 3.0, z: 1.6, r: 1.6 }, // barbecue row
+    ],
+    calmZones: [{ x: -3.1, z: 0.4, r: 4.2, maxHeight: 2.4 }],
+    // inland industrial city: a modest stream, no shipping
+    water: { kind: 'river', z0: 8.4, boats: false, bridge: false },
+  },
+  {
+    id: 'zaozhuang',
+    match: /枣庄|zaozhuang/i,
+    Landmarks: ZaozhuangLandmarks,
+    clearZones: [
+      { x: -3.2, z: 0.6, r: 2.6 }, // 台儿庄 gate tower
+      { x: 2.7, z: 2.2, r: 2.6 }, // canal houses
+    ],
+    calmZones: [{ x: 0, z: 1.5, r: 5.0, maxHeight: 2.0 }], // low canal town
+    // Grand Canal with tour boats; the town carries its own arch bridge
+    water: { kind: 'river', bridge: false },
+  },
+  {
+    id: 'dongying',
+    match: /东营|dongying/i,
+    Landmarks: DongyingLandmarks,
+    clearZones: [
+      { x: -2.4, z: -4.0, r: 2.6 }, // pumpjack field
+      { x: 3.4, z: -3.9, r: 1.6 }, // pumpjack
+      { x: 1.4, z: -4.9, r: 1.4 }, // storage tanks
+    ],
+    // flat oil-field delta: keep the whole centre low so the derricks read
+    calmZones: [{ x: 0, z: -2.6, r: 7.5, maxHeight: 1.5 }],
+    // Yellow River delta: a broad river, no shipping past the mudflats
+    water: { kind: 'river', z0: 6.6, boats: false, bridge: false },
+  },
+  {
+    id: 'weifang',
+    match: /潍坊|weifang/i,
+    Landmarks: WeifangLandmarks,
+    clearZones: [
+      { x: -2.4, z: -4.2, r: 3.4 }, // 渤海之眼 spokeless wheel
+      { x: 3.3, z: 0.6, r: 1.6 }, // kite plaza
+    ],
+    calmZones: [{ x: -2.4, z: -3.8, r: 6.5, maxHeight: 3.0 }],
+    // inland kite city: a modest river
+    water: { kind: 'river', z0: 8.0, boats: false, bridge: false },
+  },
+  {
+    id: 'jining',
+    match: /济宁|jining/i,
+    Landmarks: JiningLandmarks,
+    clearZones: [
+      { x: -3.0, z: -0.2, r: 2.8 }, // 太白楼 Taibai Tower
+      { x: 2.9, z: 5.4, r: 2.0 }, // canal wharf
+      { x: -2.2, z: 4.6, r: 1.2 }, // waterfront archway
+    ],
+    calmZones: [{ x: -2.0, z: 0.4, r: 5.8, maxHeight: 2.0 }],
+    // capital of the Grand Canal: keep the shipping, drop the default bridge
+    water: { kind: 'river', bridge: false },
+  },
+  {
+    id: 'weihai',
+    match: /威海|weihai/i,
+    Landmarks: WeihaiLandmarks,
+    clearZones: [
+      { x: -2.8, z: -3.8, r: 2.8 }, // 幸福门 Gate of Happiness
+      { x: 2.6, z: 6.0, r: 2.0 }, // seafront promenade
+    ],
+    calmZones: [{ x: -2.8, z: -3.6, r: 5.5, maxHeight: 3.4 }],
+    // Weihai Bay with the island out on the water
+    water: { kind: 'river', z0: 6.6 },
+  },
+  {
+    id: 'rizhao',
+    match: /日照|rizhao/i,
+    Landmarks: RizhaoLandmarks,
+    clearZones: [
+      { x: -3.0, z: -3.9, r: 2.2 }, // sail sculpture
+      { x: 3.4, z: -3.4, r: 1.4 }, // sun disc
+      { x: 0.8, z: 6.3, r: 2.6 }, // bathing beach
+    ],
+    calmZones: [{ x: 0, z: -3.7, r: 5.5, maxHeight: 2.8 }],
+    // sunshine coast: the bay with sailboats
+    water: { kind: 'river', z0: 6.6 },
+  },
+  {
+    id: 'linyi',
+    match: /临沂|linyi/i,
+    Landmarks: LinyiLandmarks,
+    clearZones: [
+      { x: -3.0, z: -3.6, r: 2.8 }, // 书圣阁 Shusheng Pavilion
+      { x: 3.3, z: -0.2, r: 1.6 }, // brush monument
+      { x: 2.6, z: 3.4, r: 1.2 }, // stele pavilion
+    ],
+    calmZones: [{ x: -2.2, z: -2.4, r: 6.2, maxHeight: 2.0 }],
+    // 沂河 the Yi River runs broad past the city
+    water: { kind: 'river', z0: 7.0 },
+  },
+  {
+    id: 'dezhou',
+    match: /德州|dezhou/i,
+    Landmarks: DezhouLandmarks,
+    clearZones: [
+      { x: -2.9, z: -4.0, r: 2.6 }, // Solar Valley dial building
+      { x: 3.4, z: -3.2, r: 2.2 }, // solar collector fields
+      { x: -3.2, z: 1.4, r: 1.2 }, // canal pagoda
+    ],
+    calmZones: [{ x: 0, z: -3.8, r: 6.0, maxHeight: 2.6 }],
+    // Grand Canal town: a narrow canal, no shipping
+    water: { kind: 'river', z0: 8.4, boats: false, bridge: false },
+  },
+  {
+    id: 'liaocheng',
+    match: /聊城|liaocheng/i,
+    Landmarks: LiaochengLandmarks,
+    clearZones: [
+      { x: -3.0, z: -0.6, r: 2.6 }, // 光岳楼 Guangyue Tower
+      { x: 3.4, z: -3.4, r: 1.2 }, // iron pagoda
+      { x: 1.6, z: 3.5, r: 3.0 }, // Dongchang Lake footprint
+    ],
+    calmZones: [{ x: -3.0, z: -0.6, r: 4.6, maxHeight: 2.4 }],
+    // 东昌湖 — the ring lake of the "water city of the north"
+    water: { kind: 'lake', x: 1.6, z: 3.5, rx: 3.0, rz: 2.2 },
+  },
+  {
+    id: 'binzhou',
+    match: /滨州|binzhou/i,
+    Landmarks: BinzhouLandmarks,
+    clearZones: [
+      { x: -2.4, z: -3.6, r: 3.2 }, // 孙子兵法城 Art of War fortress
+      { x: 3.2, z: 0.4, r: 1.8 }, // drum towers
+    ],
+    calmZones: [{ x: -1.8, z: -2.2, r: 6.8, maxHeight: 1.8 }],
+    // Yellow River delta plain: broad river, no shipping
+    water: { kind: 'river', z0: 6.6, boats: false, bridge: false },
+  },
+  {
+    id: 'heze',
+    match: /菏泽|heze/i,
+    Landmarks: HezeLandmarks,
+    clearZones: [
+      { x: -0.8, z: -2.6, r: 3.8 }, // 曹州牡丹园 peony garden + pavilion
+      { x: 3.2, z: 3.4, r: 1.2 }, // festival archway
+    ],
+    calmZones: [{ x: -0.8, z: -2.6, r: 5.5, maxHeight: 1.8 }], // gardens stay open
+    // inland peony plain: a modest stream, no shipping
+    water: { kind: 'river', z0: 8.4, boats: false, bridge: false },
   },
   {
     id: 'qingdao',
