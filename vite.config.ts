@@ -1,9 +1,65 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.png', 'apple-touch-icon.png', 'og.png'],
+      manifest: {
+        name: '微缩城市天气',
+        short_name: '城市天气',
+        description: '把真实天气"下"到 3D 微缩城市上：雨打屋顶、雾罩街道、昼夜灯火。',
+        lang: 'zh-CN',
+        dir: 'ltr',
+        start_url: '.',
+        scope: '.',
+        display: 'standalone',
+        orientation: 'portrait',
+        background_color: '#0b1220',
+        theme_color: '#0b1220',
+        categories: ['weather', 'entertainment', 'lifestyle'],
+        icons: [
+          { src: 'pwa-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'pwa-512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'pwa-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
+      },
+      workbox: {
+        // precache the app shell + hashed chunks, but not the heavy GLB model
+        globPatterns: ['**/*.{js,css,html,png,svg,ico,woff2}'],
+        globIgnores: ['**/*.glb'],
+        navigateFallback: 'index.html',
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+        runtimeCaching: [
+          {
+            // weather + geocoding: fresh when online, last-known when offline
+            urlPattern: ({ url }) => url.hostname.endsWith('open-meteo.com'),
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'open-meteo',
+              networkTimeoutSeconds: 6,
+              expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 6 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // the demo GLB model: cache on first use
+            urlPattern: ({ url }) => url.pathname.endsWith('.glb'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'models',
+              expiration: { maxEntries: 6, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
+      },
+    }),
+  ],
   base: './',
   server: {
     host: true,
