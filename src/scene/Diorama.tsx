@@ -9,6 +9,8 @@ import Props from './Props'
 import People from './People'
 import Extras from './Extras'
 import NightSky from './NightSky'
+import FloatingBase from './FloatingBase'
+import { islandState } from './islandState'
 import { useWater } from './cityProfiles'
 import type { ResolvedWater } from './water'
 
@@ -213,39 +215,53 @@ function Boats({ z0 }: { z0: number }) {
 export default function Diorama() {
   const water = useWater()
   const groundTex = useMemo(() => makeGroundTexture(water.groundZ1), [water.groundZ1])
+  const islandRef = useRef<THREE.Group>(null)
+
+  // the whole island gently floats (vertical bob only, so hero world position
+  // stays exact for the follow camera — the offset is shared via islandState)
+  useFrame(({ clock }) => {
+    const y = Math.sin(clock.elapsedTime * 0.5) * 0.22
+    islandState.y = y
+    if (islandRef.current) islandRef.current.position.y = y
+  })
 
   return (
     <group>
-      {/* white tray base */}
-      <RoundedBox
-        args={[CITY.trayHalf * 2 + 1.6, 1.4, CITY.trayHalf * 2 + 1.6]}
-        radius={0.5}
-        smoothness={4}
-        position={[0, -0.7, 0]}
-        castShadow
-        receiveShadow
-      >
-        <meshStandardMaterial color={'#f4f2ee'} roughness={0.85} metalness={0} />
-      </RoundedBox>
-
-      {/* inner rim / land tray top */}
-      <mesh
-        position={[0, 0.005, (GROUND_Z0 + water.groundZ1) / 2]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        receiveShadow
-      >
-        <planeGeometry args={[GROUND_X1 - GROUND_X0, water.groundZ1 - GROUND_Z0]} />
-        <meshStandardMaterial map={groundTex} roughness={0.9} metalness={0} />
-      </mesh>
-
+      {/* sky stays camera-anchored, so it must not float with the island */}
       <NightSky />
-      <WaterSurface water={water} />
-      {water.boats && water.riverZ0 != null && <Boats z0={water.riverZ0} />}
-      <City />
-      <Landmark />
-      <Props />
-      <People />
-      <Extras />
+
+      <group ref={islandRef}>
+        {/* white tray base */}
+        <RoundedBox
+          args={[CITY.trayHalf * 2 + 1.6, 1.4, CITY.trayHalf * 2 + 1.6]}
+          radius={0.5}
+          smoothness={4}
+          position={[0, -0.7, 0]}
+          castShadow
+          receiveShadow
+        >
+          <meshStandardMaterial color={'#f4f2ee'} roughness={0.85} metalness={0} />
+        </RoundedBox>
+
+        {/* inner rim / land tray top */}
+        <mesh
+          position={[0, 0.005, (GROUND_Z0 + water.groundZ1) / 2]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          receiveShadow
+        >
+          <planeGeometry args={[GROUND_X1 - GROUND_X0, water.groundZ1 - GROUND_Z0]} />
+          <meshStandardMaterial map={groundTex} roughness={0.9} metalness={0} />
+        </mesh>
+
+        <FloatingBase />
+        <WaterSurface water={water} />
+        {water.boats && water.riverZ0 != null && <Boats z0={water.riverZ0} />}
+        <City />
+        <Landmark />
+        <Props />
+        <People />
+        <Extras />
+      </group>
     </group>
   )
 }
