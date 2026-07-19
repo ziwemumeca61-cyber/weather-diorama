@@ -89,8 +89,19 @@ npx cap sync android      # 把最新 dist 同步进原生工程
 - [ ] 权限说明 — 仅 `INTERNET` + 定位；定位用途填"查询本地天气"
 - [ ] `appId`（`com.weatherdiorama.app`）**上架后不可更改**，首次提交前确认
 
-## 七、注意：Open-Meteo 在中国大陆的可用性
+## 七、天气数据源（国内建议用和风天气）
 
-App 的天气 / 地理编码数据来自境外的 Open-Meteo。上架前请在国内网络实测其
-延迟与稳定性；若不稳，需在 `src/data/api.ts` 切换到国内天气源（和风 / 彩云等）
-或经自有服务器代理。此项可能影响数据层，建议在提审前确认。
+数据源已做成可切换：默认 Open-Meteo（境外），配置和风天气 key 后自动切换。
+**面向国内商店，建议打包前切到和风天气**：
+
+1. 到 https://dev.qweather.com 注册，创建项目拿到 API Key 与专属 API Host。
+2. 在项目根目录建 `.env.local`（不进版本库）：
+   ```
+   VITE_QWEATHER_KEY=你的key
+   VITE_QWEATHER_HOST=https://你的专属host.qweatherapi.com
+   VITE_QWEATHER_GEO_HOST=https://你的专属host.qweatherapi.com
+   ```
+3. `npm run build`（env 在构建时注入）→ `npx cap sync android` → 打包。
+
+> Key 会打进前端包，属正常做法；建议在和风控制台按 Android 包名（applicationId
+> `com.weatherdiorama.app`）限制该 key 的使用来源。屏幕角标署名会自动变为「和风天气」。

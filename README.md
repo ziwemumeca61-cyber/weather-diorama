@@ -45,7 +45,7 @@
 - **GLB 模型地标**：地标既可用程序化几何，也可直接加载 `.glb` 真实模型（自托管 Draco 解码、自动播放动画、加载失败回退程序化）。
   - **CC-BY 示范**：搜索「東京 / Tokyo」加载 [Littlest Tokyo](https://artstation.com/glenatron)（CC-BY 4.0）微缩街景模型，屏幕角标注署名。
   - 放模型到 `public/models/` 并在 `src/scene/cityProfiles.ts` 加一条 `models` 配置即可扩展，详见 `public/models/README.md`。
-- **实时天气**：接入 [Open-Meteo](https://open-meteo.com) 免费天气 API（无需 API key），支持城市搜索与浏览器定位。
+- **实时天气（可切换数据源）**：默认接入 [Open-Meteo](https://open-meteo.com)（免费、无需 key、全球覆盖）；配置 `VITE_QWEATHER_KEY` 后**自动切换到国内 [和风天气](https://www.qweather.com)**，无需改代码——适合国内网络环境与上架。数据源抽象在 `src/data/providers/`，屏幕角标的署名随数据源自动切换。详见 `.env.example`。
   - **搜索自动补全**：输入即联想候选城市（带省份 / 国家），键盘上下键选择；记住最近搜索，聚焦即回看。
   - **可分享链接**：当前城市写入地址栏 `?city=…`，复制链接即可分享 / 复现同一座城市。
 - **真实昼夜**：按城市**当地实时时刻**在黎明→白天→黄昏→夜晚间连续过渡（天空、太阳角度、万家灯火同步渐变），而非固定档位硬切。夜幕降临时星空与月亮随之淡入。
@@ -79,7 +79,7 @@ npm run smoke    # 无头冒烟测试（构建产物能渲染出场景、无 JS 
 - Vercel 导入本仓库即可，零配置——自动识别 Vite（构建 `npm run build`，产物 `dist/`），此后每次推送 `main` 自动发布，PR 自动生成预览环境。
 - CI（`ci.yml`）在每个 PR 上跑 构建 + 无头渲染冒烟。
 
-> 天气数据通过 Open-Meteo 直连获取，需要可访问外网的环境。默认加载"上海"，无网络时场景以晴天回退，手动天气切换始终可用。
+> 天气数据默认走 Open-Meteo（境外），可配置和风天气 key 切换到国内源（见上）。默认加载"上海"，无网络时场景以晴天回退，手动天气切换始终可用。
 
 ## 项目结构
 
@@ -87,6 +87,6 @@ npm run smoke    # 无头冒烟测试（构建产物能渲染出场景、无 JS 
 src/
   scene/       托盘底座、程序化城市、地标塔、点缀道具、昼夜光照
   weather/     天气特效（雨/雾/雪/云/雷电）与 WMO 天气码映射
-  data/        Open-Meteo API 客户端与 zustand 状态
+  data/        天气数据源（providers/：Open-Meteo 与和风天气）与 zustand 状态
   ui/          天气预报卡片、控制面板、加载态
 ```
