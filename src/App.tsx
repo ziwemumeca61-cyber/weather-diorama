@@ -22,6 +22,7 @@ import ForecastCard from './ui/ForecastCard'
 import Controls from './ui/Controls'
 import Credit from './ui/Credit'
 import Loading from './ui/Loading'
+import PrivacyGate from './ui/PrivacyGate'
 import { useStore } from './data/store'
 import { fetchWeatherByCity } from './data/api'
 import { readCityParam, writeCityParam } from './data/urlCity'
@@ -31,8 +32,11 @@ function InitialLoad() {
   const setCurrent = useStore((s) => s.setCurrent)
   const setError = useStore((s) => s.setError)
   const addRecent = useStore((s) => s.addRecent)
+  // No network request until the user has accepted the privacy policy.
+  const consented = useStore((s) => s.consented)
 
   useEffect(() => {
+    if (!consented) return
     let cancelled = false
     // A shared ?city= link reopens that city; otherwise default to Shanghai.
     const requested = readCityParam() ?? 'Shanghai'
@@ -51,7 +55,7 @@ function InitialLoad() {
     return () => {
       cancelled = true
     }
-  }, [setLoading, setCurrent, setError, addRecent])
+  }, [consented, setLoading, setCurrent, setError, addRecent])
 
   return null
 }
@@ -176,6 +180,7 @@ export default function App() {
       </div>
       <Loading />
       <InitialLoad />
+      <PrivacyGate />
 
       {contextLost && (
         <div className="fatal">

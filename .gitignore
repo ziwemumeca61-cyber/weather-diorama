@@ -5,3 +5,8 @@ dist-ssr
 .DS_Store
 .vite
 *.tsbuildinfo
+
+# Capacitor native projects — regenerated with `npx cap add android` (see
+# BUILD-ANDROID.md). Kept out of git; you build/sign these on your machine.
+/android
+/ios

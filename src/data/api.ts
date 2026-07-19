@@ -5,6 +5,7 @@ import {
   type WeatherState,
   type TimeOfDay,
 } from '../weather/weatherCode'
+import { getCurrentPosition } from './native'
 
 export interface GeoPlace {
   name: string
@@ -142,19 +143,13 @@ export async function fetchWeatherByCity(query: string): Promise<CurrentWeather>
   return fetchWeather(places[0])
 }
 
-/** Ask the browser for the user's coordinates. */
+/**
+ * Ask for the user's coordinates. Routes through the native helper so it uses
+ * the Capacitor Geolocation plugin (real permission prompt) inside the APK and
+ * the browser Geolocation API on the web.
+ */
 export function geolocate(): Promise<{ latitude: number; longitude: number }> {
-  return new Promise((resolve, reject) => {
-    if (!('geolocation' in navigator)) {
-      reject(new Error('浏览器不支持定位'))
-      return
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
-      (err) => reject(err),
-      { enableHighAccuracy: false, timeout: 8000 },
-    )
-  })
+  return getCurrentPosition()
 }
 
 /** Reverse-geocode-ish: fetch weather from raw coords, labelling it generically. */
