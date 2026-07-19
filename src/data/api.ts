@@ -1,139 +1,42 @@
-// Open-Meteo API client — free, keyless, CORS-friendly.
-import {
-  kindFromWmoCode,
-  intensityFromWmoCode,
-  type WeatherState,
-  type TimeOfDay,
-} from '../weather/weatherCode'
+// Weather data facade. Selects a backend provider (domestic 和风天气 when a key
+// is configured, else keyless Open-Meteo) and exposes a stable API to the app.
 import { getCurrentPosition } from './native'
+import { openMeteoProvider } from './providers/openmeteo'
+import { qweatherProvider, hasQWeatherKey } from './providers/qweather'
+import type { CurrentWeather, GeoPlace, WeatherProvider } from './types'
 
-export interface GeoPlace {
-  name: string
-  country: string
-  admin1?: string
-  latitude: number
-  longitude: number
-  timezone?: string
-  /** population, when the geocoder reports it — used to rank matches */
-  population?: number
-}
-
-export interface CurrentWeather {
-  place: GeoPlace
-  temperature: number
-  weatherCode: number
-  isDay: boolean
-  /** seconds to add to UTC to get the place's local time (drives live day/night) */
-  utcOffsetSeconds: number
-  /** local date string of the place, e.g. 12月25日 */
-  dateLabelZh: string
-  weather: WeatherState
-}
-
-const GEOCODE_URL = 'https://geocoding-api.open-meteo.com/v1/search'
-const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast'
-
-async function geocodeOnce(query: string): Promise<GeoPlace[]> {
-  const url = `${GEOCODE_URL}?name=${encodeURIComponent(query)}&count=6&language=zh&format=json`
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`geocode failed: ${res.status}`)
-  const data = await res.json()
-  const results = (data?.results ?? []) as any[]
-  return results.map((r) => ({
-    name: r.name,
-    country: r.country ?? '',
-    admin1: r.admin1,
-    latitude: r.latitude,
-    longitude: r.longitude,
-    timezone: r.timezone,
-    population: typeof r.population === 'number' ? r.population : undefined,
-  }))
-}
-
-/** Merge result lists, drop near-duplicate coordinates, keep first-seen order. */
-function dedupePlaces(...lists: GeoPlace[][]): GeoPlace[] {
-  const seen = new Set<string>()
-  const out: GeoPlace[] = []
-  for (const list of lists)
-    for (const p of list) {
-      const key = `${p.latitude.toFixed(2)},${p.longitude.toFixed(2)}`
-      if (seen.has(key)) continue
-      seen.add(key)
-      out.push(p)
-    }
-  return out
-}
+export type { CurrentWeather, GeoPlace } from './types'
 
 /**
- * Look up a place by name. Chinese prefecture cities are indexed inconsistently:
- * some resolve bare (临沂), others only with a 市 suffix (枣庄市), and a bare
- * query can even surface a tiny same-named village in another province ahead of
- * the real city (枣庄 → 河南 枣庄村 before 山东 枣庄市). So for a bare CJK query
- * we fetch the 市 variant too, merge both, and rank by population — the
- * prefecture-level city carries real population data that the villages lack.
+ * Active provider:
+ *  - VITE_WEATHER_PROVIDER='qweather'|'openmeteo' forces a choice;
+ *  - otherwise QWeather is used when VITE_QWEATHER_KEY is set, else Open-Meteo.
+ * So switching to the domestic source is just setting the key — no code change.
  */
-export async function geocodeCity(query: string): Promise<GeoPlace[]> {
-  const bareCjk = /[一-鿿]$/.test(query) && !/[市县区]$/.test(query)
-  const [bare, city] = await Promise.all([
-    geocodeOnce(query).catch(() => [] as GeoPlace[]),
-    bareCjk ? geocodeOnce(query + '市').catch(() => [] as GeoPlace[]) : Promise.resolve([]),
-  ])
-  const merged = dedupePlaces(city, bare).sort((a, b) => (b.population ?? 0) - (a.population ?? 0))
-  if (merged.length) return merged
-  // nothing matched — last resort, try the 县 (county) suffix
-  if (bareCjk) {
-    const county = await geocodeOnce(query + '县').catch(() => [] as GeoPlace[])
-    if (county.length) return county
-  }
-  return merged
+function selectProvider(): WeatherProvider {
+  const explicit = (import.meta.env.VITE_WEATHER_PROVIDER as string | undefined)?.trim()
+  if (explicit === 'openmeteo') return openMeteoProvider
+  if (explicit === 'qweather') return qweatherProvider
+  return hasQWeatherKey() ? qweatherProvider : openMeteoProvider
 }
 
-/** Derive a coarse time-of-day bucket from the local hour + is_day flag. */
-function timeOfDayFromHour(hour: number, isDay: boolean): TimeOfDay {
-  if (!isDay) return 'night'
-  if (hour >= 17 || hour < 7) return 'dusk'
-  return 'day'
+export const provider: WeatherProvider = selectProvider()
+
+/** Attribution for the active data source (shown in the corner credit). */
+export const weatherCredit = {
+  name: provider.creditName,
+  url: provider.creditUrl,
+  required: provider.creditRequired,
 }
 
-function formatDateZh(date: Date): string {
-  return `${date.getMonth() + 1}月${date.getDate()}日`
+/** Look up a place by name. */
+export function geocodeCity(query: string): Promise<GeoPlace[]> {
+  return provider.geocode(query)
 }
 
 /** Fetch current weather for a place. */
-export async function fetchWeather(place: GeoPlace): Promise<CurrentWeather> {
-  const params = new URLSearchParams({
-    latitude: String(place.latitude),
-    longitude: String(place.longitude),
-    current: 'temperature_2m,weather_code,is_day',
-    timezone: place.timezone || 'auto',
-  })
-  const res = await fetch(`${FORECAST_URL}?${params.toString()}`)
-  if (!res.ok) throw new Error(`forecast failed: ${res.status}`)
-  const data = await res.json()
-  const cur = data.current
-  const code = Number(cur.weather_code)
-  const isDay = Number(cur.is_day) === 1
-  const utcOffsetSeconds = Number(data.utc_offset_seconds ?? 0)
-
-  // local time from the API's ISO string (already in place timezone)
-  const localDate = new Date(cur.time)
-  const localHour = localDate.getHours()
-
-  const weather: WeatherState = {
-    kind: kindFromWmoCode(code, isDay),
-    timeOfDay: timeOfDayFromHour(localHour, isDay),
-    intensity: intensityFromWmoCode(code),
-  }
-
-  return {
-    place,
-    temperature: Math.round(Number(cur.temperature_2m)),
-    weatherCode: code,
-    isDay,
-    utcOffsetSeconds,
-    dateLabelZh: formatDateZh(localDate),
-    weather,
-  }
+export function fetchWeather(place: GeoPlace): Promise<CurrentWeather> {
+  return provider.current(place)
 }
 
 /** Convenience: geocode then fetch weather for the top match. */
@@ -152,8 +55,8 @@ export function geolocate(): Promise<{ latitude: number; longitude: number }> {
   return getCurrentPosition()
 }
 
-/** Reverse-geocode-ish: fetch weather from raw coords, labelling it generically. */
-export async function fetchWeatherByCoords(
+/** Fetch weather from raw coordinates, labelling it generically. */
+export function fetchWeatherByCoords(
   latitude: number,
   longitude: number,
   name = '当前位置',
