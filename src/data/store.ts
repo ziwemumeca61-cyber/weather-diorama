@@ -48,6 +48,26 @@ function saveAvatar(avatar: Appearance) {
 const RECENTS_KEY = 'weather-diorama.recents'
 const RECENTS_MAX = 6
 
+// Privacy consent (PIPL): the app must not collect anything until the user
+// agrees on first launch. Bump the version to re-prompt if the policy changes.
+const CONSENT_KEY = 'weather-diorama.consent.v1'
+
+function loadConsent(): boolean {
+  try {
+    return localStorage.getItem(CONSENT_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function saveConsent() {
+  try {
+    localStorage.setItem(CONSENT_KEY, '1')
+  } catch {
+    /* ignore */
+  }
+}
+
 function loadRecents(): GeoPlace[] {
   try {
     const raw = localStorage.getItem(RECENTS_KEY)
@@ -86,6 +106,9 @@ interface AppState {
   /** Recently viewed places (most-recent first), persisted for quick recall. */
   recents: GeoPlace[]
 
+  /** Whether the user has accepted the privacy policy (gates all data use). */
+  consented: boolean
+
   /** The effective weather driving the scene (live merged with overrides). */
   effectiveWeather: () => WeatherState
 
@@ -97,6 +120,7 @@ interface AppState {
   clearOverrides: () => void
   setAvatar: (patch: Partial<Appearance>) => void
   addRecent: (place: GeoPlace) => void
+  grantConsent: () => void
 }
 
 const DEFAULT_WEATHER: WeatherState = {
@@ -138,6 +162,7 @@ export const useStore = create<AppState>((set, get) => ({
   overrideTime: null,
   avatar: loadAvatar(),
   recents: loadRecents(),
+  consented: loadConsent(),
 
   effectiveWeather: () => {
     const s = get()
@@ -170,4 +195,8 @@ export const useStore = create<AppState>((set, get) => ({
       saveRecents(recents)
       return { recents }
     }),
+  grantConsent: () => {
+    saveConsent()
+    set({ consented: true })
+  },
 }))
