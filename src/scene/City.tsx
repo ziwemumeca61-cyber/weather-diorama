@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { generateCity, type BuildingInstance } from './cityData'
 import { getFacades } from './facades'
 import { useClockInputs } from '../data/store'
-import { useCityProfile, useWater } from './cityProfiles'
+import { useCityProfile, useSkyline, useWater } from './cityProfiles'
 import { localHourNow, nightFactorAtHour, OVERRIDE_HOUR } from './dayNight'
 
 /** One category of buildings sharing a material (glass towers or concrete blocks). */
@@ -153,9 +153,10 @@ function Rooftops({ buildings }: { buildings: BuildingInstance[] }) {
 export default function City() {
   const profile = useCityProfile()
   const water = useWater()
+  const { seed, hueShift } = useSkyline()
   const buildings = useMemo(
-    () => generateCity(20251225, profile.clearZones, profile.calmZones ?? [], water.cityMaxZ),
-    [profile, water],
+    () => generateCity(seed, profile.clearZones, profile.calmZones ?? [], water.cityMaxZ, hueShift),
+    [profile, water, seed, hueShift],
   )
   const { glass, concrete } = useMemo(() => {
     const glass: BuildingInstance[] = []
@@ -174,8 +175,9 @@ export default function City() {
   })
 
   return (
-    // remount on profile switch: InstancedMesh capacity is fixed at construction
-    <group key={profile.id}>
+    // remount on profile/seed switch: InstancedMesh capacity is fixed at
+    // construction, and the generic city's building count varies with its seed
+    <group key={`${profile.id}:${seed}`}>
       <BuildingCluster items={glass} glass emissiveTargetRef={emissiveTarget} />
       <BuildingCluster items={concrete} glass={false} emissiveTargetRef={emissiveTarget} />
       <Crowns towers={glass} />
