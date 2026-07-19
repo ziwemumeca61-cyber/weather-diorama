@@ -12,7 +12,7 @@ export interface BuildingInstance {
 }
 
 // mulberry32 — tiny deterministic PRNG
-function mulberry32(seed: number) {
+export function mulberry32(seed: number) {
   let a = seed >>> 0
   return function () {
     a |= 0
@@ -70,9 +70,11 @@ export function generateCity(
   clearZones: ClearZone[] = DEFAULT_CLEAR_ZONES,
   calmZones: CalmZone[] = [],
   maxZ = CITY.maxZ, // buildable rows end here (varies with the city's water layout)
+  hueShift = 0, // rotate every building's hue (used to tint unregistered cities apart)
 ): BuildingInstance[] {
   const rand = mulberry32(seed)
   const buildings: BuildingInstance[] = []
+  const hsl = { h: 0, s: 0, l: 0 }
 
   const step = 1.55
   const roadEvery = 4 // every Nth grid line is a street
@@ -112,6 +114,10 @@ export function generateCity(
       const isCore = coreness > 0.55 && rand() < 0.6
       const palette = isCore ? CORE_PALETTE : PALETTE
       const color = new THREE.Color(palette[Math.floor(rand() * palette.length)])
+      if (hueShift !== 0) {
+        color.getHSL(hsl)
+        color.setHSL((hsl.h + hueShift + 1) % 1, hsl.s, hsl.l)
+      }
 
       buildings.push({
         position: [x + jitterX, height / 2, z + jitterZ],

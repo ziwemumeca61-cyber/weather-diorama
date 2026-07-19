@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react'
 import { lazy, useMemo } from 'react'
 import { useStore } from '../data/store'
-import type { ClearZone, CalmZone } from './cityData'
+import { mulberry32, type ClearZone, type CalmZone } from './cityData'
 import type { GltfModelSpec } from './landmarks/GltfLandmark'
 import { resolveWater, type ResolvedWater, type WaterSpec } from './water'
 
@@ -46,6 +46,7 @@ const JinanLandmarks = lazy(() => import('./landmarks/Jinan'))
 const TaianLandmarks = lazy(() => import('./landmarks/Taian'))
 const QufuLandmarks = lazy(() => import('./landmarks/Qufu'))
 const YantaiLandmarks = lazy(() => import('./landmarks/Yantai'))
+const ProceduralLandmark = lazy(() => import('./landmarks/ProceduralLandmark'))
 const ZiboLandmarks = lazy(() => import('./landmarks/Zibo'))
 const ZaozhuangLandmarks = lazy(() => import('./landmarks/Zaozhuang'))
 const DongyingLandmarks = lazy(() => import('./landmarks/Dongying'))
@@ -58,7 +59,6 @@ const DezhouLandmarks = lazy(() => import('./landmarks/Dezhou'))
 const LiaochengLandmarks = lazy(() => import('./landmarks/Liaocheng'))
 const BinzhouLandmarks = lazy(() => import('./landmarks/Binzhou'))
 const HezeLandmarks = lazy(() => import('./landmarks/Heze'))
-const Cc0Downtown = lazy(() => import('./landmarks/Cc0Downtown'))
 
 /**
  * Registry of city dioramas. Add an entry per city: a landmark ensemble
@@ -477,12 +477,14 @@ export const CITY_PROFILES: CityProfile[] = [
     ],
   },
   {
-    // Fallback for any city without a bespoke set: a modeled downtown built
-    // from Kenney's CC0 City Kit (real .glb buildings, no attribution needed).
+    // Fallback for any city without a bespoke set: a procedural hero landmark
+    // whose archetype, colour, orientation, skyline seed and water are all
+    // derived from the city name — so every unlisted city looks like its own
+    // place instead of one shared generic downtown. See genericVariant().
     id: 'generic',
     match: /__never_matches_by_name__/,
-    Landmarks: Cc0Downtown,
-    clearZones: [{ x: -0.5, z: -2, r: 5.6 }],
+    Landmarks: ProceduralLandmark,
+    clearZones: [{ x: -0.5, z: -2, r: 5.2 }],
     calmZones: [{ x: -0.5, z: -2, r: 8.5, maxHeight: 2.2 }],
   },
 ]
@@ -495,14 +497,111 @@ export function profileForCity(name: string | undefined): CityProfile {
   return CITY_PROFILES.find((p) => p.match.test(name)) ?? DEFAULT_PROFILE
 }
 
+/** The fixed skyline seed registered cities are laid out against. */
+const REGISTERED_SEED = 20251225
+
+/** FNV-1a hash of the place name → a stable 32-bit seed for the generic city. */
+export function hashName(name: string): number {
+  let h = 2166136261 >>> 0
+  for (let i = 0; i < name.length; i++) {
+    h ^= name.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return (h >>> 0) || REGISTERED_SEED
+}
+
+const GENERIC_ACCENTS = [
+  '#6fa8dc', // sky blue glass
+  '#e0995b', // warm amber
+  '#7bbf8a', // jade
+  '#c98a8a', // terracotta rose
+  '#9a8fd0', // lavender
+  '#4fb0b8', // teal
+  '#d0a94f', // brass
+  '#8a97a6', // cool steel
+]
+
+/** How an unlisted city is dressed: everything keyed off the name hash. */
+export interface GenericVariant {
+  seed: number
+  /** hue rotation applied to the whole building palette (-0.08..0.08) */
+  hueShift: number
+  /** which procedural hero archetype (0..3) */
+  landmarkKind: number
+  /** hero accent colour */
+  accent: string
+  /** hero yaw so it doesn't always face the same way */
+  yaw: number
+  water: WaterSpec
+}
+
+/** Derive a full look for any city name — deterministic, so it's stable per city. */
+export function genericVariant(name: string | undefined): GenericVariant {
+  const key = (name && name.trim()) || 'City'
+  const seed = hashName(key)
+  const rand = mulberry32(seed)
+  const landmarkKind = Math.floor(rand() * 4)
+  const hueShift = (rand() - 0.5) * 0.16
+  const accent = GENERIC_ACCENTS[Math.floor(rand() * GENERIC_ACCENTS.length)]
+  const yaw = (rand() - 0.5) * Math.PI * 0.9
+  const wr = rand()
+  let water: WaterSpec
+  if (wr < 0.55) {
+    water = { kind: 'river', z0: 6.6 + rand() * 1.8, boats: rand() < 0.6, bridge: rand() < 0.4 }
+  } else if (wr < 0.8) {
+    water = {
+      kind: 'lake',
+      x: -0.4 + (rand() - 0.5) * 2.4,
+      z: 3.2 + rand() * 0.8,
+      rx: 2.4 + rand() * 1.0,
+      rz: 1.9 + rand() * 0.6,
+    }
+  } else {
+    water = { kind: 'none' }
+  }
+  return { seed, hueShift, landmarkKind, accent, yaw, water }
+}
+
+/** Reactive hook: the raw place name of the currently loaded city. */
+export function useCityName(): string | undefined {
+  return useStore((s) => s.current?.place.name)
+}
+
 /** Reactive hook: the city profile for the currently loaded place. */
 export function useCityProfile(): CityProfile {
-  const name = useStore((s) => s.current?.place.name)
+  const name = useCityName()
   return useMemo(() => profileForCity(name), [name])
+}
+
+/** Reactive hook: the name-derived look for the generic (unlisted) city. */
+export function useGenericVariant(): GenericVariant {
+  const name = useCityName()
+  return useMemo(() => genericVariant(name), [name])
+}
+
+/**
+ * Reactive hook: the {seed, hueShift} that drive the procedural skyline.
+ * Registered cities keep the fixed seed their zones were tuned against;
+ * unlisted cities get a distinct skyline + palette tint from their name.
+ */
+export function useSkyline(): { seed: number; hueShift: number } {
+  const profile = useCityProfile()
+  const variant = useGenericVariant()
+  return useMemo(
+    () =>
+      profile.id === 'generic'
+        ? { seed: variant.seed, hueShift: variant.hueShift }
+        : { seed: REGISTERED_SEED, hueShift: 0 },
+    [profile, variant],
+  )
 }
 
 /** Reactive hook: the resolved water layout for the current city. */
 export function useWater(): ResolvedWater {
   const profile = useCityProfile()
-  return useMemo(() => resolveWater(profile.water), [profile])
+  const variant = useGenericVariant()
+  return useMemo(() => {
+    const spec = profile.id === 'generic' ? variant.water : profile.water
+    return resolveWater(spec)
+  }, [profile, variant])
 }
