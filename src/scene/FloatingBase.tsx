@@ -107,7 +107,73 @@ function DriftRock({ seed }: { seed: number }) {
   )
 }
 
-/** The floating island's rocky underside plus a few drifting rocks. */
+/** Thin hanging vines/roots dangling from the island's rim. */
+function Vines() {
+  const vines = useMemo(() => {
+    let a = 33
+    const rnd = () => ((a = (a * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff)
+    const R = CITY.trayHalf + 0.2
+    return Array.from({ length: 20 }).map(() => {
+      const th = rnd() * Math.PI * 2
+      return {
+        x: Math.cos(th) * R,
+        z: Math.sin(th) * R,
+        len: 0.8 + rnd() * 2.2,
+        lean: (rnd() - 0.5) * 0.3,
+        c: rnd() > 0.5 ? '#5a6f3e' : '#6b5636',
+      }
+    })
+  }, [])
+  return (
+    <group>
+      {vines.map((v, i) => (
+        <mesh key={i} position={[v.x, TRAY_BOTTOM - v.len / 2 + 0.2, v.z]} rotation={[v.lean, 0, v.lean]}>
+          <cylinderGeometry args={[0.02, 0.05, v.len, 4]} />
+          <meshStandardMaterial color={v.c} roughness={0.95} />
+        </mesh>
+      ))}
+    </group>
+  )
+}
+
+/** Slow-drifting mist wisps hanging in the air below the island. */
+function DriftMist() {
+  const puffs = useMemo(() => {
+    let a = 707
+    const rnd = () => ((a = (a * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff)
+    return Array.from({ length: 7 }).map(() => {
+      const th = rnd() * Math.PI * 2
+      const r = 6 + rnd() * 7
+      return {
+        x: Math.cos(th) * r,
+        z: Math.sin(th) * r,
+        y: TRAY_BOTTOM - 2 - rnd() * 6,
+        s: 1.6 + rnd() * 1.8,
+        p: rnd() * Math.PI * 2,
+      }
+    })
+  }, [])
+  const refs = useRef<(THREE.Mesh | null)[]>([])
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime
+    puffs.forEach((pf, i) => {
+      const m = refs.current[i]
+      if (m) m.position.x = pf.x + Math.sin(t * 0.12 + pf.p) * 1.2
+    })
+  })
+  return (
+    <group>
+      {puffs.map((pf, i) => (
+        <mesh key={i} ref={(el) => (refs.current[i] = el)} position={[pf.x, pf.y, pf.z]} scale={[pf.s * 1.8, pf.s * 0.6, pf.s]}>
+          <sphereGeometry args={[0.7, 12, 8]} />
+          <meshStandardMaterial color={'#eef3f8'} transparent opacity={0.32} roughness={1} depthWrite={false} />
+        </mesh>
+      ))}
+    </group>
+  )
+}
+
+/** The floating island's rocky underside, drifting rocks, vines and mist. */
 export default function FloatingBase() {
   const geo = useMemo(() => makeUnderside(), [])
   const rockMat = useMemo(
@@ -117,9 +183,11 @@ export default function FloatingBase() {
   return (
     <group>
       <mesh geometry={geo} material={rockMat} castShadow receiveShadow />
+      <Vines />
       {[0, 1, 2, 3, 4].map((i) => (
         <DriftRock key={i} seed={i + 1} />
       ))}
+      <DriftMist />
     </group>
   )
 }
