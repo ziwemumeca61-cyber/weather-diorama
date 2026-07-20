@@ -129,7 +129,7 @@ export default function App() {
             false,
           )
         }}
-        camera={{ position: [24, 7, 26], fov: 42 }}
+        camera={{ position: [17, 14, 19], fov: 38 }}
         gl={{
           antialias: false,
           toneMapping: THREE.ACESFilmicToneMapping,
@@ -141,24 +141,24 @@ export default function App() {
         <Lighting />
         <Diorama />
         <WeatherController />
-        {/* soft shadow cast on faraway ground far below the floating island */}
+        {/* soft shadow beneath the floating slab */}
         <ContactShadows
-          position={[0, -9.6, 0]}
-          scale={44}
-          blur={3.2}
-          far={24}
-          opacity={0.26}
+          position={[0, -2.1, 0]}
+          scale={32}
+          blur={2.8}
+          far={9}
+          opacity={0.3}
           resolution={1024}
         />
         <OrbitControls
           enablePan={false}
           autoRotate
           autoRotateSpeed={0.4}
-          minDistance={14}
-          maxDistance={48}
+          minDistance={12}
+          maxDistance={40}
           minPolarAngle={0.15}
-          maxPolarAngle={Math.PI * 0.6}
-          target={[0, 2.2, 0]}
+          maxPolarAngle={Math.PI / 2.12}
+          target={[0, 1.2, 0]}
           makeDefault
         />
         <EffectComposer multisampling={0}>
