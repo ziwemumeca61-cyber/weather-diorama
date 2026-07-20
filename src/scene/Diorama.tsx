@@ -1,6 +1,5 @@
 import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { RoundedBox } from '@react-three/drei'
 import * as THREE from 'three'
 import { CITY } from './cityData'
 import City from './City'
@@ -232,19 +231,10 @@ export default function Diorama() {
       <NightSky />
 
       <group ref={islandRef}>
-        {/* white tray base */}
-        <RoundedBox
-          args={[CITY.trayHalf * 2 + 1.6, 1.4, CITY.trayHalf * 2 + 1.6]}
-          radius={0.5}
-          smoothness={4}
-          position={[0, -0.7, 0]}
-          castShadow
-          receiveShadow
-        >
-          <meshStandardMaterial color={'#f4f2ee'} roughness={0.85} metalness={0} />
-        </RoundedBox>
+        {/* the island body (irregular grassy slab + rocky underside) is in
+            FloatingBase; the city ground plane sits on top of it */}
 
-        {/* inner rim / land tray top */}
+        {/* land ground plane (roads + plots) over the island's grassy top */}
         <mesh
           position={[0, 0.005, (GROUND_Z0 + water.groundZ1) / 2]}
           rotation={[-Math.PI / 2, 0, 0]}

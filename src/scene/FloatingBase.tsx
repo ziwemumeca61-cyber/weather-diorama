@@ -17,12 +17,77 @@ function noise3(x: number, y: number, z: number): number {
 const TRAY_BOTTOM = -1.4
 
 /**
+ * The island's top slab, replacing the old white tray: an irregular grassy
+ * coastline (noise-perturbed rounded-rect outline) rolling into dirt-and-rock
+ * cliffs. Grass on top, dirt just under the rim, granite lower down.
+ */
+function makeIslandSlab(): THREE.BufferGeometry {
+  const HALF = CITY.trayHalf + 0.8 // ~11.3, a touch past the city ground
+  const cr = 2.2 // corner radius
+  const s = new THREE.Shape()
+  s.moveTo(-HALF + cr, -HALF)
+  s.lineTo(HALF - cr, -HALF)
+  s.quadraticCurveTo(HALF, -HALF, HALF, -HALF + cr)
+  s.lineTo(HALF, HALF - cr)
+  s.quadraticCurveTo(HALF, HALF, HALF - cr, HALF)
+  s.lineTo(-HALF + cr, HALF)
+  s.quadraticCurveTo(-HALF, HALF, -HALF, HALF - cr)
+  s.lineTo(-HALF, -HALF + cr)
+  s.quadraticCurveTo(-HALF, -HALF, -HALF + cr, -HALF)
+
+  // perturb the outline outward with smooth noise → irregular coastline
+  const pts = s.getPoints(160).map((p) => {
+    const n = noise3(p.x * 0.28, 0, p.y * 0.28)
+    const n2 = noise3(p.x * 0.75 + 11, 0, p.y * 0.75 - 11)
+    // biased outward so the coast never cuts inside the built-up ground
+    const push = (n - 0.3) * 3.4 + (n2 - 0.5) * 0.9
+    const len = Math.hypot(p.x, p.y) || 1
+    return new THREE.Vector2(p.x + (p.x / len) * push, p.y + (p.y / len) * push)
+  })
+  const shape = new THREE.Shape(pts)
+  const H = -TRAY_BOTTOM // 1.4
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: H, bevelEnabled: false, steps: 1 })
+  geo.rotateX(-Math.PI / 2) // shape XY → ground XZ, extrude → +Y
+  geo.translate(0, TRAY_BOTTOM, 0) // top face at y≈0, bottom at TRAY_BOTTOM
+
+  const pos = geo.attributes.position as THREE.BufferAttribute
+  const nrm = geo.attributes.normal as THREE.BufferAttribute
+  const colors = new Float32Array(pos.count * 3)
+  const cGrass = new THREE.Color('#6f8a4c')
+  const cGrassDk = new THREE.Color('#5a763e')
+  const cDirt = new THREE.Color('#83603c')
+  const cRock = new THREE.Color('#6f6a60')
+  const cDark = new THREE.Color('#43403a')
+  const tmp = new THREE.Color()
+  for (let i = 0; i < pos.count; i++) {
+    const y = pos.getY(i)
+    const ny = nrm.getY(i)
+    const jitter = noise3(pos.getX(i) * 0.5, 0, pos.getZ(i) * 0.5) - 0.5
+    if (ny > 0.6) {
+      tmp.lerpColors(cGrass, cGrassDk, jitter + 0.5) // grassy top
+    } else if (ny < -0.6) {
+      tmp.copy(cDark) // hidden underside
+    } else {
+      const t = THREE.MathUtils.clamp(-y / H, 0, 1) // 0 top edge → 1 bottom
+      if (t < 0.16) tmp.lerpColors(cGrassDk, cDirt, t / 0.16) // grassy overhang
+      else tmp.lerpColors(cDirt, cRock, (t - 0.16) / 0.84)
+    }
+    tmp.offsetHSL(0, 0, jitter * 0.06)
+    colors[i * 3] = tmp.r
+    colors[i * 3 + 1] = tmp.g
+    colors[i * 3 + 2] = tmp.b
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+  return geo
+}
+
+/**
  * The underside of the floating island: a craggy chunk of earth torn from the
  * ground, tapering to a rocky point below the tray. Vertex-coloured from mossy
  * dirt at the rim through granite to dark rock at the tip; seam-safe noise.
  */
 function makeUnderside(): THREE.BufferGeometry {
-  const R = CITY.trayHalf + 0.55 // meet the tray edge so rock hugs the rim
+  const R = CITY.trayHalf + 1.6 // meet the irregular slab's outer edge
   const H = 7.6
   const geo = new THREE.ConeGeometry(R, H, 40, 16, false)
   geo.rotateX(Math.PI) // apex points down
@@ -173,16 +238,23 @@ function DriftMist() {
   )
 }
 
-/** The floating island's rocky underside, drifting rocks, vines and mist. */
+/** The floating island: irregular grassy top slab, rocky underside, vines,
+ *  drifting rocks and mist. Replaces the old regular white tray. */
 export default function FloatingBase() {
-  const geo = useMemo(() => makeUnderside(), [])
+  const slab = useMemo(() => makeIslandSlab(), [])
+  const under = useMemo(() => makeUnderside(), [])
+  const slabMat = useMemo(
+    () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, flatShading: true }),
+    [],
+  )
   const rockMat = useMemo(
     () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true }),
     [],
   )
   return (
     <group>
-      <mesh geometry={geo} material={rockMat} castShadow receiveShadow />
+      <mesh geometry={slab} material={slabMat} castShadow receiveShadow />
+      <mesh geometry={under} material={rockMat} castShadow receiveShadow />
       <Vines />
       {[0, 1, 2, 3, 4].map((i) => (
         <DriftRock key={i} seed={i + 1} />
