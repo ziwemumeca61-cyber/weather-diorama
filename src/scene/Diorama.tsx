@@ -10,6 +10,7 @@ import People from './People'
 import Extras from './Extras'
 import NightSky from './NightSky'
 import FloatingBase from './FloatingBase'
+import Waterfall from './Waterfall'
 import { islandState } from './islandState'
 import { useWater } from './cityProfiles'
 import type { ResolvedWater } from './water'
@@ -255,6 +256,7 @@ export default function Diorama() {
 
         <FloatingBase />
         <WaterSurface water={water} />
+        <Waterfall water={water} />
         {water.boats && water.riverZ0 != null && <Boats z0={water.riverZ0} />}
         <City />
         <Landmark />
