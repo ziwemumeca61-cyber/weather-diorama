@@ -23,6 +23,63 @@
     <meta name="twitter:image" content="./og.png" />
   </head>
   <body>
+    <!-- instant splash while the 3D bundle downloads; faded out by the app -->
+    <style>
+      #splash {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        background: linear-gradient(#0b1220, #141e33);
+        color: #f4f7fb;
+        font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        transition: opacity 0.5s ease;
+      }
+      #splash.splash-hide {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .splash-icon {
+        font-size: 56px;
+        animation: splash-bob 1.6s ease-in-out infinite;
+      }
+      .splash-title {
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: 4px;
+      }
+      .splash-tip {
+        font-size: 13px;
+        color: rgba(244, 247, 251, 0.55);
+      }
+      .splash-tip::after {
+        content: '…';
+        display: inline-block;
+        width: 1.2em;
+        text-align: left;
+        animation: splash-dots 1.4s steps(4) infinite;
+        overflow: hidden;
+        vertical-align: bottom;
+        white-space: nowrap;
+      }
+      @keyframes splash-bob {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+      }
+      @keyframes splash-dots {
+        0% { width: 0; }
+        100% { width: 1.2em; }
+      }
+    </style>
+    <div id="splash" aria-hidden="true">
+      <div class="splash-icon">🏙️</div>
+      <div class="splash-title">微缩城市天气</div>
+      <div class="splash-tip">正在搭建城市</div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

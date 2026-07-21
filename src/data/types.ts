@@ -1,4 +1,29 @@
-import type { WeatherState } from '../weather/weatherCode'
+import type { WeatherKind, WeatherState } from '../weather/weatherCode'
+
+/** One hour of the upcoming forecast (for the strip under the card). */
+export interface HourForecast {
+  /** local-hour label, e.g. "14时" / "现在" */
+  label: string
+  kind: WeatherKind
+  temp: number
+  isDay: boolean
+}
+
+/** One day of the 7-day forecast. */
+export interface DayForecast {
+  /** e.g. "今天" / "周三" */
+  label: string
+  /** e.g. "7/21" */
+  dateLabel: string
+  kind: WeatherKind
+  tMax: number
+  tMin: number
+}
+
+export interface Forecast {
+  hourly: HourForecast[]
+  daily: DayForecast[]
+}
 
 export interface GeoPlace {
   name: string
@@ -25,6 +50,15 @@ export interface CurrentWeather {
   /** local date string of the place, e.g. 12月25日 */
   dateLabelZh: string
   weather: WeatherState
+  /** upcoming hours/days, when the provider supplies them */
+  forecast?: Forecast
+}
+
+/** "今天" / "明天" / "周X" label for a date offset from the first entry. */
+export function dayLabelZh(date: Date, index: number): string {
+  if (index === 0) return '今天'
+  if (index === 1) return '明天'
+  return '周' + '日一二三四五六'[date.getDay()]
 }
 
 /** A pluggable weather backend (Open-Meteo / QWeather / …). */

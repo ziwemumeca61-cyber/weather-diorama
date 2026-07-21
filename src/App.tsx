@@ -19,6 +19,7 @@ import Diorama from './scene/Diorama'
 import Lighting from './scene/Lighting'
 import WeatherController from './weather/WeatherController'
 import ForecastCard from './ui/ForecastCard'
+import ForecastStrip from './ui/ForecastStrip'
 import Controls from './ui/Controls'
 import Credit from './ui/Credit'
 import Loading from './ui/Loading'
@@ -99,6 +100,18 @@ export default function App() {
   const supported = useMemo(() => webglSupported(), [])
   const [contextLost, setContextLost] = useState(false)
 
+  // fade out the instant HTML splash once the app has mounted (the heavy JS
+  // download is over by then; the canvas first-paints moments later)
+  useEffect(() => {
+    const el = document.getElementById('splash')
+    if (!el) return
+    const t = setTimeout(() => {
+      el.classList.add('splash-hide')
+      setTimeout(() => el.remove(), 600)
+    }, 250)
+    return () => clearTimeout(t)
+  }, [])
+
   if (!supported) {
     return (
       <div className="app">
@@ -175,6 +188,7 @@ export default function App() {
 
       <div className="hud">
         <ForecastCard />
+        <ForecastStrip />
         <Controls />
         <Credit />
       </div>
