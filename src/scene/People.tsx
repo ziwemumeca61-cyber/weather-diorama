@@ -3,7 +3,6 @@ import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useNightGlow } from './landmarks/nightGlow'
 import { useCityProfile } from './cityProfiles'
-import { islandState } from './islandState'
 import type { ClearZone } from './cityData'
 
 /** Hero's live world position, shared with the dog and the follow camera. */
@@ -145,7 +144,6 @@ function Person({ a, b, speed, phase, mode, appearance, hero, emoji, zones }: Pe
 
       if (hero) {
         heroState.pos.copy(pos)
-        heroState.pos.y += islandState.y // keep world Y correct while the island floats
         const now = clock.elapsedTime
         // consume the action decided inside the click handler (real event
         // timing — frame-rate independent, unlike clock-based detection)
