@@ -89,6 +89,94 @@ canvas {
   color: var(--text-dim);
 }
 
+/* ---------- Hourly / 7-day forecast strip ---------- */
+.fstrip {
+  position: absolute;
+  top: 238px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(560px, calc(100vw - 24px));
+  border-radius: 16px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  padding: 8px 10px 9px;
+  user-select: none;
+}
+
+.fstrip-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.fstrip-tab {
+  padding: 2px 12px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.fstrip-tab.active {
+  border-color: var(--glass-border);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+.fstrip-row {
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.fstrip-row::-webkit-scrollbar {
+  display: none;
+}
+
+.fstrip-cell {
+  flex: 0 0 auto;
+  min-width: 46px;
+  text-align: center;
+  padding: 2px 3px;
+  border-radius: 10px;
+}
+
+.fstrip-cell:first-child {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.fstrip-label {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.fstrip-date {
+  font-size: 10px;
+  color: var(--text-dim);
+  opacity: 0.8;
+}
+
+.fstrip-emoji {
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.fstrip-temp {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.fstrip-min {
+  font-weight: 400;
+  color: var(--text-dim);
+}
+
 /* ---------- Controls ---------- */
 .controls {
   position: absolute;
@@ -460,6 +548,9 @@ canvas {
   }
   .fc-temp {
     font-size: 26px;
+  }
+  .fstrip {
+    top: 206px;
   }
 }
 

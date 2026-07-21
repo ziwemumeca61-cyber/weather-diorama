@@ -8,10 +8,12 @@
 // both HOST and GEO_HOST to it.
 import type { WeatherKind, WeatherState } from '../../weather/weatherCode'
 import {
+  dayLabelZh,
   localTimeAt,
   offsetToSeconds,
   timeOfDayFromHour,
   type CurrentWeather,
+  type Forecast,
   type GeoPlace,
   type WeatherProvider,
 } from '../types'
@@ -76,12 +78,49 @@ async function geocode(query: string): Promise<GeoPlace[]> {
   }))
 }
 
+/** Parse QWeather /24h + /7d responses into our forecast shape. */
+function parseQwForecast(h24: any, d7: any): Forecast | undefined {
+  try {
+    const hs = (h24?.hourly ?? []) as any[]
+    const ds = (d7?.daily ?? []) as any[]
+    if (!hs.length || !ds.length) return undefined
+    const hourly = hs.slice(0, 24).map((h, i) => {
+      const hh = Number(String(h.fxTime).slice(11, 13))
+      const icon = Number(h.icon)
+      const isDay = icon < 150 || icon >= 300 // 1xx night variants are 150+
+      return {
+        label: i === 0 ? '现在' : `${hh}时`,
+        kind: kindFromQwIcon(icon),
+        temp: Math.round(Number(h.temp)),
+        isDay,
+      }
+    })
+    const daily = ds.slice(0, 7).map((d, i) => {
+      const date = new Date(String(d.fxDate) + 'T12:00')
+      return {
+        label: dayLabelZh(date, i),
+        dateLabel: `${date.getMonth() + 1}/${date.getDate()}`,
+        kind: kindFromQwIcon(Number(d.iconDay)),
+        tMax: Math.round(Number(d.tempMax)),
+        tMin: Math.round(Number(d.tempMin)),
+      }
+    })
+    return { hourly, daily }
+  } catch {
+    return undefined
+  }
+}
+
 async function current(place: GeoPlace): Promise<CurrentWeather> {
   // Prefer the precise LocationID; fall back to "lon,lat".
   const loc = place.id ?? `${place.longitude.toFixed(4)},${place.latitude.toFixed(4)}`
-  const data = await qwFetch(
-    `${HOST}/v7/weather/now?location=${encodeURIComponent(loc)}&key=${KEY}&lang=zh`,
-  )
+  const q = `location=${encodeURIComponent(loc)}&key=${KEY}&lang=zh`
+  // 24h/7d are nice-to-have — failures must not break current weather
+  const [data, h24, d7] = await Promise.all([
+    qwFetch(`${HOST}/v7/weather/now?${q}`),
+    qwFetch(`${HOST}/v7/weather/24h?${q}`).catch(() => null),
+    qwFetch(`${HOST}/v7/weather/7d?${q}`).catch(() => null),
+  ])
   const now = data.now ?? {}
   const iconCode = Number(now.icon)
 
@@ -106,6 +145,7 @@ async function current(place: GeoPlace): Promise<CurrentWeather> {
     utcOffsetSeconds,
     dateLabelZh,
     weather,
+    forecast: parseQwForecast(h24, d7),
   }
 }
 

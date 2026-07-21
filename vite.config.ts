@@ -1,9 +1,25 @@
+import { execSync } from 'node:child_process'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// Short build id shown in the corner credit, so anyone can tell at a glance
+// which deployment they're looking at. Vercel exposes the commit SHA in env.
+function buildId(): string {
+  const sha = process.env.VERCEL_GIT_COMMIT_SHA
+  if (sha) return sha.slice(0, 7)
+  try {
+    return execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim()
+  } catch {
+    return 'dev'
+  }
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
+  define: {
+    __BUILD_ID__: JSON.stringify(buildId()),
+  },
   plugins: [
     react(),
     VitePWA({

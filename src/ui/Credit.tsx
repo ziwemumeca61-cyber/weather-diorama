@@ -16,7 +16,8 @@ export default function Credit() {
       <a href={weatherCredit.url} target="_blank" rel="noreferrer">
         {weatherCredit.name}
       </a>
-      {isOpenMeteo ? ' (CC-BY 4.0)' : ''} · 定位仅用于查询本地天气，不会上传
+      {isOpenMeteo ? ' (CC-BY 4.0)' : ''} · 定位仅用于查询本地天气，不会上传 ·{' '}
+      <span className="credit-ver">v{__BUILD_ID__}</span>
     </div>
   )
 }
