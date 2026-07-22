@@ -9,6 +9,7 @@ import Props from './Props'
 import People from './People'
 import Extras from './Extras'
 import NightSky from './NightSky'
+import MoltenIsland from './MoltenIsland'
 import { useWater } from './cityProfiles'
 import type { ResolvedWater } from './water'
 
@@ -66,7 +67,7 @@ function makeGroundTexture(z1: number): THREE.Texture {
     ctx.fillRect(0, pz - h / 2, S, h)
   }
 
-  // lane dashes on roads
+  // lane dashes on roads — both directions
   ctx.strokeStyle = '#e8e4d0'
   ctx.lineWidth = 2
   ctx.setLineDash([10, 12])
@@ -79,6 +80,16 @@ function makeGroundTexture(z1: number): THREE.Texture {
     ctx.lineTo(px, S)
     ctx.stroke()
   }
+  iz = 0
+  for (let z = CITY.minZ; z <= CITY.maxZ; z += step, iz++) {
+    if (iz % roadEvery !== 0) continue
+    const [, pz] = toPx(0, z)
+    ctx.beginPath()
+    ctx.moveTo(0, pz)
+    ctx.lineTo(S, pz)
+    ctx.stroke()
+  }
+  ctx.setLineDash([])
 
   const tex = new THREE.CanvasTexture(c)
   tex.anisotropy = 4
@@ -153,9 +164,9 @@ function WaterSurface({ water }: { water: ResolvedWater }) {
   useFrame(({ clock }, dt) => {
     const t = clock.elapsedTime
     if (matRef.current) matRef.current.emissiveIntensity = 0.04 + Math.sin(t * 0.8) * 0.02
-    flow.offset.x -= dt * (water.lake ? 0.008 : 0.045)
-    if (water.lake) flow.offset.y += dt * 0.004
-    foam.offset.x -= dt * 0.03
+    flow.offset.x -= dt * (water.lake ? 0.006 : 0.03)
+    if (water.lake) flow.offset.y += dt * 0.003
+    foam.offset.x -= dt * 0.016
 
     // gentle vertex ripples on the water surface (local z = world up)
     const m = meshRef.current
@@ -168,9 +179,9 @@ function WaterSurface({ water }: { water: ResolvedWater }) {
         const x = b[i * 3]
         const y = b[i * 3 + 1]
         const w =
-          Math.sin(x * 1.1 + t * 1.3) * 0.03 +
-          Math.sin(y * 1.7 - t * 1.0) * 0.024 +
-          Math.sin((x + y) * 0.7 + t * 0.7) * 0.02
+          Math.sin(x * 1.0 + t * 1.1) * 0.009 +
+          Math.sin(y * 1.5 - t * 0.8) * 0.007 +
+          Math.sin((x + y) * 0.6 + t * 0.6) * 0.005
         pos.setZ(i, b[i * 3 + 2] + w)
       }
       pos.needsUpdate = true
@@ -258,7 +269,9 @@ function Boats({ z0 }: { z0: number }) {
       const p = (t * b.speed + b.offset) % 1
       const x = THREE.MathUtils.lerp(-10, 10, b.dir > 0 ? p : 1 - p)
       g.position.set(x, 0.05, b.z)
-      g.rotation.y = b.dir > 0 ? Math.PI / 2 : -Math.PI / 2
+      // hull runs along local +x with the prow at +x, so face the travel axis:
+      // 0 when sailing toward +x, PI when toward -x
+      g.rotation.y = b.dir > 0 ? 0 : Math.PI
     })
   })
   return (
@@ -291,7 +304,7 @@ function Boats({ z0 }: { z0: number }) {
           </mesh>
           {/* trailing wake foam */}
           <mesh position={[-0.62, -0.035, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[0.8, 0.36]} />
+            <planeGeometry args={[0.8, 0.34]} />
             <meshStandardMaterial
               map={foam}
               color={'#ffffff'}
@@ -310,20 +323,37 @@ function Boats({ z0 }: { z0: number }) {
 export default function Diorama() {
   const water = useWater()
   const groundTex = useMemo(() => makeGroundTexture(water.groundZ1), [water.groundZ1])
+  const floatRef = useRef<THREE.Group>(null)
+
+  // The whole diorama drifts as a suspended island: a slow vertical bob plus a
+  // faint sway, so the molten rock beneath reads as truly floating.
+  useFrame(({ clock }) => {
+    const g = floatRef.current
+    if (!g) return
+    const t = clock.elapsedTime
+    g.position.y = Math.sin(t * 0.5) * 0.18
+    g.rotation.z = Math.sin(t * 0.4) * 0.012
+    g.rotation.x = Math.sin(t * 0.33 + 1.1) * 0.01
+  })
 
   return (
-    <group>
-      {/* white tray base */}
+    <group ref={floatRef}>
+      {/* thin base slab — a slim plate the molten island hangs from. Its top
+          sits just below the ground plane (y≈0.005) so the road/pavement
+          texture shows through instead of being covered by white. */}
       <RoundedBox
-        args={[CITY.trayHalf * 2 + 1.6, 1.4, CITY.trayHalf * 2 + 1.6]}
-        radius={0.5}
+        args={[CITY.trayHalf * 2 + 1.6, 0.42, CITY.trayHalf * 2 + 1.6]}
+        radius={0.18}
         smoothness={4}
-        position={[0, -0.7, 0]}
+        position={[0, -0.25, 0]}
         castShadow
         receiveShadow
       >
         <meshStandardMaterial color={'#f4f2ee'} roughness={0.85} metalness={0} />
       </RoundedBox>
+
+      {/* molten amber/gold rock mass suspended beneath the slab */}
+      <MoltenIsland />
 
       {/* inner rim / land tray top */}
       <mesh

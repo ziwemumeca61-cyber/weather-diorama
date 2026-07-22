@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { useCityProfile } from './cityProfiles'
 import GltfLandmarks from './landmarks/GltfLandmark'
 import ModelErrorBoundary from './landmarks/ModelErrorBoundary'
+import LandmarkLabels from './LandmarkLabels'
 
 /**
  * Renders the landmark set for the currently loaded city. A profile may supply
@@ -13,22 +14,29 @@ export default function Landmark() {
   const profile = useCityProfile()
   const Procedural = profile.Landmarks
   const proceduralNode = Procedural ? <Procedural /> : null
+  const labels = <LandmarkLabels labels={profile.labels} />
 
   if (profile.models?.length) {
     return (
-      <ModelErrorBoundary key={profile.id} fallback={proceduralNode}>
-        <Suspense fallback={proceduralNode}>
-          <GltfLandmarks specs={profile.models} />
-        </Suspense>
-      </ModelErrorBoundary>
+      <>
+        <ModelErrorBoundary key={profile.id} fallback={proceduralNode}>
+          <Suspense fallback={proceduralNode}>
+            <GltfLandmarks specs={profile.models} />
+          </Suspense>
+        </ModelErrorBoundary>
+        {labels}
+      </>
     )
   }
 
   // Procedural path — wrapped too, since a "procedural" set may load GLBs
   // (e.g. the CC0 modeled downtown). A load failure degrades to an empty scene.
   return (
-    <ModelErrorBoundary key={profile.id} fallback={null}>
-      <Suspense fallback={null}>{proceduralNode}</Suspense>
-    </ModelErrorBoundary>
+    <>
+      <ModelErrorBoundary key={profile.id} fallback={null}>
+        <Suspense fallback={null}>{proceduralNode}</Suspense>
+      </ModelErrorBoundary>
+      {labels}
+    </>
   )
 }

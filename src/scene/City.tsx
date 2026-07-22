@@ -78,9 +78,9 @@ function BuildingCluster({
         emissiveMap={set.emissive}
         emissiveIntensity={0}
         roughnessMap={set.roughness}
-        roughness={glass ? 0.35 : 0.85}
-        metalness={glass ? 0.8 : 0.08}
-        envMapIntensity={glass ? 1.4 : 0.5}
+        roughness={glass ? 0.22 : 0.8}
+        metalness={glass ? 0.85 : 0.1}
+        envMapIntensity={glass ? 1.8 : 0.6}
       />
     </instancedMesh>
   )
@@ -110,33 +110,40 @@ function RoofToppers({ buildings }: { buildings: BuildingInstance[] }) {
   useLayoutEffect(() => {
     const d = new THREE.Object3D()
     const c = new THREE.Color()
-    const tile = new THREE.Color('#7c6f63')
-    // hip: 4-sided pyramid cap
+    // a small palette of natural roof tones: warm terracotta, clay and slate
+    const palette = [
+      new THREE.Color('#b06a4a'),
+      new THREE.Color('#9c5b40'),
+      new THREE.Color('#8a6f63'),
+      new THREE.Color('#6f7075'),
+    ]
+    const tileFor = (i: number) => palette[i % palette.length]
+    // hip: shallow 4-sided pyramid cap (a gentle pitch, not a spike)
     if (hipRef.current) {
       groups.hip.forEach((b, i) => {
         const top = b.position[1] + b.size[1] / 2
-        const capH = 0.35 + b.size[0] * 0.4
+        const capH = 0.2 + Math.min(b.size[0], b.size[2]) * 0.22
         d.position.set(b.position[0], top + capH / 2, b.position[2])
         d.rotation.set(0, Math.PI / 4, 0)
-        d.scale.set(b.size[0] * 1.04, capH, b.size[2] * 1.04)
+        d.scale.set(b.size[0] * 1.08, capH, b.size[2] * 1.08)
         d.updateMatrix()
         hipRef.current!.setMatrixAt(i, d.matrix)
-        hipRef.current!.setColorAt(i, c.copy(tile).offsetHSL(0, 0, (i % 4) * 0.02 - 0.03))
+        hipRef.current!.setColorAt(i, c.copy(tileFor(i)).offsetHSL(0, 0, (i % 3) * 0.02 - 0.02))
       })
       d.rotation.set(0, 0, 0)
       hipRef.current.instanceMatrix.needsUpdate = true
       if (hipRef.current.instanceColor) hipRef.current.instanceColor.needsUpdate = true
     }
-    // gable: ridge roof
+    // gable: shallow ridge roof with a slight eave overhang
     if (gableRef.current) {
       groups.gable.forEach((b, i) => {
         const top = b.position[1] + b.size[1] / 2
-        const gH = 0.3 + b.size[2] * 0.5
+        const gH = 0.18 + b.size[2] * 0.3
         d.position.set(b.position[0], top, b.position[2])
-        d.scale.set(b.size[0] * 1.02, gH, b.size[2] * 1.06)
+        d.scale.set(b.size[0] * 1.08, gH, b.size[2] * 1.12)
         d.updateMatrix()
         gableRef.current!.setMatrixAt(i, d.matrix)
-        gableRef.current!.setColorAt(i, c.copy(tile).offsetHSL(0.02, 0.05, (i % 3) * 0.02 - 0.02))
+        gableRef.current!.setColorAt(i, c.copy(tileFor(i + 1)).offsetHSL(0, 0, (i % 3) * 0.02 - 0.02))
       })
       gableRef.current.instanceMatrix.needsUpdate = true
       if (gableRef.current.instanceColor) gableRef.current.instanceColor.needsUpdate = true
