@@ -3,6 +3,7 @@ import { lazy, useMemo } from 'react'
 import { useStore } from '../data/store'
 import { mulberry32, type ClearZone, type CalmZone } from './cityData'
 import type { GltfModelSpec } from './landmarks/GltfLandmark'
+import type { LandmarkLabel } from './LandmarkLabels'
 import { resolveWater, type ResolvedWater, type WaterSpec } from './water'
 
 export interface CityProfile {
@@ -22,6 +23,9 @@ export interface CityProfile {
   calmZones?: CalmZone[]
   /** the city's water body (river band / lake / none); default: Shanghai-style river */
   water?: WaterSpec
+  /** subtle name boards for landmarks — wood 牌匾 for heritage sites, a small
+   *  floating sign for modern towers */
+  labels?: LandmarkLabel[]
 }
 
 // Each city's landmark ensemble is code-split into its own chunk and only
@@ -70,6 +74,10 @@ export const CITY_PROFILES: CityProfile[] = [
     id: 'beijing',
     match: /北京|beijing/i,
     Landmarks: BeijingLandmarks,
+    labels: [
+      { text: '天安门', pos: [3.9, 1.3, 4.2] },
+      { text: '祈年殿', pos: [-3.8, 1.3, 4.0] },
+    ],
     clearZones: [
       { x: -3.8, z: 1.4, r: 3.0 }, // 祈年殿 Temple of Heaven (front-left)
       { x: 3.9, z: 1.6, r: 3.2 }, // 天安门 Tiananmen (front-right, incl. flanking walls)
@@ -88,6 +96,7 @@ export const CITY_PROFILES: CityProfile[] = [
     id: 'guangzhou',
     match: /广州|guangzhou|canton/i,
     Landmarks: GuangzhouLandmarks,
+    labels: [{ text: '广州塔', pos: [-1.5, 1.2, -0.6] }],
     clearZones: [
       { x: -1.5, z: -2.5, r: 2.0 }, // 广州塔 Canton Tower
       { x: 3.2, z: -4.0, r: 1.2 }, // companion tower
@@ -98,6 +107,10 @@ export const CITY_PROFILES: CityProfile[] = [
     id: 'xian',
     match: /西安|xi'?an|xian/i,
     Landmarks: XianLandmarks,
+    labels: [
+      { text: '大雁塔', pos: [-3.4, 1.3, 3.4] },
+      { text: '钟楼', pos: [3.6, 1.3, 1.8] },
+    ],
     clearZones: [
       { x: -3.4, z: 0.8, r: 2.6 }, // 大雁塔 Wild Goose Pagoda
       { x: 3.6, z: -0.4, r: 2.2 }, // 钟楼 Bell Tower
@@ -113,6 +126,7 @@ export const CITY_PROFILES: CityProfile[] = [
     id: 'hangzhou',
     match: /杭州|hangzhou/i,
     Landmarks: HangzhouLandmarks,
+    labels: [{ text: '雷峰塔', pos: [-1.0, 1.3, 2.0] }],
     clearZones: [
       { x: -1.0, z: -1.6, r: 3.6 }, // 雷峰塔 Leifeng Pagoda + hill
       { x: 0.6, z: 3.4, r: 3.9 }, // 西湖 West Lake footprint
@@ -186,6 +200,10 @@ export const CITY_PROFILES: CityProfile[] = [
     id: 'suzhou',
     match: /苏州|suzhou/i,
     Landmarks: SuzhouLandmarks,
+    labels: [
+      { text: '虎丘塔', pos: [-3.4, 1.3, 3.4] },
+      { text: '东方之门', pos: [2.9, 1.2, -2.2] },
+    ],
     clearZones: [
       { x: 2.9, z: -3.8, r: 2.2 }, // 东方之门 Gate of the Orient
       { x: -3.4, z: 0.5, r: 2.9 }, // 虎丘塔 Tiger Hill
@@ -200,6 +218,10 @@ export const CITY_PROFILES: CityProfile[] = [
     id: 'nanjing',
     match: /南京|nanjing/i,
     Landmarks: NanjingLandmarks,
+    labels: [
+      { text: '中华门', pos: [-3.2, 1.3, 3.8] },
+      { text: '紫峰大厦', pos: [2.8, 1.2, -3.0] },
+    ],
     clearZones: [
       { x: 2.8, z: -4.2, r: 1.9 }, // 紫峰大厦 Zifeng Tower
       { x: -3.2, z: 0.8, r: 3.1 }, // 中华门 city wall gate
@@ -257,6 +279,7 @@ export const CITY_PROFILES: CityProfile[] = [
     id: 'taian',
     match: /泰安|tai[’']an|taian/i,
     Landmarks: TaianLandmarks,
+    labels: [{ text: '泰山', pos: [-1.5, 1.2, 0.6] }],
     clearZones: [{ x: -1.5, z: -4.4, r: 4.7 }], // 泰山 the massif itself
     calmZones: [{ x: -1.5, z: -4.4, r: 7.0, maxHeight: 1.8 }], // town stays at its foot
     // inland mountain town — no waterway, the blocks run to the tray edge
@@ -266,6 +289,10 @@ export const CITY_PROFILES: CityProfile[] = [
     id: 'qufu',
     match: /曲阜|qufu/i,
     Landmarks: QufuLandmarks,
+    labels: [
+      { text: '大成殿', pos: [-3.2, 1.3, 3.6] },
+      { text: '孔庙', pos: [3.2, 1.3, 2.2] },
+    ],
     clearZones: [
       { x: -3.2, z: 0.6, r: 3.0 }, // 大成殿 Dacheng Hall terraces
       { x: 3.2, z: -0.4, r: 2.8 }, // 万仞宫墙 gate
@@ -465,6 +492,10 @@ export const CITY_PROFILES: CityProfile[] = [
     id: 'shanghai',
     match: /上海|shanghai/i,
     Landmarks: ShanghaiLandmarks,
+    labels: [
+      { text: '东方明珠', pos: [-3.7, 1.2, 0.4] },
+      { text: '上海中心', pos: [1.7, 1.2, -3.4] },
+    ],
     clearZones: [
       { x: -3.7, z: -1.2, r: 2.2 }, // 东方明珠 Oriental Pearl (riverside, alone)
       { x: 1.7, z: -5.1, r: 1.6 }, // 上海中心 Shanghai Tower
