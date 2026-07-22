@@ -166,8 +166,8 @@ export default function App() {
           enablePan={false}
           autoRotate
           autoRotateSpeed={0.4}
-          minDistance={12}
-          maxDistance={38}
+          minDistance={9}
+          maxDistance={80}
           minPolarAngle={0.15}
           // allow dipping below the horizon so the floating molten island shows
           maxPolarAngle={Math.PI * 0.62}

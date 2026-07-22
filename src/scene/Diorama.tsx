@@ -12,6 +12,7 @@ import NightSky from './NightSky'
 import CloudBase from './CloudBase'
 import { useWater } from './cityProfiles'
 import type { ResolvedWater } from './water'
+import { useEffectiveWeather } from '../data/store'
 
 const GROUND_X0 = -9.9
 const GROUND_X1 = 9.9
@@ -332,6 +333,38 @@ function Boats({ z0 }: { z0: number }) {
   )
 }
 
+/** White snow blanket over the land, fading in when it's snowing. */
+function GroundSnow({ z1 }: { z1: number }) {
+  const { kind } = useEffectiveWeather()
+  const matRef = useRef<THREE.MeshStandardMaterial>(null)
+  useFrame((_, dtRaw) => {
+    const m = matRef.current
+    if (!m) return
+    const target = kind === 'snow' ? 0.92 : 0
+    m.opacity += (target - m.opacity) * (1 - Math.exp(-2.2 * Math.min(dtRaw, 0.05)))
+    m.visible = m.opacity > 0.01
+  })
+  return (
+    <mesh
+      position={[0, 0.03, (GROUND_Z0 + z1) / 2]}
+      rotation={[-Math.PI / 2, 0, 0]}
+      receiveShadow
+      visible={false}
+    >
+      <planeGeometry args={[GROUND_X1 - GROUND_X0, z1 - GROUND_Z0]} />
+      <meshStandardMaterial
+        ref={matRef}
+        color={'#eef4fc'}
+        roughness={0.7}
+        metalness={0}
+        transparent
+        opacity={0}
+        depthWrite={false}
+      />
+    </mesh>
+  )
+}
+
 export default function Diorama() {
   const water = useWater()
   const groundTex = useMemo(() => makeGroundTexture(water.groundZ1), [water.groundZ1])
@@ -376,6 +409,8 @@ export default function Diorama() {
         <planeGeometry args={[GROUND_X1 - GROUND_X0, water.groundZ1 - GROUND_Z0]} />
         <meshStandardMaterial map={groundTex} roughness={0.9} metalness={0} />
       </mesh>
+
+      <GroundSnow z1={water.groundZ1} />
 
       <NightSky />
       <WaterSurface water={water} />
