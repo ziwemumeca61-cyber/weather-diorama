@@ -75,7 +75,7 @@ function Cars({ water }: { water: ResolvedWater }) {
         a: new THREE.Vector3(d[0], 0.11, d[1]),
         b: new THREE.Vector3(d[2], 0.11, d[3]),
         color: colors[i % colors.length],
-        speed: 0.35 + (i % 3) * 0.12,
+        speed: 0.14 + (i % 3) * 0.045, // slower, calmer traffic
         offset: (i * 0.37) % 1,
       }))
   }, [water])
@@ -100,14 +100,33 @@ function Cars({ water }: { water: ResolvedWater }) {
     <group>
       {lanes.map((lane, i) => (
         <group key={i} ref={(el) => (refs.current[i] = el)}>
-          <mesh castShadow position={[0, 0.06, 0]}>
-            <boxGeometry args={[0.22, 0.12, 0.38]} />
-            <meshStandardMaterial color={lane.color} roughness={0.5} metalness={0.3} />
+          {/* body */}
+          <mesh castShadow position={[0, 0.075, 0]}>
+            <boxGeometry args={[0.23, 0.1, 0.46]} />
+            <meshStandardMaterial color={lane.color} roughness={0.45} metalness={0.35} />
           </mesh>
-          <mesh position={[0, 0.15, -0.02]}>
-            <boxGeometry args={[0.18, 0.1, 0.2]} />
-            <meshStandardMaterial color={'#20242c'} roughness={0.3} metalness={0.5} />
+          {/* glass cabin, set slightly back */}
+          <mesh position={[0, 0.16, -0.03]}>
+            <boxGeometry args={[0.19, 0.09, 0.26]} />
+            <meshStandardMaterial color={'#1c2029'} roughness={0.2} metalness={0.6} />
           </mesh>
+          {/* body-colour roof */}
+          <mesh position={[0, 0.205, -0.03]}>
+            <boxGeometry args={[0.195, 0.03, 0.27]} />
+            <meshStandardMaterial color={lane.color} roughness={0.45} metalness={0.35} />
+          </mesh>
+          {/* four wheels (axis across the car) */}
+          {[
+            [-0.115, 0.15],
+            [0.115, 0.15],
+            [-0.115, -0.15],
+            [0.115, -0.15],
+          ].map(([wx, wz], k) => (
+            <mesh key={k} position={[wx, 0.045, wz]} rotation={[0, 0, Math.PI / 2]}>
+              <cylinderGeometry args={[0.045, 0.045, 0.05, 10]} />
+              <meshStandardMaterial color={'#15171b'} roughness={0.75} />
+            </mesh>
+          ))}
         </group>
       ))}
     </group>

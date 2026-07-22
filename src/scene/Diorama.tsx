@@ -86,6 +86,29 @@ function makeGroundTexture(z1: number): THREE.Texture {
   return tex
 }
 
+/** Soft white foam streaks on transparent, for shorelines and boat wakes. */
+function makeFoamTexture(): THREE.Texture {
+  const c = document.createElement('canvas')
+  c.width = 256
+  c.height = 64
+  const g = c.getContext('2d')!
+  g.clearRect(0, 0, 256, 64)
+  let a = 8123
+  const rnd = () => ((a = (a * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff)
+  for (let i = 0; i < 90; i++) {
+    const x = rnd() * 256
+    const y = rnd() * 64
+    const r = 1 + rnd() * 4
+    g.fillStyle = `rgba(255,255,255,${0.12 + rnd() * 0.4})`
+    g.beginPath()
+    g.arc(x, y, r, 0, Math.PI * 2)
+    g.fill()
+  }
+  const t = new THREE.CanvasTexture(c)
+  t.wrapS = t.wrapT = THREE.RepeatWrapping
+  return t
+}
+
 /** Streaky ripple texture for flowing water (scrolled every frame). */
 function makeFlowTexture(): THREE.Texture {
   const c = document.createElement('canvas')
@@ -114,20 +137,45 @@ function makeFlowTexture(): THREE.Texture {
 
 function WaterSurface({ water }: { water: ResolvedWater }) {
   const matRef = useRef<THREE.MeshStandardMaterial>(null)
+  const meshRef = useRef<THREE.Mesh>(null)
+  const base = useRef<Float32Array | null>(null)
   const flow = useMemo(() => {
     const t = makeFlowTexture()
     t.repeat.set(water.lake ? 3 : 6, water.lake ? 3 : 2)
     return t
   }, [water])
+  const foam = useMemo(() => {
+    const t = makeFoamTexture()
+    t.repeat.set(10, 1)
+    return t
+  }, [])
 
   useFrame(({ clock }, dt) => {
-    if (matRef.current) {
-      // subtle shimmer
-      matRef.current.emissiveIntensity = 0.04 + Math.sin(clock.elapsedTime * 0.8) * 0.02
-    }
-    // current: rivers run along x with the boats; lakes drift slowly
+    const t = clock.elapsedTime
+    if (matRef.current) matRef.current.emissiveIntensity = 0.04 + Math.sin(t * 0.8) * 0.02
     flow.offset.x -= dt * (water.lake ? 0.008 : 0.045)
     if (water.lake) flow.offset.y += dt * 0.004
+    foam.offset.x -= dt * 0.03
+
+    // gentle vertex ripples on the water surface (local z = world up)
+    const m = meshRef.current
+    if (m) {
+      const g = m.geometry as THREE.BufferGeometry
+      const pos = g.attributes.position as THREE.BufferAttribute
+      if (!base.current) base.current = (pos.array as Float32Array).slice()
+      const b = base.current
+      for (let i = 0; i < pos.count; i++) {
+        const x = b[i * 3]
+        const y = b[i * 3 + 1]
+        const w =
+          Math.sin(x * 1.1 + t * 1.3) * 0.03 +
+          Math.sin(y * 1.7 - t * 1.0) * 0.024 +
+          Math.sin((x + y) * 0.7 + t * 0.7) * 0.02
+        pos.setZ(i, b[i * 3 + 2] + w)
+      }
+      pos.needsUpdate = true
+      g.computeVertexNormals()
+    }
   })
 
   const material = (
@@ -147,12 +195,13 @@ function WaterSurface({ water }: { water: ResolvedWater }) {
   if (water.lake) {
     return (
       <mesh
+        ref={meshRef}
         position={[water.lake.x, 0.02, water.lake.z]}
         rotation={[-Math.PI / 2, 0, 0]}
         scale={[water.lake.rx, water.lake.rz, 1]}
         receiveShadow
       >
-        <circleGeometry args={[1, 48]} />
+        <circleGeometry args={[1, 56, 0, Math.PI * 2]} />
         {material}
       </mesh>
     )
@@ -161,10 +210,29 @@ function WaterSurface({ water }: { water: ResolvedWater }) {
   const z0 = water.riverZ0
   const z1 = CITY.trayHalf
   return (
-    <mesh position={[0, 0.015, (z0 + z1) / 2]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-      <planeGeometry args={[22, z1 - z0]} />
-      {material}
-    </mesh>
+    <group>
+      <mesh
+        ref={meshRef}
+        position={[0, 0.015, (z0 + z1) / 2]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        receiveShadow
+      >
+        <planeGeometry args={[22, z1 - z0, 48, 10]} />
+        {material}
+      </mesh>
+      {/* foam line where the river meets the shore */}
+      <mesh position={[0, 0.04, z0 + 0.05]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[22, 0.7]} />
+        <meshStandardMaterial
+          map={foam}
+          color={'#ffffff'}
+          transparent
+          opacity={0.5}
+          depthWrite={false}
+          roughness={1}
+        />
+      </mesh>
+    </group>
   )
 }
 
@@ -173,20 +241,21 @@ function Boats({ z0 }: { z0: number }) {
     () =>
       Array.from({ length: 6 }).map((_, i) => ({
         z: z0 + 0.7 + (i % 3) * 1.0, // three lanes inside the band
-        speed: 0.25 + (i % 4) * 0.08,
+        speed: 0.09 + (i % 4) * 0.022, // slower, gliding boats
         offset: (i * 0.31) % 1,
         color: ['#e8e8e8', '#d7b24a', '#c96b4a'][i % 3],
         dir: i % 2 === 0 ? 1 : -1,
       })),
     [z0],
   )
+  const foam = useMemo(() => makeFoamTexture(), [])
   const refs = useRef<(THREE.Group | null)[]>([])
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime()
     boats.forEach((b, i) => {
       const g = refs.current[i]
       if (!g) return
-      const p = ((t * b.speed + b.offset) % 1)
+      const p = (t * b.speed + b.offset) % 1
       const x = THREE.MathUtils.lerp(-10, 10, b.dir > 0 ? p : 1 - p)
       g.position.set(x, 0.05, b.z)
       g.rotation.y = b.dir > 0 ? Math.PI / 2 : -Math.PI / 2
@@ -196,13 +265,41 @@ function Boats({ z0 }: { z0: number }) {
     <group>
       {boats.map((b, i) => (
         <group key={i} ref={(el) => (refs.current[i] = el)}>
-          <mesh castShadow>
-            <boxGeometry args={[0.7, 0.14, 0.28]} />
-            <meshStandardMaterial color={b.color} roughness={0.6} />
+          {/* hull */}
+          <mesh castShadow position={[-0.05, 0, 0]}>
+            <boxGeometry args={[0.6, 0.12, 0.26]} />
+            <meshStandardMaterial color={b.color} roughness={0.55} />
           </mesh>
-          <mesh position={[0, 0.13, 0]}>
-            <boxGeometry args={[0.35, 0.12, 0.2]} />
+          {/* pointed prow (diamond, forward corner leads) */}
+          <mesh castShadow position={[0.32, 0, 0]} rotation={[0, Math.PI / 4, 0]}>
+            <boxGeometry args={[0.19, 0.12, 0.19]} />
+            <meshStandardMaterial color={b.color} roughness={0.55} />
+          </mesh>
+          {/* cabin + windows */}
+          <mesh position={[-0.12, 0.12, 0]}>
+            <boxGeometry args={[0.26, 0.12, 0.19]} />
             <meshStandardMaterial color={'#5a5f68'} roughness={0.5} />
+          </mesh>
+          <mesh position={[-0.12, 0.13, 0]}>
+            <boxGeometry args={[0.2, 0.055, 0.196]} />
+            <meshStandardMaterial color={'#cfe0ea'} metalness={0.4} roughness={0.25} />
+          </mesh>
+          {/* funnel */}
+          <mesh position={[-0.25, 0.21, 0]}>
+            <cylinderGeometry args={[0.028, 0.032, 0.14, 8]} />
+            <meshStandardMaterial color={'#3a3f47'} roughness={0.6} />
+          </mesh>
+          {/* trailing wake foam */}
+          <mesh position={[-0.62, -0.035, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[0.8, 0.36]} />
+            <meshStandardMaterial
+              map={foam}
+              color={'#ffffff'}
+              transparent
+              opacity={0.32}
+              depthWrite={false}
+              roughness={1}
+            />
           </mesh>
         </group>
       ))}
