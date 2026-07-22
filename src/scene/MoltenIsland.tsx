@@ -100,16 +100,66 @@ function makeMoltenTexture(): THREE.Texture {
   return t
 }
 
-/** Deterministic layered-trig "value noise" for craggy rock displacement. */
-function craggy(ang: number, ny: number): number {
+/** Mottled grey stone: speckles and dark cracks so the rock has surface detail
+ *  and doesn't read as flat facets. Used as both colour and bump map. */
+function makeRockTexture(): THREE.CanvasTexture {
+  const S = 512
+  const c = document.createElement('canvas')
+  c.width = c.height = S
+  const g = c.getContext('2d')!
+  g.fillStyle = '#6d685f'
+  g.fillRect(0, 0, S, S)
+  let a = 20240
+  const rnd = () => ((a = (a * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff)
+  // mottled patches, light and dark
+  for (let i = 0; i < 900; i++) {
+    const x = rnd() * S
+    const y = rnd() * S
+    const r = 2 + rnd() * 22
+    const l = 60 + Math.floor(rnd() * 70)
+    g.fillStyle = `rgba(${l},${l - 4},${l - 10},${0.05 + rnd() * 0.12})`
+    g.beginPath()
+    g.arc(x, y, r, 0, Math.PI * 2)
+    g.fill()
+  }
+  // thin dark cracks
+  g.strokeStyle = 'rgba(30,26,22,0.5)'
+  for (let i = 0; i < 60; i++) {
+    g.lineWidth = 0.6 + rnd() * 1.6
+    let x = rnd() * S
+    let y = rnd() * S
+    g.beginPath()
+    g.moveTo(x, y)
+    for (let k = 0; k < 5; k++) {
+      x += (rnd() - 0.5) * 60
+      y += (rnd() - 0.5) * 60
+      g.lineTo(x, y)
+    }
+    g.stroke()
+  }
+  const t = new THREE.CanvasTexture(c)
+  t.wrapS = t.wrapT = THREE.RepeatWrapping
+  t.repeat.set(5, 5)
+  t.anisotropy = 4
+  return t
+}
+
+/** Craggy displacement: angular ridges plus irregular spatial noise (uses the
+ *  world x/z so the bumps break the cone's radial symmetry and read as rock). */
+function craggy(ang: number, ny: number, x: number, z: number): number {
   const ridges =
     Math.sin(ang * 6) * 0.5 + Math.sin(ang * 11 + 1.3) * 0.3 + Math.sin(ang * 19 + 2.1) * 0.2
   const vert = Math.sin(ny * 7 + ang * 3) * 0.35 + Math.sin(ny * 15 + 0.7) * 0.2
-  return ridges * 0.7 + vert * 0.4
+  // irregular lumps from incommensurate spatial waves
+  const spatial =
+    Math.sin(x * 1.7 + z * 1.3) * 0.32 +
+    Math.sin(x * 3.1 - z * 2.7 + 1.1) * 0.18 +
+    Math.sin(x * 6.3 + z * 5.1 + 2.3) * 0.1
+  return ridges * 0.6 + vert * 0.35 + spatial
 }
 
 function makeIslandGeometry(): THREE.BufferGeometry {
-  const geo = new THREE.ConeGeometry(TOP_R, HEIGHT, 72, 40, false)
+  const geo = new THREE.ConeGeometry(TOP_R, HEIGHT, 120, 64, false)
   // Cone default: apex at +y, base circle at -y. Flip so the wide ring is on
   // top and the point hangs down, then drop the top ring to TOP_Y.
   geo.scale(1, -1, 1)
@@ -123,10 +173,10 @@ function makeIslandGeometry(): THREE.BufferGeometry {
     const ny = (TOP_Y - v.y) / HEIGHT // 0 at top, 1 at bottom point
     const ang = Math.atan2(v.z, v.x)
     const gate = THREE.MathUtils.smoothstep(ny, 0.0, 0.14)
-    const amp = (0.6 + ny * 1.7) * gate
-    const n = craggy(ang, ny)
+    const amp = (0.55 + ny * 2.2) * gate
+    const n = craggy(ang, ny, v.x, v.z)
     if (r0 > 1e-3) {
-      // craggy circular profile for the body of the mountain
+      // craggy profile for the body of the mountain
       const craggyR = Math.max(0.02, r0 + n * amp)
       // near the top, blend to a rounded-square profile that matches the slab
       // footprint so the plate sits on the rock like a lid — edges flush, no gap
@@ -137,7 +187,7 @@ function makeIslandGeometry(): THREE.BufferGeometry {
       v.z *= nr / r0
     }
     // jagged vertical wobble, strongest toward the hanging tip
-    v.y -= (Math.sin(ang * 9 + ny * 6) * 0.25 + n * 0.15) * gate * (0.4 + ny)
+    v.y -= (Math.sin(ang * 9 + ny * 6) * 0.25 + n * 0.18) * gate * (0.4 + ny)
     pos.setXYZ(i, v.x, v.y, v.z)
   }
   pos.needsUpdate = true
@@ -155,7 +205,8 @@ interface Shard {
 export default function MoltenIsland() {
   const geo = useMemo(makeIslandGeometry, [])
   const molten = useMemo(makeMoltenTexture, [])
-  const shardGeo = useMemo(() => new THREE.IcosahedronGeometry(1, 0), [])
+  const rock = useMemo(makeRockTexture, [])
+  const shardGeo = useMemo(() => new THREE.IcosahedronGeometry(1, 1), [])
   const matRef = useRef<THREE.MeshStandardMaterial>(null)
   const lightRef = useRef<THREE.PointLight>(null)
   const shardRefs = useRef<(THREE.Mesh | null)[]>([])
@@ -191,18 +242,21 @@ export default function MoltenIsland() {
 
   return (
     <group>
-      {/* main hanging molten rock mass */}
+      {/* main hanging molten rock mass — smooth-shaded stone with a rock texture
+          so it reads as solid rock, not a triangulated net */}
       <mesh geometry={geo} castShadow receiveShadow>
         <meshStandardMaterial
           ref={matRef}
-          color={'#6f6a61'}
-          roughness={0.92}
-          metalness={0.12}
+          color={'#7a746a'}
+          map={rock}
+          bumpMap={rock}
+          bumpScale={0.4}
+          roughness={0.98}
+          metalness={0.08}
           emissive={'#ff8a20'}
           emissiveMap={molten}
           emissiveIntensity={1.3}
           side={THREE.DoubleSide}
-          flatShading
         />
       </mesh>
 
@@ -222,13 +276,15 @@ export default function MoltenIsland() {
           castShadow
         >
           <meshStandardMaterial
-            color={'#6a655c'}
-            roughness={0.9}
-            metalness={0.15}
+            color={'#726c62'}
+            map={rock}
+            bumpMap={rock}
+            bumpScale={0.3}
+            roughness={0.95}
+            metalness={0.12}
             emissive={'#ff9a2c'}
             emissiveMap={molten}
             emissiveIntensity={1.2}
-            flatShading
           />
         </mesh>
       ))}

@@ -154,9 +154,9 @@ function WaterSurface({ water }: { water: ResolvedWater }) {
   useFrame(({ clock }, dt) => {
     const t = clock.elapsedTime
     if (matRef.current) matRef.current.emissiveIntensity = 0.04 + Math.sin(t * 0.8) * 0.02
-    flow.offset.x -= dt * (water.lake ? 0.008 : 0.045)
-    if (water.lake) flow.offset.y += dt * 0.004
-    foam.offset.x -= dt * 0.03
+    flow.offset.x -= dt * (water.lake ? 0.006 : 0.03)
+    if (water.lake) flow.offset.y += dt * 0.003
+    foam.offset.x -= dt * 0.016
 
     // gentle vertex ripples on the water surface (local z = world up)
     const m = meshRef.current
@@ -169,9 +169,9 @@ function WaterSurface({ water }: { water: ResolvedWater }) {
         const x = b[i * 3]
         const y = b[i * 3 + 1]
         const w =
-          Math.sin(x * 1.1 + t * 1.3) * 0.014 +
-          Math.sin(y * 1.7 - t * 1.0) * 0.011 +
-          Math.sin((x + y) * 0.7 + t * 0.7) * 0.009
+          Math.sin(x * 0.9 + t * 0.9) * 0.006 +
+          Math.sin(y * 1.4 - t * 0.7) * 0.0045 +
+          Math.sin((x + y) * 0.6 + t * 0.5) * 0.0035
         pos.setZ(i, b[i * 3 + 2] + w)
       }
       pos.needsUpdate = true
@@ -223,12 +223,12 @@ function WaterSurface({ water }: { water: ResolvedWater }) {
       </mesh>
       {/* foam line where the river meets the shore */}
       <mesh position={[0, 0.04, z0 + 0.05]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[22, 0.7]} />
+        <planeGeometry args={[22, 0.55]} />
         <meshStandardMaterial
           map={foam}
           color={'#ffffff'}
           transparent
-          opacity={0.5}
+          opacity={0.28}
           depthWrite={false}
           roughness={1}
         />
@@ -294,12 +294,12 @@ function Boats({ z0 }: { z0: number }) {
           </mesh>
           {/* trailing wake foam */}
           <mesh position={[-0.62, -0.035, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[0.8, 0.36]} />
+            <planeGeometry args={[0.7, 0.3]} />
             <meshStandardMaterial
               map={foam}
               color={'#ffffff'}
               transparent
-              opacity={0.32}
+              opacity={0.2}
               depthWrite={false}
               roughness={1}
             />
@@ -328,12 +328,14 @@ export default function Diorama() {
 
   return (
     <group ref={floatRef}>
-      {/* thin base slab — a slim plate the molten island hangs from */}
+      {/* thin base slab — a slim plate the molten island hangs from. Its top
+          sits just below the ground plane (y≈0.005) so the road/pavement
+          texture shows through instead of being covered by white. */}
       <RoundedBox
         args={[CITY.trayHalf * 2 + 1.6, 0.42, CITY.trayHalf * 2 + 1.6]}
         radius={0.18}
         smoothness={4}
-        position={[0, -0.2, 0]}
+        position={[0, -0.25, 0]}
         castShadow
         receiveShadow
       >
