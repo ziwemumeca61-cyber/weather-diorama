@@ -9,6 +9,7 @@ import Props from './Props'
 import People from './People'
 import Extras from './Extras'
 import NightSky from './NightSky'
+import MoltenIsland from './MoltenIsland'
 import { useWater } from './cityProfiles'
 import type { ResolvedWater } from './water'
 
@@ -310,20 +311,35 @@ function Boats({ z0 }: { z0: number }) {
 export default function Diorama() {
   const water = useWater()
   const groundTex = useMemo(() => makeGroundTexture(water.groundZ1), [water.groundZ1])
+  const floatRef = useRef<THREE.Group>(null)
+
+  // The whole diorama drifts as a suspended island: a slow vertical bob plus a
+  // faint sway, so the molten rock beneath reads as truly floating.
+  useFrame(({ clock }) => {
+    const g = floatRef.current
+    if (!g) return
+    const t = clock.elapsedTime
+    g.position.y = Math.sin(t * 0.5) * 0.18
+    g.rotation.z = Math.sin(t * 0.4) * 0.012
+    g.rotation.x = Math.sin(t * 0.33 + 1.1) * 0.01
+  })
 
   return (
-    <group>
-      {/* white tray base */}
+    <group ref={floatRef}>
+      {/* thin base slab — a slim plate the molten island hangs from */}
       <RoundedBox
-        args={[CITY.trayHalf * 2 + 1.6, 1.4, CITY.trayHalf * 2 + 1.6]}
-        radius={0.5}
+        args={[CITY.trayHalf * 2 + 1.6, 0.5, CITY.trayHalf * 2 + 1.6]}
+        radius={0.22}
         smoothness={4}
-        position={[0, -0.7, 0]}
+        position={[0, -0.24, 0]}
         castShadow
         receiveShadow
       >
         <meshStandardMaterial color={'#f4f2ee'} roughness={0.85} metalness={0} />
       </RoundedBox>
+
+      {/* molten amber/gold rock mass suspended beneath the slab */}
+      <MoltenIsland />
 
       {/* inner rim / land tray top */}
       <mesh
