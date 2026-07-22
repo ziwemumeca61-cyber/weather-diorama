@@ -9,7 +9,7 @@ import Props from './Props'
 import People from './People'
 import Extras from './Extras'
 import NightSky from './NightSky'
-import MoltenIsland from './MoltenIsland'
+import CloudBase from './CloudBase'
 import { useWater } from './cityProfiles'
 import type { ResolvedWater } from './water'
 
@@ -352,8 +352,8 @@ export default function Diorama() {
         <meshStandardMaterial color={'#f4f2ee'} roughness={0.85} metalness={0} />
       </RoundedBox>
 
-      {/* molten amber/gold rock mass suspended beneath the slab */}
-      <MoltenIsland />
+      {/* soft cloud the city floats on (reacts to the weather) */}
+      <CloudBase />
 
       {/* inner rim / land tray top */}
       <mesh
