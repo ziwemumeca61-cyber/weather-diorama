@@ -10,3 +10,12 @@ dist-ssr
 # BUILD-ANDROID.md). Kept out of git; you build/sign these on your machine.
 /android
 /ios
+
+# scratch/verification artifacts
+_bolt_*.png
+_r_*.png
+_isl*.png
+_def*.png
+_v*_*.png
+_lbl*.png
+/_*.mjs
