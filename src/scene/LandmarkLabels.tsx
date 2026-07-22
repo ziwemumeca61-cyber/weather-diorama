@@ -85,44 +85,24 @@ function makeSignTexture(text: string): THREE.CanvasTexture {
   return t
 }
 
-function Plaque({ label }: { label: LandmarkLabel }) {
-  const tex = useMemo(() => makePlaqueTexture(label.text), [label.text])
-  const chars = [...label.text].length
-  const w = label.width ?? Math.max(1.1, chars * 0.42 + 0.4)
-  const h = w / (chars + 0.6) // keep the character cells roughly square
-  const postH = label.pos[1] - h / 2 // posts run from the board down to the ground
-  return (
-    <group position={label.pos} rotation={[0, label.rotationY ?? 0, 0]}>
-      {/* board */}
-      <mesh castShadow>
-        <planeGeometry args={[w, h]} />
-        <meshStandardMaterial map={tex} roughness={0.6} metalness={0.15} side={THREE.DoubleSide} />
-      </mesh>
-      {/* backing so it isn't paper-thin */}
-      <mesh position={[0, 0, -0.03]}>
-        <boxGeometry args={[w, h, 0.06]} />
-        <meshStandardMaterial color={'#2c150a'} roughness={0.8} />
-      </mesh>
-      {/* two supporting posts down to the ground */}
-      {postH > 0.2 &&
-        [-w * 0.34, w * 0.34].map((px) => (
-          <mesh key={px} position={[px, -h / 2 - postH / 2, -0.02]} castShadow>
-            <cylinderGeometry args={[0.05, 0.05, postH, 8]} />
-            <meshStandardMaterial color={'#3a1d10'} roughness={0.8} />
-          </mesh>
-        ))}
-    </group>
+/**
+ * A landmark name board that floats just above its landmark, always faces the
+ * camera (Billboard) and renders on top of the scene so the name is always
+ * legible — a wood 牌匾 for heritage sites, a slim sign for modern towers.
+ */
+function Label({ label }: { label: LandmarkLabel }) {
+  const isSign = (label.style ?? 'plaque') === 'sign'
+  const tex = useMemo(
+    () => (isSign ? makeSignTexture(label.text) : makePlaqueTexture(label.text)),
+    [label.text, isSign],
   )
-}
-
-function Sign({ label }: { label: LandmarkLabel }) {
-  const tex = useMemo(() => makeSignTexture(label.text), [label.text])
   const chars = [...label.text].length
-  const w = label.width ?? chars * 0.5 + 0.7
-  const h = w / (chars * 1.05 + 0.9)
+  const w = label.width ?? Math.max(1.6, chars * 0.62 + 0.5)
+  const h = isSign ? w / (chars * 1.05 + 0.9) : w / (chars + 0.6)
+  // float the tag a little above the authored anchor so it clears the base
+  const pos: [number, number, number] = [label.pos[0], label.pos[1] + 1.4, label.pos[2]]
   return (
-    <Billboard position={label.pos}>
-      {/* rendered on top so the name is always legible, like a map pin label */}
+    <Billboard position={pos}>
       <mesh renderOrder={999}>
         <planeGeometry args={[w, h]} />
         <meshBasicMaterial
@@ -141,13 +121,9 @@ export default function LandmarkLabels({ labels }: { labels?: LandmarkLabel[] })
   if (!labels?.length) return null
   return (
     <group>
-      {labels.map((label, i) =>
-        (label.style ?? 'plaque') === 'sign' ? (
-          <Sign key={i} label={label} />
-        ) : (
-          <Plaque key={i} label={label} />
-        ),
-      )}
+      {labels.map((label, i) => (
+        <Label key={i} label={label} />
+      ))}
     </group>
   )
 }

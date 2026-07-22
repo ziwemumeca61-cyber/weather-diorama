@@ -53,27 +53,27 @@ function makePuffs(): Puff[] {
   const grid = 6
   for (let ix = 0; ix < grid; ix++) {
     for (let iz = 0; iz < grid; iz++) {
-      const gx = (ix / (grid - 1) - 0.5) * 2 * SLAB_HALF * 0.98
-      const gz = (iz / (grid - 1) - 0.5) * 2 * SLAB_HALF * 0.98
-      const s = 5 + rnd() * 3
-      out.push({ pos: [gx + (rnd() - 0.5) * 2.2, TOP_EDGE - s * 0.42 - rnd() * 0.4, gz + (rnd() - 0.5) * 2.2], s })
+      const gx = (ix / (grid - 1) - 0.5) * 2 * SLAB_HALF * 0.92
+      const gz = (iz / (grid - 1) - 0.5) * 2 * SLAB_HALF * 0.92
+      const s = 3.4 + rnd() * 2.2
+      out.push({ pos: [gx + (rnd() - 0.5) * 2.0, TOP_EDGE - s * 0.42 - rnd() * 0.3, gz + (rnd() - 0.5) * 2.0], s })
     }
   }
   // rim billows puffing out slightly past the edge
-  const ring = 16
+  const ring = 14
   for (let i = 0; i < ring; i++) {
     const ang = (i / ring) * Math.PI * 2 + rnd() * 0.3
-    const rad = SLAB_HALF * (0.96 + rnd() * 0.12)
-    const s = 4 + rnd() * 2.2
-    out.push({ pos: [Math.cos(ang) * rad, TOP_EDGE - s * 0.42 - 0.4 - rnd() * 0.8, Math.sin(ang) * rad], s })
+    const rad = SLAB_HALF * (0.9 + rnd() * 0.1)
+    const s = 2.8 + rnd() * 1.6
+    out.push({ pos: [Math.cos(ang) * rad, TOP_EDGE - s * 0.42 - 0.3 - rnd() * 0.6, Math.sin(ang) * rad], s })
   }
-  // lower billows, tapering inward to a rounded underside
-  for (let i = 0; i < 18; i++) {
+  // lower billows, tapering inward to a compact rounded underside
+  for (let i = 0; i < 14; i++) {
     const ang = rnd() * Math.PI * 2
     const t = rnd()
-    const rad = (1 - t * 0.8) * SLAB_HALF * 0.7
-    const s = 2.6 + (1 - t) * 3.2
-    out.push({ pos: [Math.cos(ang) * rad, -3.4 - t * 2.6, Math.sin(ang) * rad], s })
+    const rad = (1 - t * 0.85) * SLAB_HALF * 0.6
+    const s = 1.8 + (1 - t) * 2.2
+    out.push({ pos: [Math.cos(ang) * rad, -2.8 - t * 2.0, Math.sin(ang) * rad], s })
   }
   return out
 }

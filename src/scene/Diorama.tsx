@@ -120,25 +120,37 @@ function makeFoamTexture(): THREE.Texture {
   return t
 }
 
-/** Streaky ripple texture for flowing water (scrolled every frame). */
+/** Rippled water texture with clear wave bands and white foam caps (scrolled
+ *  every frame). Bands and caps read as visible ripples & 浪花. */
 function makeFlowTexture(): THREE.Texture {
   const c = document.createElement('canvas')
   c.width = 256
-  c.height = 128
+  c.height = 256
   const g = c.getContext('2d')!
   g.fillStyle = '#3f6f97'
-  g.fillRect(0, 0, 256, 128)
+  g.fillRect(0, 0, 256, 256)
   let a = 4242
   const rnd = () => ((a = (a * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff)
-  for (let i = 0; i < 46; i++) {
-    const y = rnd() * 128
+  // wavy ripple bands (lighter crests) running across the flow
+  for (let i = 0; i < 26; i++) {
+    const y = rnd() * 256
+    g.strokeStyle = `rgba(${190 + rnd() * 55}, ${220 + rnd() * 35}, 255, ${0.22 + rnd() * 0.28})`
+    g.lineWidth = 1.5 + rnd() * 3
+    g.beginPath()
+    g.moveTo(0, y)
+    for (let x = 0; x <= 256; x += 16) g.lineTo(x, y + Math.sin(x * 0.08 + i) * (3 + rnd() * 5))
+    g.stroke()
+  }
+  // white foam caps scattered on the crests
+  for (let i = 0; i < 90; i++) {
     const x = rnd() * 256
-    const len = 18 + rnd() * 50
-    g.strokeStyle = `rgba(${180 + rnd() * 60}, ${210 + rnd() * 40}, 255, ${0.10 + rnd() * 0.16})`
+    const y = rnd() * 256
+    g.strokeStyle = `rgba(255,255,255,${0.35 + rnd() * 0.5})`
     g.lineWidth = 1 + rnd() * 1.6
     g.beginPath()
+    const len = 4 + rnd() * 12
     g.moveTo(x, y)
-    g.quadraticCurveTo(x + len / 2, y + (rnd() - 0.5) * 5, x + len, y)
+    g.quadraticCurveTo(x + len / 2, y - 2 - rnd() * 3, x + len, y)
     g.stroke()
   }
   const t = new THREE.CanvasTexture(c)
@@ -179,9 +191,9 @@ function WaterSurface({ water }: { water: ResolvedWater }) {
         const x = b[i * 3]
         const y = b[i * 3 + 1]
         const w =
-          Math.sin(x * 1.0 + t * 1.1) * 0.009 +
-          Math.sin(y * 1.5 - t * 0.8) * 0.007 +
-          Math.sin((x + y) * 0.6 + t * 0.6) * 0.005
+          Math.sin(x * 1.0 + t * 1.2) * 0.02 +
+          Math.sin(y * 1.6 - t * 0.9) * 0.014 +
+          Math.sin((x + y) * 0.7 + t * 0.7) * 0.01
         pos.setZ(i, b[i * 3 + 2] + w)
       }
       pos.needsUpdate = true
@@ -193,13 +205,13 @@ function WaterSurface({ water }: { water: ResolvedWater }) {
     <meshStandardMaterial
       ref={matRef}
       map={flow}
-      color={'#e9f0f5'}
-      roughness={0.15}
-      metalness={0.5}
+      color={'#dfeaf2'}
+      roughness={0.42}
+      metalness={0.25}
       emissive={'#2b5a86'}
       emissiveIntensity={0.05}
       transparent
-      opacity={0.92}
+      opacity={0.95}
     />
   )
 
