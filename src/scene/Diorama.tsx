@@ -67,7 +67,7 @@ function makeGroundTexture(z1: number): THREE.Texture {
     ctx.fillRect(0, pz - h / 2, S, h)
   }
 
-  // lane dashes on roads
+  // lane dashes on roads — both directions
   ctx.strokeStyle = '#e8e4d0'
   ctx.lineWidth = 2
   ctx.setLineDash([10, 12])
@@ -80,6 +80,16 @@ function makeGroundTexture(z1: number): THREE.Texture {
     ctx.lineTo(px, S)
     ctx.stroke()
   }
+  iz = 0
+  for (let z = CITY.minZ; z <= CITY.maxZ; z += step, iz++) {
+    if (iz % roadEvery !== 0) continue
+    const [, pz] = toPx(0, z)
+    ctx.beginPath()
+    ctx.moveTo(0, pz)
+    ctx.lineTo(S, pz)
+    ctx.stroke()
+  }
+  ctx.setLineDash([])
 
   const tex = new THREE.CanvasTexture(c)
   tex.anisotropy = 4
@@ -169,9 +179,9 @@ function WaterSurface({ water }: { water: ResolvedWater }) {
         const x = b[i * 3]
         const y = b[i * 3 + 1]
         const w =
-          Math.sin(x * 0.9 + t * 0.9) * 0.006 +
-          Math.sin(y * 1.4 - t * 0.7) * 0.0045 +
-          Math.sin((x + y) * 0.6 + t * 0.5) * 0.0035
+          Math.sin(x * 1.0 + t * 1.1) * 0.009 +
+          Math.sin(y * 1.5 - t * 0.8) * 0.007 +
+          Math.sin((x + y) * 0.6 + t * 0.6) * 0.005
         pos.setZ(i, b[i * 3 + 2] + w)
       }
       pos.needsUpdate = true
@@ -223,12 +233,12 @@ function WaterSurface({ water }: { water: ResolvedWater }) {
       </mesh>
       {/* foam line where the river meets the shore */}
       <mesh position={[0, 0.04, z0 + 0.05]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[22, 0.55]} />
+        <planeGeometry args={[22, 0.7]} />
         <meshStandardMaterial
           map={foam}
           color={'#ffffff'}
           transparent
-          opacity={0.28}
+          opacity={0.5}
           depthWrite={false}
           roughness={1}
         />
@@ -294,12 +304,12 @@ function Boats({ z0 }: { z0: number }) {
           </mesh>
           {/* trailing wake foam */}
           <mesh position={[-0.62, -0.035, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[0.7, 0.3]} />
+            <planeGeometry args={[0.8, 0.34]} />
             <meshStandardMaterial
               map={foam}
               color={'#ffffff'}
               transparent
-              opacity={0.2}
+              opacity={0.32}
               depthWrite={false}
               roughness={1}
             />

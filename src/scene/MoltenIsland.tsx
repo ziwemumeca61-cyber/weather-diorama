@@ -159,10 +159,12 @@ function craggy(ang: number, ny: number, x: number, z: number): number {
 }
 
 function makeIslandGeometry(): THREE.BufferGeometry {
-  const geo = new THREE.ConeGeometry(TOP_R, HEIGHT, 120, 64, false)
-  // Cone default: apex at +y, base circle at -y. Flip so the wide ring is on
-  // top and the point hangs down, then drop the top ring to TOP_Y.
-  geo.scale(1, -1, 1)
+  const geo = new THREE.ConeGeometry(TOP_R, HEIGHT, 90, 44, false)
+  // Cone default: apex at +y, base circle at -y. Flip with a ROTATION (not a
+  // negative scale — that mirrors the geometry and inverts the face winding,
+  // which makes single-sided rendering cull the outer surface and show a
+  // see-through "net"). Rotating keeps the winding correct → solid exterior.
+  geo.rotateX(Math.PI)
   geo.translate(0, -HEIGHT / 2 + TOP_Y, 0)
 
   const pos = geo.attributes.position as THREE.BufferAttribute
@@ -173,21 +175,23 @@ function makeIslandGeometry(): THREE.BufferGeometry {
     const ny = (TOP_Y - v.y) / HEIGHT // 0 at top, 1 at bottom point
     const ang = Math.atan2(v.z, v.x)
     const gate = THREE.MathUtils.smoothstep(ny, 0.0, 0.14)
-    const amp = (0.55 + ny * 2.2) * gate
-    const n = craggy(ang, ny, v.x, v.z)
+    // GENTLE outward-only bumps (a small fraction of the local radius) keep the
+    // mass star-convex — no steep back-facing triangles, so single-sided
+    // rendering shows a solid rock with no see-through holes or "net".
+    const amp = (0.28 + ny * 0.5) * gate
+    const n = craggy(ang, ny, v.x, v.z) // ~[-1.1, 1.1]
     if (r0 > 1e-3) {
-      // craggy profile for the body of the mountain
-      const craggyR = Math.max(0.02, r0 + n * amp)
-      // near the top, blend to a rounded-square profile that matches the slab
-      // footprint so the plate sits on the rock like a lid — edges flush, no gap
+      const bump = (n * 0.4 + 0.5) * amp // biased outward, small
+      const craggyR = r0 + Math.max(0, bump)
+      // near the top, blend to a rounded-square profile matching the slab
       const sqR = squircleR(ang, SLAB_HALF + 0.02)
       const topFactor = 1 - THREE.MathUtils.smoothstep(ny, 0.02, 0.3)
       const nr = THREE.MathUtils.lerp(craggyR, sqR, topFactor)
       v.x *= nr / r0
       v.z *= nr / r0
     }
-    // jagged vertical wobble, strongest toward the hanging tip
-    v.y -= (Math.sin(ang * 9 + ny * 6) * 0.25 + n * 0.18) * gate * (0.4 + ny)
+    // gently lengthen the hanging tip downward only
+    v.y -= Math.max(0, n) * 0.12 * gate * (0.4 + ny)
     pos.setXYZ(i, v.x, v.y, v.z)
   }
   pos.needsUpdate = true
@@ -250,13 +254,12 @@ export default function MoltenIsland() {
           color={'#7a746a'}
           map={rock}
           bumpMap={rock}
-          bumpScale={0.4}
+          bumpScale={0.12}
           roughness={0.98}
           metalness={0.08}
           emissive={'#ff8a20'}
           emissiveMap={molten}
           emissiveIntensity={1.3}
-          side={THREE.DoubleSide}
         />
       </mesh>
 
@@ -279,7 +282,7 @@ export default function MoltenIsland() {
             color={'#726c62'}
             map={rock}
             bumpMap={rock}
-            bumpScale={0.3}
+            bumpScale={0.1}
             roughness={0.95}
             metalness={0.12}
             emissive={'#ff9a2c'}
