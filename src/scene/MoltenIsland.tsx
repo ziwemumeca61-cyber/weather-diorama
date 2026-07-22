@@ -6,7 +6,6 @@ import { CITY } from './cityData'
 // The island hangs from the underside of the thin base slab and tapers to a
 // jagged point. Widest ring tucks just under the slab lip so the seam is hidden.
 const SLAB_HALF = CITY.trayHalf + 0.8 // matches the base slab's half-extent
-const TOP_R = CITY.trayHalf + 0.6 // cone's raw top radius (reshaped below)
 const HEIGHT = 6.0 // how far the rock reaches down (chunky mountain, not a spike)
 const TOP_Y = -0.4 // rock's top ring seats at the slab's underside (its lid)
 
@@ -159,40 +158,33 @@ function craggy(ang: number, ny: number, x: number, z: number): number {
 }
 
 function makeIslandGeometry(): THREE.BufferGeometry {
-  const geo = new THREE.ConeGeometry(TOP_R, HEIGHT, 90, 44, false)
-  // Cone default: apex at +y, base circle at -y. Flip with a ROTATION (not a
-  // negative scale — that mirrors the geometry and inverts the face winding,
-  // which makes single-sided rendering cull the outer surface and show a
-  // see-through "net"). Rotating keeps the winding correct → solid exterior.
-  geo.rotateX(Math.PI)
-  geo.translate(0, -HEIGHT / 2 + TOP_Y, 0)
-
+  // Built from an icosphere (uniform triangles, correct outward winding) rather
+  // than a cone — a cone's radial tessellation lights up as a triangular "net".
+  // The sphere is warped into a wide-topped teardrop: the equator (widest ring)
+  // sits at the slab underside and the lower hemisphere tapers to a rough point.
+  const geo = new THREE.IcosahedronGeometry(1, 5)
   const pos = geo.attributes.position as THREE.BufferAttribute
   const v = new THREE.Vector3()
   for (let i = 0; i < pos.count; i++) {
     v.fromBufferAttribute(pos, i)
-    const r0 = Math.hypot(v.x, v.z)
-    const ny = (TOP_Y - v.y) / HEIGHT // 0 at top, 1 at bottom point
+    const uy = v.y // -1 (bottom) .. 1 (top) on the unit sphere
     const ang = Math.atan2(v.z, v.x)
-    const gate = THREE.MathUtils.smoothstep(ny, 0.0, 0.14)
-    // GENTLE outward-only bumps (a small fraction of the local radius) keep the
-    // mass star-convex — no steep back-facing triangles, so single-sided
-    // rendering shows a solid rock with no see-through holes or "net".
-    const amp = (0.28 + ny * 0.5) * gate
-    const n = craggy(ang, ny, v.x, v.z) // ~[-1.1, 1.1]
-    if (r0 > 1e-3) {
-      const bump = (n * 0.4 + 0.5) * amp // biased outward, small
-      const craggyR = r0 + Math.max(0, bump)
-      // near the top, blend to a rounded-square profile matching the slab
-      const sqR = squircleR(ang, SLAB_HALF + 0.02)
-      const topFactor = 1 - THREE.MathUtils.smoothstep(ny, 0.02, 0.3)
-      const nr = THREE.MathUtils.lerp(craggyR, sqR, topFactor)
-      v.x *= nr / r0
-      v.z *= nr / r0
-    }
-    // gently lengthen the hanging tip downward only
-    v.y -= Math.max(0, n) * 0.12 * gate * (0.4 + ny)
-    pos.setXYZ(i, v.x, v.y, v.z)
+    const low = Math.max(0, -uy) // 0 on the upper half, →1 at the bottom pole
+    const ny = low // 0 at equator, 1 at the hanging tip (for noise)
+    // horizontal: a rounded-square cross-section matching the slab, tapering to
+    // a point toward the bottom
+    const rh = Math.hypot(v.x, v.z) || 1e-4
+    const shrink = 1 - low * low * 0.82
+    const n = craggy(ang, ny, v.x * 6, v.z * 6)
+    const targetR = squircleR(ang, SLAB_HALF, 4) * shrink + Math.max(0, n * 0.4 + 0.4) * (0.25 + ny)
+    const hx = (v.x / rh) * targetR
+    const hz = (v.z / rh) * targetR
+    // vertical: upper half domes gently up into (and is hidden by) the slab; the
+    // lower half stretches down to the hanging tip
+    let y: number
+    if (uy >= 0) y = TOP_Y + uy * 0.5
+    else y = TOP_Y + uy * HEIGHT - Math.max(0, n) * 0.2 * ny
+    pos.setXYZ(i, hx, y, hz)
   }
   pos.needsUpdate = true
   geo.computeVertexNormals()
@@ -246,8 +238,8 @@ export default function MoltenIsland() {
 
   return (
     <group>
-      {/* main hanging molten rock mass — smooth-shaded stone with a rock texture
-          so it reads as solid rock, not a triangulated net */}
+      {/* main hanging molten rock mass — a solid deformed icosphere with a rock
+          texture; uniform triangles read as stone, not a triangulated net */}
       <mesh geometry={geo} castShadow receiveShadow>
         <meshStandardMaterial
           ref={matRef}
