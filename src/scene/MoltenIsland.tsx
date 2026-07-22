@@ -5,9 +5,17 @@ import { CITY } from './cityData'
 
 // The island hangs from the underside of the thin base slab and tapers to a
 // jagged point. Widest ring tucks just under the slab lip so the seam is hidden.
-const TOP_R = CITY.trayHalf + 0.6 // ≈ slab half-extent, sits under the lip
+const SLAB_HALF = CITY.trayHalf + 0.8 // matches the base slab's half-extent
+const TOP_R = CITY.trayHalf + 0.6 // cone's raw top radius (reshaped below)
 const HEIGHT = 6.0 // how far the rock reaches down (chunky mountain, not a spike)
-const TOP_Y = -0.35 // just below the (thinned) slab
+const TOP_Y = -0.4 // rock's top ring seats at the slab's underside (its lid)
+
+/** Rounded-square (superellipse) radius at a given angle — matches the slab. */
+function squircleR(ang: number, half: number, n = 8): number {
+  const c = Math.abs(Math.cos(ang))
+  const s = Math.abs(Math.sin(ang))
+  return half / Math.pow(Math.pow(c, n) + Math.pow(s, n), 1 / n)
+}
 
 /**
  * Glowing molten-amber crack network on near-black rock, used as the emissive
@@ -108,12 +116,17 @@ function makeIslandGeometry(): THREE.BufferGeometry {
     const r0 = Math.hypot(v.x, v.z)
     const ny = (TOP_Y - v.y) / HEIGHT // 0 at top, 1 at bottom point
     const ang = Math.atan2(v.z, v.x)
-    // keep the top ~12% almost undisturbed so it tucks flush under the slab
     const gate = THREE.MathUtils.smoothstep(ny, 0.0, 0.14)
     const amp = (0.6 + ny * 1.7) * gate
     const n = craggy(ang, ny)
     if (r0 > 1e-3) {
-      const nr = Math.max(0.02, r0 + n * amp)
+      // craggy circular profile for the body of the mountain
+      const craggyR = Math.max(0.02, r0 + n * amp)
+      // near the top, blend to a rounded-square profile that matches the slab
+      // footprint so the plate sits on the rock like a lid — edges flush, no gap
+      const sqR = squircleR(ang, SLAB_HALF + 0.02)
+      const topFactor = 1 - THREE.MathUtils.smoothstep(ny, 0.02, 0.3)
+      const nr = THREE.MathUtils.lerp(craggyR, sqR, topFactor)
       v.x *= nr / r0
       v.z *= nr / r0
     }
@@ -159,9 +172,9 @@ export default function MoltenIsland() {
   useFrame(({ clock }) => {
     const t = clock.elapsedTime
     // slow breathing glow, like cooling and reheating magma
-    const glow = 1.15 + Math.sin(t * 0.9) * 0.35 + Math.sin(t * 2.3) * 0.12
+    const glow = 0.9 + Math.sin(t * 0.9) * 0.28 + Math.sin(t * 2.3) * 0.1
     if (matRef.current) matRef.current.emissiveIntensity = glow
-    if (lightRef.current) lightRef.current.intensity = 5 + glow * 3
+    if (lightRef.current) lightRef.current.intensity = 4 + glow * 2.5
     shards.forEach((s, i) => {
       const m = shardRefs.current[i]
       if (!m) return
@@ -176,12 +189,14 @@ export default function MoltenIsland() {
       <mesh geometry={geo} castShadow receiveShadow>
         <meshStandardMaterial
           ref={matRef}
-          color={'#4a2c16'}
-          roughness={0.9}
-          metalness={0.2}
+          color={'#3c2412'}
+          roughness={0.95}
+          metalness={0.1}
           emissive={'#ff8a20'}
           emissiveMap={molten}
-          emissiveIntensity={1.4}
+          emissiveIntensity={1.0}
+          side={THREE.DoubleSide}
+          flatShading
         />
       </mesh>
 

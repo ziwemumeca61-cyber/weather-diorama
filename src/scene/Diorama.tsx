@@ -328,10 +328,10 @@ export default function Diorama() {
     <group ref={floatRef}>
       {/* thin base slab — a slim plate the molten island hangs from */}
       <RoundedBox
-        args={[CITY.trayHalf * 2 + 1.6, 0.5, CITY.trayHalf * 2 + 1.6]}
-        radius={0.22}
+        args={[CITY.trayHalf * 2 + 1.6, 0.42, CITY.trayHalf * 2 + 1.6]}
+        radius={0.18}
         smoothness={4}
-        position={[0, -0.24, 0]}
+        position={[0, -0.2, 0]}
         castShadow
         receiveShadow
       >
