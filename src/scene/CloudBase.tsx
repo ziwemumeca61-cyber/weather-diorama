@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from 'react'
+import { useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { CITY } from './cityData'
@@ -6,115 +6,105 @@ import { useEffectiveWeather } from '../data/store'
 import type { WeatherKind } from '../weather/weatherCode'
 
 const SLAB_HALF = CITY.trayHalf + 0.8
-const TOP_Y = -0.3 // cloud tops meet just under the slab
+const TOP_EDGE = -0.55 // the cloud's soft upper edge sits just under the slab
 
 // cloud tint per weather — bright & white when fair, grey and heavy in storms
 const TINT: Record<WeatherKind, string> = {
-  clear: '#eef2fa',
-  cloudy: '#e4e9f1',
-  overcast: '#c1c7d0',
-  fog: '#ccd1d8',
-  rain: '#9aa1ab',
-  snow: '#f3f6fb',
-  thunder: '#7f8792',
+  clear: '#f6f9fe',
+  cloudy: '#edf1f8',
+  overcast: '#c4cad3',
+  fog: '#d4d9e0',
+  rain: '#9ca3ad',
+  snow: '#f8fbff',
+  thunder: '#838b96',
+}
+
+/** Soft round puff (radial white → transparent) used as the cloud billboard. */
+function makePuffTexture(): THREE.CanvasTexture {
+  const S = 128
+  const c = document.createElement('canvas')
+  c.width = c.height = S
+  const g = c.getContext('2d')!
+  const grad = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2)
+  grad.addColorStop(0, 'rgba(255,255,255,1)')
+  grad.addColorStop(0.45, 'rgba(255,255,255,0.92)')
+  grad.addColorStop(0.8, 'rgba(255,255,255,0.35)')
+  grad.addColorStop(1, 'rgba(255,255,255,0)')
+  g.fillStyle = grad
+  g.beginPath()
+  g.arc(S / 2, S / 2, S / 2, 0, Math.PI * 2)
+  g.fill()
+  return new THREE.CanvasTexture(c)
 }
 
 interface Puff {
   pos: [number, number, number]
-  r: number
-  tint: number // per-instance brightness offset
+  s: number
 }
 
-/** A soft cumulus the city rests on: overlapping spheres, densest just under
- *  the slab and billowing down to a rounded base. */
+/** A billowy cumulus mound: dense soft puffs under the slab, tapering to a
+ *  rounded base below. */
 function makePuffs(): Puff[] {
-  let a = 913
+  let a = 4177
   const rnd = () => ((a = (a * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff)
-  const puffs: Puff[] = []
-  const push = (x: number, y: number, z: number, r: number) =>
-    puffs.push({ pos: [x, y, z], r, tint: (rnd() - 0.5) * 0.08 })
-
-  // top layer: fill the footprint so the cloud's upper surface meets the slab
-  const grid = 5
+  const out: Puff[] = []
+  // top blanket across the footprint: each puff's soft upper edge kisses the
+  // slab underside, so the city sits cleanly on top of the cloud
+  const grid = 6
   for (let ix = 0; ix < grid; ix++) {
     for (let iz = 0; iz < grid; iz++) {
-      const gx = (ix / (grid - 1) - 0.5) * 2 * SLAB_HALF * 0.86
-      const gz = (iz / (grid - 1) - 0.5) * 2 * SLAB_HALF * 0.86
-      // skip a few for an irregular edge
-      if (rnd() < 0.12) continue
-      const r = 2.3 + rnd() * 1.1
-      push(gx + (rnd() - 0.5) * 1.6, TOP_Y - r + 0.2 + (rnd() - 0.5) * 0.4, gz + (rnd() - 0.5) * 1.6, r)
+      const gx = (ix / (grid - 1) - 0.5) * 2 * SLAB_HALF * 0.98
+      const gz = (iz / (grid - 1) - 0.5) * 2 * SLAB_HALF * 0.98
+      const s = 5 + rnd() * 3
+      out.push({ pos: [gx + (rnd() - 0.5) * 2.2, TOP_EDGE - s * 0.42 - rnd() * 0.4, gz + (rnd() - 0.5) * 2.2], s })
     }
   }
-  // extra billows puffing out past the rim
-  const ring = 12
+  // rim billows puffing out slightly past the edge
+  const ring = 16
   for (let i = 0; i < ring; i++) {
     const ang = (i / ring) * Math.PI * 2 + rnd() * 0.3
-    const rad = SLAB_HALF * (0.9 + rnd() * 0.14)
-    const r = 2.2 + rnd() * 1.0
-    push(Math.cos(ang) * rad, TOP_Y - r * 0.9 - rnd() * 0.6, Math.sin(ang) * rad, r)
+    const rad = SLAB_HALF * (0.96 + rnd() * 0.12)
+    const s = 4 + rnd() * 2.2
+    out.push({ pos: [Math.cos(ang) * rad, TOP_EDGE - s * 0.42 - 0.4 - rnd() * 0.8, Math.sin(ang) * rad], s })
   }
-  // lower billows, tapering down and inward to a rounded underside
-  for (let i = 0; i < 16; i++) {
+  // lower billows, tapering inward to a rounded underside
+  for (let i = 0; i < 18; i++) {
     const ang = rnd() * Math.PI * 2
     const t = rnd()
-    const rad = (1 - t) * SLAB_HALF * 0.66
-    const r = 1.5 + (1 - t) * 1.9
-    push(Math.cos(ang) * rad, -2.4 - t * 3.0, Math.sin(ang) * rad, r)
+    const rad = (1 - t * 0.8) * SLAB_HALF * 0.7
+    const s = 2.6 + (1 - t) * 3.2
+    out.push({ pos: [Math.cos(ang) * rad, -3.4 - t * 2.6, Math.sin(ang) * rad], s })
   }
-  return puffs
+  return out
 }
 
 export default function CloudBase() {
   const puffs = useMemo(makePuffs, [])
-  const geo = useMemo(() => new THREE.IcosahedronGeometry(1, 3), [])
-  const meshRef = useRef<THREE.InstancedMesh>(null)
-  const matRef = useRef<THREE.MeshStandardMaterial>(null)
+  const tex = useMemo(makePuffTexture, [])
   const { kind } = useEffectiveWeather()
-
   const target = useMemo(() => new THREE.Color(TINT[kind] ?? TINT.clear), [kind])
 
-  useLayoutEffect(() => {
-    const mesh = meshRef.current
-    if (!mesh) return
-    const d = new THREE.Object3D()
-    const base = new THREE.Color('#eef2fa')
-    const c = new THREE.Color()
-    puffs.forEach((p, i) => {
-      d.position.set(...p.pos)
-      d.scale.setScalar(p.r)
-      d.updateMatrix()
-      mesh.setMatrixAt(i, d.matrix)
-      mesh.setColorAt(i, c.copy(base).offsetHSL(0, 0, p.tint))
-    })
-    mesh.instanceMatrix.needsUpdate = true
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
-  }, [puffs])
+  const material = useMemo(
+    () =>
+      new THREE.SpriteMaterial({
+        map: tex,
+        transparent: true,
+        depthWrite: false,
+        opacity: 0.92,
+        color: new THREE.Color(TINT.clear),
+      }),
+    [tex],
+  )
 
   useFrame((_, dt) => {
-    const m = matRef.current
-    if (m) m.color.lerp(target, 1 - Math.exp(-2.5 * dt))
+    material.color.lerp(target, 1 - Math.exp(-2.5 * dt))
   })
 
   return (
     <group>
-      <instancedMesh
-        ref={meshRef}
-        args={[geo, undefined, puffs.length]}
-        castShadow
-        receiveShadow
-        frustumCulled={false}
-      >
-        <meshStandardMaterial
-          ref={matRef}
-          color={'#eef2fa'}
-          roughness={0.95}
-          metalness={0}
-          emissive={'#dfe6f2'}
-          emissiveIntensity={0.25}
-          flatShading
-        />
-      </instancedMesh>
+      {puffs.map((p, i) => (
+        <sprite key={i} position={p.pos} scale={[p.s, p.s, p.s]} material={material} />
+      ))}
     </group>
   )
 }
