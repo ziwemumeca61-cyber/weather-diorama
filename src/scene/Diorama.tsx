@@ -169,9 +169,9 @@ function WaterSurface({ water }: { water: ResolvedWater }) {
         const x = b[i * 3]
         const y = b[i * 3 + 1]
         const w =
-          Math.sin(x * 1.1 + t * 1.3) * 0.03 +
-          Math.sin(y * 1.7 - t * 1.0) * 0.024 +
-          Math.sin((x + y) * 0.7 + t * 0.7) * 0.02
+          Math.sin(x * 1.1 + t * 1.3) * 0.014 +
+          Math.sin(y * 1.7 - t * 1.0) * 0.011 +
+          Math.sin((x + y) * 0.7 + t * 0.7) * 0.009
         pos.setZ(i, b[i * 3 + 2] + w)
       }
       pos.needsUpdate = true
@@ -259,7 +259,9 @@ function Boats({ z0 }: { z0: number }) {
       const p = (t * b.speed + b.offset) % 1
       const x = THREE.MathUtils.lerp(-10, 10, b.dir > 0 ? p : 1 - p)
       g.position.set(x, 0.05, b.z)
-      g.rotation.y = b.dir > 0 ? Math.PI / 2 : -Math.PI / 2
+      // hull runs along local +x with the prow at +x, so face the travel axis:
+      // 0 when sailing toward +x, PI when toward -x
+      g.rotation.y = b.dir > 0 ? 0 : Math.PI
     })
   })
   return (

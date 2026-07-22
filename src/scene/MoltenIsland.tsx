@@ -26,12 +26,9 @@ function makeMoltenTexture(): THREE.Texture {
   const c = document.createElement('canvas')
   c.width = c.height = S
   const g = c.getContext('2d')!
-  // dim warm ember base so the whole mass glows faintly amber, not pure black
-  const bg = g.createLinearGradient(0, 0, 0, S)
-  bg.addColorStop(0, '#3a1608')
-  bg.addColorStop(0.5, '#2a0f05')
-  bg.addColorStop(1, '#1c0a03')
-  g.fillStyle = bg
+  // pure black field: the emissive map only lights the lava, so the rock keeps
+  // its natural (non-emissive) stone colour everywhere else
+  g.fillStyle = '#000000'
   g.fillRect(0, 0, S, S)
 
   let a = 90125
@@ -67,18 +64,27 @@ function makeMoltenTexture(): THREE.Texture {
     }
   }
 
-  for (let i = 0; i < 40; i++) {
-    drawVein(rnd() * S, -20 + rnd() * 60, 60 + rnd() * 40, rnd() - 0.5, 2 + rnd() * 3)
-  }
-  // a few bright horizontal molten seams
-  for (let i = 0; i < 8; i++) {
-    const y = rnd() * S
-    g.strokeStyle = `rgba(255,${140 + rnd() * 80},40,${0.5 + rnd() * 0.4})`
-    g.lineWidth = 1 + rnd() * 2.5
+  // Lava is localized: a handful of hot patches, each a glowing pool with a
+  // small cluster of veins branching out of it. Most of the rock stays dark.
+  const hotspots = 7
+  for (let h = 0; h < hotspots; h++) {
+    const hx = rnd() * S
+    const hy = rnd() * S
+    // molten pool: a soft radial glow
+    const R = 24 + rnd() * 40
+    const pool = g.createRadialGradient(hx, hy, 0, hx, hy, R)
+    pool.addColorStop(0, 'rgba(255,225,140,0.95)')
+    pool.addColorStop(0.4, 'rgba(255,150,40,0.75)')
+    pool.addColorStop(1, 'rgba(120,40,8,0)')
+    g.fillStyle = pool
     g.beginPath()
-    g.moveTo(0, y)
-    for (let x = 0; x <= S; x += 32) g.lineTo(x, y + (rnd() - 0.5) * 24)
-    g.stroke()
+    g.arc(hx, hy, R, 0, Math.PI * 2)
+    g.fill()
+    // a few veins creeping out of the pool
+    const veins = 2 + Math.floor(rnd() * 3)
+    for (let v = 0; v < veins; v++) {
+      drawVein(hx + (rnd() - 0.5) * R, hy + (rnd() - 0.5) * R, 8 + rnd() * 12, rnd() - 0.5, 1.5 + rnd() * 2)
+    }
   }
 
   // soft bloom pass so the veins read as hot, not hairline
@@ -189,12 +195,12 @@ export default function MoltenIsland() {
       <mesh geometry={geo} castShadow receiveShadow>
         <meshStandardMaterial
           ref={matRef}
-          color={'#3c2412'}
-          roughness={0.95}
-          metalness={0.1}
+          color={'#6f6a61'}
+          roughness={0.92}
+          metalness={0.12}
           emissive={'#ff8a20'}
           emissiveMap={molten}
-          emissiveIntensity={1.0}
+          emissiveIntensity={1.3}
           side={THREE.DoubleSide}
           flatShading
         />
@@ -216,12 +222,13 @@ export default function MoltenIsland() {
           castShadow
         >
           <meshStandardMaterial
-            color={'#3a2214'}
-            roughness={0.88}
-            metalness={0.2}
+            color={'#6a655c'}
+            roughness={0.9}
+            metalness={0.15}
             emissive={'#ff9a2c'}
             emissiveMap={molten}
-            emissiveIntensity={1.05}
+            emissiveIntensity={1.2}
+            flatShading
           />
         </mesh>
       ))}

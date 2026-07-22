@@ -14,7 +14,7 @@ export const lightningPulse = { value: 0 }
  */
 export default function Lightning() {
   const lightRef = useRef<THREE.PointLight>(null)
-  const nextStrike = useRef(1 + Math.random() * 3)
+  const nextStrike = useRef(0.5 + Math.random() * 1.5)
   const timer = useRef(0)
   const flash = useRef(0) // remaining flash energy
   const pos = useRef(new THREE.Vector3(0, 12, 0))
@@ -28,7 +28,7 @@ export default function Lightning() {
 
     if (timer.current >= nextStrike.current) {
       timer.current = 0
-      nextStrike.current = 2.5 + Math.random() * 5
+      nextStrike.current = 0.8 + Math.random() * 2.2
       flash.current = 1
       pos.current.set((Math.random() - 0.5) * 16, 10 + Math.random() * 4, (Math.random() - 0.5) * 12)
       // schedule a quick second flicker

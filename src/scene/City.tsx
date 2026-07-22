@@ -78,9 +78,9 @@ function BuildingCluster({
         emissiveMap={set.emissive}
         emissiveIntensity={0}
         roughnessMap={set.roughness}
-        roughness={glass ? 0.35 : 0.85}
-        metalness={glass ? 0.8 : 0.08}
-        envMapIntensity={glass ? 1.4 : 0.5}
+        roughness={glass ? 0.22 : 0.8}
+        metalness={glass ? 0.85 : 0.1}
+        envMapIntensity={glass ? 1.8 : 0.6}
       />
     </instancedMesh>
   )

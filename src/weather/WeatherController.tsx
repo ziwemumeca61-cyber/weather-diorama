@@ -4,6 +4,7 @@ import Snow from './effects/Snow'
 import Fog from './effects/Fog'
 import Clouds from './effects/Clouds'
 import Lightning from './effects/Lightning'
+import Sun from '../scene/Sun'
 
 /**
  * Reads the effective weather and mounts the matching scene effects.
@@ -27,7 +28,7 @@ export default function WeatherController() {
       {kind === 'fog' && <Fog intensity={intensity} />}
       {kind === 'cloudy' && <Clouds coverage={0.45} />}
       {kind === 'overcast' && <Clouds coverage={0.85} />}
-      {/* clear: no atmosphere layer */}
+      {kind === 'clear' && <Sun />}
     </group>
   )
 }
