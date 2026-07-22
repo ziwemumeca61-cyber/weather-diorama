@@ -2,14 +2,44 @@ import { useState } from 'react'
 import { useStore } from '../data/store'
 import { emojiForKind } from '../weather/weatherCode'
 
+const COLLAPSE_KEY = 'weather-diorama.fstrip-collapsed'
+
 /**
  * Slim glass strip under the forecast card: the next 24 hours (scrollable),
- * toggleable to the 7-day outlook. Hidden until the provider supplies data.
+ * toggleable to the 7-day outlook, and collapsible to a small handle.
+ * Hidden entirely until the provider supplies data.
  */
 export default function ForecastStrip() {
   const forecast = useStore((s) => s.current?.forecast)
   const [tab, setTab] = useState<'hourly' | 'daily'>('hourly')
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem(COLLAPSE_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
   if (!forecast || (!forecast.hourly.length && !forecast.daily.length)) return null
+
+  const toggle = () => {
+    setCollapsed((c) => {
+      const next = !c
+      try {
+        localStorage.setItem(COLLAPSE_KEY, next ? '1' : '0')
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
+  }
+
+  if (collapsed) {
+    return (
+      <button className="fstrip-handle" onClick={toggle} aria-label="展开预报">
+        预报 <span aria-hidden>▾</span>
+      </button>
+    )
+  }
 
   return (
     <div className="fstrip">
@@ -25,6 +55,9 @@ export default function ForecastStrip() {
           onClick={() => setTab('daily')}
         >
           7天
+        </button>
+        <button className="fstrip-collapse" onClick={toggle} aria-label="收起预报">
+          ▴
         </button>
       </div>
       {tab === 'hourly' ? (

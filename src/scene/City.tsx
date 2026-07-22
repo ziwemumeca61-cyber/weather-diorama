@@ -2,6 +2,21 @@ import { useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { generateCity, type BuildingInstance } from './cityData'
+
+/** Unit gable (ridge) roof: base at y0 (z ±0.5), ridge at y1 (z 0), along x. */
+function makeGableGeometry(): THREE.BufferGeometry {
+  const A = [-0.5, 0, -0.5], B = [-0.5, 0, 0.5], C = [-0.5, 1, 0]
+  const D = [0.5, 0, -0.5], E = [0.5, 0, 0.5], F = [0.5, 1, 0]
+  const pos = [
+    ...A, ...B, ...C, ...D, ...F, ...E, // end triangles
+    ...A, ...C, ...F, ...A, ...F, ...D, // slope -z
+    ...B, ...E, ...F, ...B, ...F, ...C, // slope +z
+  ]
+  const g = new THREE.BufferGeometry()
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
+  g.computeVertexNormals()
+  return g
+}
 import { getFacades } from './facades'
 import { useClockInputs } from '../data/store'
 import { useCityProfile, useSkyline, useWater } from './cityProfiles'
@@ -71,10 +86,100 @@ function BuildingCluster({
   )
 }
 
-/** Tapered glass crowns on the tallest towers. */
+/**
+ * Roof toppers that break up the flat-box skyline: hip pyramids and gable
+ * ridges on low-rise, stepped setback tiers on tall towers.
+ */
+function RoofToppers({ buildings }: { buildings: BuildingInstance[] }) {
+  const hipRef = useRef<THREE.InstancedMesh>(null)
+  const gableRef = useRef<THREE.InstancedMesh>(null)
+  const setRef = useRef<THREE.InstancedMesh>(null)
+  const gableGeo = useMemo(() => makeGableGeometry(), [])
+  const groups = useMemo(() => {
+    const hip: BuildingInstance[] = []
+    const gable: BuildingInstance[] = []
+    const setback: BuildingInstance[] = []
+    for (const b of buildings) {
+      if (b.roof === 'hip') hip.push(b)
+      else if (b.roof === 'gable') gable.push(b)
+      else if (b.roof === 'setback') setback.push(b)
+    }
+    return { hip, gable, setback }
+  }, [buildings])
+
+  useLayoutEffect(() => {
+    const d = new THREE.Object3D()
+    const c = new THREE.Color()
+    const tile = new THREE.Color('#7c6f63')
+    // hip: 4-sided pyramid cap
+    if (hipRef.current) {
+      groups.hip.forEach((b, i) => {
+        const top = b.position[1] + b.size[1] / 2
+        const capH = 0.35 + b.size[0] * 0.4
+        d.position.set(b.position[0], top + capH / 2, b.position[2])
+        d.rotation.set(0, Math.PI / 4, 0)
+        d.scale.set(b.size[0] * 1.04, capH, b.size[2] * 1.04)
+        d.updateMatrix()
+        hipRef.current!.setMatrixAt(i, d.matrix)
+        hipRef.current!.setColorAt(i, c.copy(tile).offsetHSL(0, 0, (i % 4) * 0.02 - 0.03))
+      })
+      d.rotation.set(0, 0, 0)
+      hipRef.current.instanceMatrix.needsUpdate = true
+      if (hipRef.current.instanceColor) hipRef.current.instanceColor.needsUpdate = true
+    }
+    // gable: ridge roof
+    if (gableRef.current) {
+      groups.gable.forEach((b, i) => {
+        const top = b.position[1] + b.size[1] / 2
+        const gH = 0.3 + b.size[2] * 0.5
+        d.position.set(b.position[0], top, b.position[2])
+        d.scale.set(b.size[0] * 1.02, gH, b.size[2] * 1.06)
+        d.updateMatrix()
+        gableRef.current!.setMatrixAt(i, d.matrix)
+        gableRef.current!.setColorAt(i, c.copy(tile).offsetHSL(0.02, 0.05, (i % 3) * 0.02 - 0.02))
+      })
+      gableRef.current.instanceMatrix.needsUpdate = true
+      if (gableRef.current.instanceColor) gableRef.current.instanceColor.needsUpdate = true
+    }
+    // setback: a narrower box tier crowning tall towers
+    if (setRef.current) {
+      groups.setback.forEach((b, i) => {
+        const top = b.position[1] + b.size[1] / 2
+        const tierH = 0.7 + b.size[1] * 0.12
+        d.position.set(b.position[0], top + tierH / 2, b.position[2])
+        d.rotation.set(0, 0, 0)
+        d.scale.set(b.size[0] * 0.64, tierH, b.size[2] * 0.64)
+        d.updateMatrix()
+        setRef.current!.setMatrixAt(i, d.matrix)
+        setRef.current!.setColorAt(i, c.copy(b.color).multiplyScalar(0.94))
+      })
+      setRef.current.instanceMatrix.needsUpdate = true
+      if (setRef.current.instanceColor) setRef.current.instanceColor.needsUpdate = true
+    }
+  }, [groups])
+
+  return (
+    <group>
+      <instancedMesh ref={hipRef} args={[undefined, undefined, groups.hip.length]} castShadow>
+        <coneGeometry args={[0.5, 1, 4]} />
+        <meshStandardMaterial roughness={0.85} metalness={0.05} />
+      </instancedMesh>
+      <instancedMesh ref={gableRef} args={[undefined, undefined, groups.gable.length]} castShadow>
+        <primitive object={gableGeo} attach="geometry" />
+        <meshStandardMaterial roughness={0.85} metalness={0.05} />
+      </instancedMesh>
+      <instancedMesh ref={setRef} args={[undefined, undefined, groups.setback.length]} castShadow receiveShadow>
+        <boxGeometry args={[1, 1, 1]} />
+        <meshStandardMaterial roughness={0.5} metalness={0.4} envMapIntensity={1.2} />
+      </instancedMesh>
+    </group>
+  )
+}
+
+/** Tapered glass crowns on the tallest flat-topped towers. */
 function Crowns({ towers }: { towers: BuildingInstance[] }) {
   const ref = useRef<THREE.InstancedMesh>(null)
-  const tall = useMemo(() => towers.filter((t) => t.size[1] > 5.5), [towers])
+  const tall = useMemo(() => towers.filter((t) => t.size[1] > 6.5 && t.roof === 'flat'), [towers])
   useLayoutEffect(() => {
     const mesh = ref.current
     if (!mesh) return
@@ -110,7 +215,7 @@ function Rooftops({ buildings }: { buildings: BuildingInstance[] }) {
       return seed / 0x7fffffff
     }
     buildings.forEach((b) => {
-      if (b.size[1] < 1.6) return
+      if (b.size[1] < 1.6 || b.roof !== 'flat') return
       const n = 1 + Math.floor(rand() * 2)
       const top = b.position[1] + b.size[1] / 2
       for (let k = 0; k < n; k++) {
@@ -180,6 +285,7 @@ export default function City() {
     <group key={`${profile.id}:${seed}`}>
       <BuildingCluster items={glass} glass emissiveTargetRef={emissiveTarget} />
       <BuildingCluster items={concrete} glass={false} emissiveTargetRef={emissiveTarget} />
+      <RoofToppers buildings={buildings} />
       <Crowns towers={glass} />
       <Rooftops buildings={buildings} />
     </group>

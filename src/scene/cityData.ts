@@ -3,12 +3,16 @@
 
 import * as THREE from 'three'
 
+/** Roof/top silhouette so the skyline isn't all flat boxes. */
+export type RoofKind = 'flat' | 'hip' | 'setback' | 'gable'
+
 export interface BuildingInstance {
   position: [number, number, number]
   size: [number, number, number] // width, height, depth
   color: THREE.Color
   /** 0..1 how "downtown" — taller, glassier towers near the core */
   coreness: number
+  roof: RoofKind
 }
 
 // mulberry32 — tiny deterministic PRNG
@@ -88,19 +92,25 @@ export function generateCity(
       // keep landmark footprints clear
       const dToCore = Math.hypot(x - CITY.landmark.x, z - CITY.landmark.z)
       if (clearZones.some((c) => Math.hypot(x - c.x, z - c.z) < c.r)) continue
-      // random gaps
-      if (rand() < 0.12) continue
+      // random gaps (fewer now → denser city)
+      if (rand() < 0.06) continue
 
       // coreness: 1 at downtown, fading out to edges & waterfront
       const coreness = THREE.MathUtils.clamp(1 - dToCore / 11, 0, 1)
 
       const jitterX = (rand() - 0.5) * 0.5
       const jitterZ = (rand() - 0.5) * 0.5
-      const footprint = 0.75 + rand() * 0.5
+      let footprint = 0.72 + rand() * 0.5
 
-      // taller downtown, low-rise waterfront/edges
-      const base = 0.6 + rand() * 0.8
-      let height = base + Math.pow(coreness, 1.6) * (2.5 + rand() * 6.5)
+      // taller downtown, low-rise waterfront/edges (raised overall)
+      const base = 0.7 + rand() * 1.0
+      let height = base + Math.pow(coreness, 1.5) * (3.6 + rand() * 9)
+      // some slim supertall spikes near the core for skyline drama
+      const slim = coreness > 0.5 && rand() < 0.28
+      if (slim) {
+        footprint *= 0.62
+        height *= 1.45
+      }
 
       // suppress height near landmarks so they stay visible (soft falloff)
       for (const zone of calmZones) {
@@ -119,11 +129,20 @@ export function generateCity(
         color.setHSL((hsl.h + hueShift + 1) % 1, hsl.s, hsl.l)
       }
 
+      // roof silhouette: tall towers step back or stay flat; low-rise gets
+      // pitched (hip/gable) roofs; mid gets an occasional hip
+      let roof: RoofKind = 'flat'
+      const rr = rand()
+      if (height > 5.5) roof = rr < 0.5 ? 'setback' : 'flat'
+      else if (coreness < 0.42 && height < 2.4) roof = rr < 0.42 ? 'gable' : rr < 0.68 ? 'hip' : 'flat'
+      else roof = rr < 0.24 ? 'hip' : 'flat'
+
       buildings.push({
         position: [x + jitterX, height / 2, z + jitterZ],
         size: [footprint, height, footprint * (0.85 + rand() * 0.3)],
         color,
         coreness,
+        roof,
       })
     }
   }
