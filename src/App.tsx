@@ -142,7 +142,7 @@ export default function App() {
             false,
           )
         }}
-        camera={{ position: [17, 12, 19], fov: 38 }}
+        camera={{ position: [19, 2, 21], fov: 40 }}
         gl={{
           antialias: false,
           toneMapping: THREE.ACESFilmicToneMapping,
@@ -167,10 +167,11 @@ export default function App() {
           autoRotate
           autoRotateSpeed={0.4}
           minDistance={12}
-          maxDistance={34}
+          maxDistance={38}
           minPolarAngle={0.15}
-          maxPolarAngle={Math.PI / 2.15}
-          target={[0, 1.5, 0]}
+          // allow dipping below the horizon so the floating molten island shows
+          maxPolarAngle={Math.PI * 0.62}
+          target={[0, -1.0, 0]}
           makeDefault
         />
         <EffectComposer multisampling={0}>

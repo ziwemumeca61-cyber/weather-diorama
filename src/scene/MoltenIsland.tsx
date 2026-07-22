@@ -6,7 +6,7 @@ import { CITY } from './cityData'
 // The island hangs from the underside of the thin base slab and tapers to a
 // jagged point. Widest ring tucks just under the slab lip so the seam is hidden.
 const TOP_R = CITY.trayHalf + 0.6 // ≈ slab half-extent, sits under the lip
-const HEIGHT = 8.2 // how far the rock reaches down
+const HEIGHT = 6.0 // how far the rock reaches down (chunky mountain, not a spike)
 const TOP_Y = -0.35 // just below the (thinned) slab
 
 /**
