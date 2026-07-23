@@ -50,7 +50,7 @@ export default function Fog({ intensity }: FogProps) {
   // install global fog while this effect is active
   useEffect(() => {
     const prev = scene.fog
-    const density = THREE.MathUtils.lerp(0.02, 0.06, intensity)
+    const density = THREE.MathUtils.lerp(0.01, 0.028, intensity)
     scene.fog = new THREE.FogExp2(new THREE.Color('#c7ccd2'), density)
     return () => {
       scene.fog = prev ?? null
@@ -69,7 +69,7 @@ export default function Fog({ intensity }: FogProps) {
     })
   })
 
-  const opacity = THREE.MathUtils.lerp(0.28, 0.5, intensity)
+  const opacity = THREE.MathUtils.lerp(0.16, 0.32, intensity)
 
   return (
     <group ref={groupRef}>

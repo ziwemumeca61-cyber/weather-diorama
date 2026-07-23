@@ -16,7 +16,12 @@ export default function WeatherController() {
 
   return (
     <group>
-      {kind === 'rain' && <Rain intensity={intensity} />}
+      {kind === 'rain' && (
+        <>
+          <Rain intensity={intensity} />
+          <Clouds coverage={0.75} dark />
+        </>
+      )}
       {kind === 'thunder' && (
         <>
           <Rain intensity={Math.max(0.7, intensity)} />

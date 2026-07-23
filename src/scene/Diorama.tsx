@@ -10,6 +10,7 @@ import People from './People'
 import Extras from './Extras'
 import NightSky from './NightSky'
 import CloudBase from './CloudBase'
+import AmbientClouds from './AmbientClouds'
 import { useWater } from './cityProfiles'
 import type { ResolvedWater } from './water'
 import { useEffectiveWeather } from '../data/store'
@@ -177,9 +178,9 @@ function WaterSurface({ water }: { water: ResolvedWater }) {
   useFrame(({ clock }, dt) => {
     const t = clock.elapsedTime
     if (matRef.current) matRef.current.emissiveIntensity = 0.04 + Math.sin(t * 0.8) * 0.02
-    flow.offset.x -= dt * (water.lake ? 0.006 : 0.03)
-    if (water.lake) flow.offset.y += dt * 0.003
-    foam.offset.x -= dt * 0.016
+    flow.offset.x -= dt * (water.lake ? 0.014 : 0.06)
+    if (water.lake) flow.offset.y += dt * 0.007
+    foam.offset.x -= dt * 0.035
 
     // gentle vertex ripples on the water surface (local z = world up)
     const m = meshRef.current
@@ -382,7 +383,10 @@ export default function Diorama() {
   })
 
   return (
-    <group ref={floatRef}>
+    <>
+      {/* decorative clouds drifting in the open air around the floating city */}
+      <AmbientClouds />
+      <group ref={floatRef}>
       {/* thin base slab — a slim plate the molten island hangs from. Its top
           sits just below the ground plane (y≈0.005) so the road/pavement
           texture shows through instead of being covered by white. */}
@@ -420,6 +424,7 @@ export default function Diorama() {
       <Props />
       <People />
       <Extras />
-    </group>
+      </group>
+    </>
   )
 }

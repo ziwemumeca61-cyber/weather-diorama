@@ -31,13 +31,13 @@ export default function Clouds({ coverage, dark = false }: CloudsProps) {
   const groupRef = useRef<THREE.Group>(null)
 
   const puffs = useMemo(() => {
-    const n = Math.floor(THREE.MathUtils.lerp(10, 26, coverage))
+    const n = Math.floor(THREE.MathUtils.lerp(16, 34, coverage))
     return Array.from({ length: n }).map(() => ({
-      x: (Math.random() - 0.5) * 26,
-      z: (Math.random() - 0.5) * 26 + CITY.landmark.z,
-      y: 9 + Math.random() * 3,
-      scale: 4 + Math.random() * 5,
-      speed: 0.12 + Math.random() * 0.18,
+      x: (Math.random() - 0.5) * 34,
+      z: (Math.random() - 0.5) * 34 + CITY.landmark.z,
+      y: 8.5 + Math.random() * 4,
+      scale: 8 + Math.random() * 9,
+      speed: 0.1 + Math.random() * 0.16,
     }))
   }, [coverage])
 

@@ -10,29 +10,55 @@ function Trees({ water }: { water: ResolvedWater }) {
     () => generateTrees().filter((t) => !inLake(water, t.position[0], t.position[2])),
     [water],
   )
-  const foliageRef = useRef<THREE.InstancedMesh>(null)
+  const pines = useMemo(() => trees.filter((t) => t.kind === 'pine'), [trees])
+  const broads = useMemo(() => trees.filter((t) => t.kind === 'broad'), [trees])
   const trunkRef = useRef<THREE.InstancedMesh>(null)
+  const pineRef = useRef<THREE.InstancedMesh>(null)
+  // broadleaf canopies use two stacked spheres for a fuller crown
+  const broad1Ref = useRef<THREE.InstancedMesh>(null)
+  const broad2Ref = useRef<THREE.InstancedMesh>(null)
 
   useLayoutEffect(() => {
-    const dummy = new THREE.Object3D()
+    const d = new THREE.Object3D()
+    const c = new THREE.Color()
     const green = new THREE.Color('#5f9e5a')
+    const tint = (i: number) => c.copy(green).offsetHSL((i % 4) * 0.01 - 0.015, 0.04, (i % 5) * 0.025 - 0.05)
+
     trees.forEach((t, i) => {
-      // trunk
-      dummy.position.set(t.position[0], 0.18 * t.scale, t.position[2])
-      dummy.scale.set(t.scale, t.scale, t.scale)
-      dummy.updateMatrix()
-      trunkRef.current!.setMatrixAt(i, dummy.matrix)
-      // foliage
-      dummy.position.set(t.position[0], 0.5 * t.scale, t.position[2])
-      dummy.scale.set(t.scale, t.scale * (0.9 + (i % 3) * 0.15), t.scale)
-      dummy.updateMatrix()
-      foliageRef.current!.setMatrixAt(i, dummy.matrix)
-      foliageRef.current!.setColorAt(i, green.clone().offsetHSL(0, 0, (i % 5) * 0.02 - 0.04))
+      d.position.set(t.position[0], 0.18 * t.scale, t.position[2])
+      d.scale.set(t.scale, t.scale, t.scale)
+      d.updateMatrix()
+      trunkRef.current!.setMatrixAt(i, d.matrix)
     })
     trunkRef.current!.instanceMatrix.needsUpdate = true
-    foliageRef.current!.instanceMatrix.needsUpdate = true
-    if (foliageRef.current!.instanceColor) foliageRef.current!.instanceColor.needsUpdate = true
-  }, [trees])
+
+    pines.forEach((t, i) => {
+      d.position.set(t.position[0], 0.52 * t.scale, t.position[2])
+      d.scale.set(t.scale, t.scale * (0.95 + (i % 3) * 0.16), t.scale)
+      d.updateMatrix()
+      pineRef.current!.setMatrixAt(i, d.matrix)
+      pineRef.current!.setColorAt(i, tint(i))
+    })
+    pineRef.current!.instanceMatrix.needsUpdate = true
+    if (pineRef.current!.instanceColor) pineRef.current!.instanceColor.needsUpdate = true
+
+    broads.forEach((t, i) => {
+      d.position.set(t.position[0], 0.5 * t.scale, t.position[2])
+      d.scale.set(t.scale * 1.05, t.scale * 0.95, t.scale * 1.05)
+      d.updateMatrix()
+      broad1Ref.current!.setMatrixAt(i, d.matrix)
+      broad1Ref.current!.setColorAt(i, tint(i))
+      d.position.set(t.position[0], 0.74 * t.scale, t.position[2])
+      d.scale.set(t.scale * 0.72, t.scale * 0.72, t.scale * 0.72)
+      d.updateMatrix()
+      broad2Ref.current!.setMatrixAt(i, d.matrix)
+      broad2Ref.current!.setColorAt(i, tint(i + 2))
+    })
+    broad1Ref.current!.instanceMatrix.needsUpdate = true
+    broad2Ref.current!.instanceMatrix.needsUpdate = true
+    if (broad1Ref.current!.instanceColor) broad1Ref.current!.instanceColor.needsUpdate = true
+    if (broad2Ref.current!.instanceColor) broad2Ref.current!.instanceColor.needsUpdate = true
+  }, [trees, pines, broads])
 
   return (
     <group>
@@ -40,9 +66,17 @@ function Trees({ water }: { water: ResolvedWater }) {
         <cylinderGeometry args={[0.05, 0.06, 0.36, 6]} />
         <meshStandardMaterial color={'#6b4a2f'} roughness={0.9} />
       </instancedMesh>
-      <instancedMesh ref={foliageRef} args={[undefined, undefined, trees.length]} castShadow>
-        <coneGeometry args={[0.34, 0.8, 8]} />
+      <instancedMesh ref={pineRef} args={[undefined, undefined, pines.length]} castShadow>
+        <coneGeometry args={[0.32, 0.85, 8]} />
         <meshStandardMaterial roughness={0.85} />
+      </instancedMesh>
+      <instancedMesh ref={broad1Ref} args={[undefined, undefined, broads.length]} castShadow>
+        <icosahedronGeometry args={[0.34, 1]} />
+        <meshStandardMaterial roughness={0.9} flatShading />
+      </instancedMesh>
+      <instancedMesh ref={broad2Ref} args={[undefined, undefined, broads.length]} castShadow>
+        <icosahedronGeometry args={[0.34, 1]} />
+        <meshStandardMaterial roughness={0.9} flatShading />
       </instancedMesh>
     </group>
   )

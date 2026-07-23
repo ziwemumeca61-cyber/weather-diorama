@@ -186,7 +186,7 @@ function RoofToppers({ buildings }: { buildings: BuildingInstance[] }) {
 /** Tapered glass crowns on the tallest flat-topped towers. */
 function Crowns({ towers }: { towers: BuildingInstance[] }) {
   const ref = useRef<THREE.InstancedMesh>(null)
-  const tall = useMemo(() => towers.filter((t) => t.size[1] > 6.5 && t.roof === 'flat'), [towers])
+  const tall = useMemo(() => towers.filter((t) => t.size[1] > 5.3 && t.roof === 'flat'), [towers])
   useLayoutEffect(() => {
     const mesh = ref.current
     if (!mesh) return
@@ -194,8 +194,8 @@ function Crowns({ towers }: { towers: BuildingInstance[] }) {
     const c = new THREE.Color()
     tall.forEach((b, i) => {
       const top = b.position[1] + b.size[1] / 2
-      dummy.position.set(b.position[0], top + b.size[0] * 0.35, b.position[2])
-      dummy.scale.set(b.size[0] * 0.6, b.size[0] * 0.7, b.size[2] * 0.6)
+      dummy.position.set(b.position[0], top + b.size[0] * 0.5, b.position[2])
+      dummy.scale.set(b.size[0] * 0.58, b.size[0] * 1.0, b.size[2] * 0.58)
       dummy.updateMatrix()
       mesh.setMatrixAt(i, dummy.matrix)
       mesh.setColorAt(i, c.copy(b.color).multiplyScalar(0.9))

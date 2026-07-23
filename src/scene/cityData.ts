@@ -129,13 +129,14 @@ export function generateCity(
         color.setHSL((hsl.h + hueShift + 1) % 1, hsl.s, hsl.l)
       }
 
-      // roof silhouette: tall towers step back or stay flat; low-rise gets
-      // pitched (hip/gable) roofs; mid gets an occasional hip
+      // roof silhouette: tall towers stay flat (they get sleek glass crowns);
+      // only a minority of low-rise gets a subtle pitched roof so the skyline
+      // stays clean rather than suburban.
       let roof: RoofKind = 'flat'
       const rr = rand()
-      if (height > 5.5) roof = rr < 0.5 ? 'setback' : 'flat'
-      else if (coreness < 0.42 && height < 2.4) roof = rr < 0.42 ? 'gable' : rr < 0.68 ? 'hip' : 'flat'
-      else roof = rr < 0.24 ? 'hip' : 'flat'
+      if (height > 5.5) roof = 'flat'
+      else if (coreness < 0.42 && height < 2.4) roof = rr < 0.22 ? 'gable' : rr < 0.4 ? 'hip' : 'flat'
+      else roof = rr < 0.12 ? 'hip' : 'flat'
 
       buildings.push({
         position: [x + jitterX, height / 2, z + jitterZ],
@@ -152,17 +153,35 @@ export function generateCity(
 export interface TreeInstance {
   position: [number, number, number]
   scale: number
+  kind: 'pine' | 'broad'
 }
 
 export function generateTrees(seed = 77): TreeInstance[] {
   const rand = mulberry32(seed)
   const trees: TreeInstance[] = []
-  for (let i = 0; i < 70; i++) {
-    const x = THREE.MathUtils.lerp(CITY.minX - 0.5, CITY.maxX + 0.5, rand())
-    const z = THREE.MathUtils.lerp(CITY.minZ - 0.5, CITY.riverZ - 0.6, rand())
-    const dToCore = Math.hypot(x - CITY.landmark.x, z - CITY.landmark.z)
-    if (dToCore < 2) continue
-    trees.push({ position: [x, 0, z], scale: 0.7 + rand() * 0.7 })
+  const zMax = CITY.riverZ - 0.6
+  const push = (x: number, z: number, s: number) => {
+    if (Math.hypot(x - CITY.landmark.x, z - CITY.landmark.z) < 2) return
+    trees.push({ position: [x, 0, z], scale: s, kind: rand() < 0.55 ? 'broad' : 'pine' })
+  }
+  // general street/park greenery across the city
+  for (let i = 0; i < 120; i++) {
+    push(
+      THREE.MathUtils.lerp(CITY.minX - 0.5, CITY.maxX + 0.5, rand()),
+      THREE.MathUtils.lerp(CITY.minZ - 0.5, zMax, rand()),
+      0.7 + rand() * 0.7,
+    )
+  }
+  // a lush green belt around the outskirts (the outer ring of the tray)
+  const inner = CITY.maxX - 1.5
+  const outer = CITY.trayHalf - 0.5
+  for (let i = 0; i < 150; i++) {
+    const ang = rand() * Math.PI * 2
+    const r = inner + rand() * (outer - inner)
+    const x = Math.cos(ang) * r
+    const z = Math.sin(ang) * r
+    if (z > zMax || x < CITY.minX - 0.8 || x > CITY.maxX + 0.8) continue // keep off the river/edges
+    push(x, z, 0.85 + rand() * 0.9)
   }
   return trees
 }
