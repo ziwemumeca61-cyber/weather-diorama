@@ -7,8 +7,8 @@ interface RainProps {
   intensity: number // 0..1
 }
 
-const AREA_X = 22
-const AREA_Z = 22
+const AREA_X = 30
+const AREA_Z = 30
 const TOP = 14
 const BOTTOM = 0.2
 
@@ -17,7 +17,7 @@ const BOTTOM = 0.2
  * land on the ground and rooftops — the "雨滴打在屋顶" moment from the brief.
  */
 export default function Rain({ intensity }: RainProps) {
-  const count = Math.floor(THREE.MathUtils.lerp(300, 1400, intensity))
+  const count = Math.floor(THREE.MathUtils.lerp(500, 1900, intensity))
   const rippleCount = Math.floor(THREE.MathUtils.lerp(24, 70, intensity))
 
   const linesRef = useRef<THREE.LineSegments>(null)

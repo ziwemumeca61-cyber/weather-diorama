@@ -7,13 +7,13 @@ interface SnowProps {
   intensity: number
 }
 
-const AREA_X = 22
-const AREA_Z = 22
+const AREA_X = 30
+const AREA_Z = 30
 const TOP = 14
 
 /** Slow drifting snowflakes as a Points cloud. */
 export default function Snow({ intensity }: SnowProps) {
-  const count = Math.floor(THREE.MathUtils.lerp(400, 1600, intensity))
+  const count = Math.floor(THREE.MathUtils.lerp(700, 2400, intensity))
   const pointsRef = useRef<THREE.Points>(null)
 
   const { positions, velocities, phase } = useMemo(() => {
