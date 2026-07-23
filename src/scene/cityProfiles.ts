@@ -69,6 +69,12 @@ const ZhengzhouLandmarks = lazy(() => import('./landmarks/Zhengzhou'))
 const NanchangLandmarks = lazy(() => import('./landmarks/Nanchang'))
 const ShenyangLandmarks = lazy(() => import('./landmarks/Shenyang'))
 const ChangshaLandmarks = lazy(() => import('./landmarks/Changsha'))
+const LhasaLandmarks = lazy(() => import('./landmarks/Lhasa'))
+const TaipeiLandmarks = lazy(() => import('./landmarks/Taipei'))
+const GuiyangLandmarks = lazy(() => import('./landmarks/Guiyang'))
+const MacauLandmarks = lazy(() => import('./landmarks/Macau'))
+const HohhotLandmarks = lazy(() => import('./landmarks/Hohhot'))
+const LanzhouLandmarks = lazy(() => import('./landmarks/Lanzhou'))
 
 /**
  * Registry of city dioramas. Add an entry per city: a landmark ensemble
@@ -551,6 +557,81 @@ export const CITY_PROFILES: CityProfile[] = [
     calmZones: [{ x: 0, z: -3.8, r: 6.0, maxHeight: 3.4 }],
     // 湘江 — the broad river carrying Orange Isle
     water: { kind: 'river', z0: 6.2, boats: false },
+  },
+  {
+    id: 'lhasa',
+    match: /拉萨|lhasa|lasa/i,
+    Landmarks: LhasaLandmarks,
+    clearZones: [{ x: -0.6, z: -2.4, r: 4.6 }], // the Potala on its hill
+    // the old town stays low so the palace dominates the plateau skyline
+    calmZones: [{ x: -0.6, z: -2.4, r: 8.5, maxHeight: 1.6 }],
+    // high plateau town — no big waterway
+    water: { kind: 'none' },
+  },
+  {
+    id: 'taipei',
+    match: /台北|臺北|taipei/i,
+    Landmarks: TaipeiLandmarks,
+    clearZones: [
+      { x: 1.8, z: -4.0, r: 2.1 }, // 台北101
+      { x: -2.8, z: 0.8, r: 2.6 }, // 中正纪念堂
+    ],
+    calmZones: [
+      { x: 1.8, z: -4.0, r: 4.6, maxHeight: 3.2 },
+      { x: -2.8, z: 0.8, r: 4.2, maxHeight: 1.8 },
+    ],
+    // 淡水河 past the basin
+    water: { kind: 'river', z0: 6.6 },
+  },
+  {
+    id: 'guiyang',
+    match: /贵阳|guiyang/i,
+    Landmarks: GuiyangLandmarks,
+    clearZones: [{ x: -1.2, z: 4.4, r: 3.4 }], // 甲秀楼 pier + 浮玉桥
+    calmZones: [{ x: -1.0, z: 2.6, r: 5.5, maxHeight: 2.4 }],
+    // 南明河 bends past the tower — a broad calm reach
+    water: { kind: 'lake', x: -1.0, z: 4.6, rx: 3.6, rz: 2.2 },
+  },
+  {
+    id: 'macau',
+    match: /澳门|澳門|macau|macao/i,
+    Landmarks: MacauLandmarks,
+    clearZones: [
+      { x: -2.6, z: 1.0, r: 3.0 }, // 大三巴 facade + stairs
+      { x: 3.2, z: -4.0, r: 1.8 }, // 澳门旅游塔
+    ],
+    calmZones: [
+      { x: -2.6, z: 1.0, r: 4.6, maxHeight: 2.0 },
+      { x: 3.2, z: -4.0, r: 3.4, maxHeight: 3.2 },
+    ],
+    // the Pearl-estuary waterfront keeps ferries
+    water: { kind: 'river', z0: 6.4 },
+  },
+  {
+    id: 'hohhot',
+    match: /呼和浩特|hohhot|huhehaote/i,
+    Landmarks: HohhotLandmarks,
+    clearZones: [
+      { x: -2.4, z: -0.6, r: 3.0 }, // 五塔寺 diamond throne
+      { x: 2.8, z: 2.4, r: 2.6 }, // yurt camp
+    ],
+    // keep the whole low steppe town short so the temple + yurts read clearly
+    calmZones: [
+      { x: -1.0, z: -0.8, r: 7.5, maxHeight: 1.7 },
+      { x: 2.8, z: 2.4, r: 3.4, maxHeight: 1.4 },
+    ],
+    // steppe city — grassland runs to the edge
+    water: { kind: 'none' },
+  },
+  {
+    id: 'lanzhou',
+    match: /兰州|蘭州|lanzhou/i,
+    Landmarks: LanzhouLandmarks,
+    clearZones: [{ x: -2.6, z: -1.6, r: 2.6 }], // 白塔山白塔
+    // keep the riverbank town low so the hilltop pagoda dominates
+    calmZones: [{ x: -1.4, z: -1.6, r: 7.2, maxHeight: 1.9 }],
+    // 黄河 runs broad through the city with the iron bridge over it
+    water: { kind: 'river', z0: 6.2, bridge: false },
   },
   {
     id: 'qingdao',
