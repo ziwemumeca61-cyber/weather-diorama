@@ -35,8 +35,9 @@ export default function Clouds({ coverage, dark = false }: CloudsProps) {
     return Array.from({ length: n }).map(() => ({
       x: (Math.random() - 0.5) * 34,
       z: (Math.random() - 0.5) * 34 + CITY.landmark.z,
-      // sit high above the skyline so they don't cover the buildings
-      y: 15 + Math.random() * 5,
+      // just above the skyline — low enough to feel present, high enough to
+      // not cover the buildings
+      y: 12 + Math.random() * 4,
       scale: 6 + Math.random() * 6,
       speed: 0.1 + Math.random() * 0.16,
     }))
