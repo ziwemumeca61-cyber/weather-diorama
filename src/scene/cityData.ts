@@ -165,17 +165,17 @@ export function generateTrees(seed = 77): TreeInstance[] {
     trees.push({ position: [x, 0, z], scale: s, kind: rand() < 0.55 ? 'broad' : 'pine' })
   }
   // general street/park greenery across the city
-  for (let i = 0; i < 120; i++) {
+  for (let i = 0; i < 70; i++) {
     push(
       THREE.MathUtils.lerp(CITY.minX - 0.5, CITY.maxX + 0.5, rand()),
       THREE.MathUtils.lerp(CITY.minZ - 0.5, zMax, rand()),
       0.7 + rand() * 0.7,
     )
   }
-  // a lush green belt around the outskirts (the outer ring of the tray)
+  // a green belt around the outskirts (the outer ring of the tray)
   const inner = CITY.maxX - 1.5
   const outer = CITY.trayHalf - 0.5
-  for (let i = 0; i < 150; i++) {
+  for (let i = 0; i < 55; i++) {
     const ang = rand() * Math.PI * 2
     const r = inner + rand() * (outer - inner)
     const x = Math.cos(ang) * r
