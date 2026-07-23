@@ -31,12 +31,13 @@ export default function Clouds({ coverage, dark = false }: CloudsProps) {
   const groupRef = useRef<THREE.Group>(null)
 
   const puffs = useMemo(() => {
-    const n = Math.floor(THREE.MathUtils.lerp(16, 34, coverage))
+    const n = Math.floor(THREE.MathUtils.lerp(9, 18, coverage))
     return Array.from({ length: n }).map(() => ({
       x: (Math.random() - 0.5) * 34,
       z: (Math.random() - 0.5) * 34 + CITY.landmark.z,
-      y: 8.5 + Math.random() * 4,
-      scale: 8 + Math.random() * 9,
+      // sit high above the skyline so they don't cover the buildings
+      y: 15 + Math.random() * 5,
+      scale: 6 + Math.random() * 6,
       speed: 0.1 + Math.random() * 0.16,
     }))
   }, [coverage])
