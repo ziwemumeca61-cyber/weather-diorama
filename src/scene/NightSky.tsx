@@ -1,8 +1,20 @@
 import { useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
-import { useClockInputs } from '../data/store'
+import { useClockInputs, useEffectiveWeather } from '../data/store'
 import { localHourNow, nightFactorAtHour, OVERRIDE_HOUR } from './dayNight'
+import type { WeatherKind } from '../weather/weatherCode'
+
+// how much of the sky is clear enough to see stars through
+const STAR_CLEARNESS: Record<WeatherKind, number> = {
+  clear: 1,
+  cloudy: 0.4,
+  overcast: 0,
+  fog: 0,
+  rain: 0,
+  snow: 0,
+  thunder: 0,
+}
 
 /** Random points on the upper hemisphere of a big dome around the diorama. */
 function starField(count: number, radius: number, seed: number): THREE.BufferGeometry {
@@ -32,13 +44,17 @@ function starField(count: number, radius: number, seed: number): THREE.BufferGeo
  */
 export default function NightSky() {
   const { overrideTime, utcOffset } = useClockInputs()
+  const { kind } = useEffectiveWeather()
+  const clearness = STAR_CLEARNESS[kind] ?? 1
 
   const R = 44
-  const near = useMemo(() => starField(260, R, 9871), [])
-  const far = useMemo(() => starField(200, R * 1.05, 4412), [])
+  const near = useMemo(() => starField(520, R, 9871), [])
+  const far = useMemo(() => starField(380, R * 1.05, 4412), [])
+  const bright = useMemo(() => starField(110, R * 0.98, 2277), [])
 
   const nearMat = useRef<THREE.PointsMaterial>(null)
   const farMat = useRef<THREE.PointsMaterial>(null)
+  const brightMat = useRef<THREE.PointsMaterial>(null)
   const moonCore = useRef<THREE.MeshBasicMaterial>(null)
   const moonGlow = useRef<THREE.MeshBasicMaterial>(null)
   const moonGroup = useRef<THREE.Group>(null)
@@ -50,11 +66,13 @@ export default function NightSky() {
 
   useFrame(({ clock }) => {
     const hour = overrideTime != null ? OVERRIDE_HOUR[overrideTime] : localHourNow(utcOffset)
-    const nf = nightFactorAtHour(hour)
+    const nf = nightFactorAtHour(hour) * clearness // stars hide in cloud/rain
     const t = clock.elapsedTime
-    // two layers twinkle slightly out of phase for life
-    if (nearMat.current) nearMat.current.opacity = nf * (0.72 + 0.28 * Math.sin(t * 0.9))
-    if (farMat.current) farMat.current.opacity = nf * (0.55 + 0.25 * Math.sin(t * 0.6 + 1.7))
+    // layers twinkle out of phase for a lively, sparkling sky
+    if (nearMat.current) nearMat.current.opacity = nf * (0.62 + 0.38 * Math.sin(t * 1.1))
+    if (farMat.current) farMat.current.opacity = nf * (0.5 + 0.35 * Math.sin(t * 0.7 + 1.7))
+    if (brightMat.current)
+      brightMat.current.opacity = nf * (0.55 + 0.45 * Math.abs(Math.sin(t * 2.3 + 0.6)))
     if (moonCore.current) moonCore.current.opacity = nf
     if (moonGlow.current) moonGlow.current.opacity = nf * 0.28
 
@@ -89,6 +107,17 @@ export default function NightSky() {
           ref={farMat}
           color={'#c8d6ff'}
           size={0.2}
+          sizeAttenuation
+          transparent
+          opacity={0}
+          depthWrite={false}
+        />
+      </points>
+      <points geometry={bright}>
+        <pointsMaterial
+          ref={brightMat}
+          color={'#ffffff'}
+          size={0.5}
           sizeAttenuation
           transparent
           opacity={0}
