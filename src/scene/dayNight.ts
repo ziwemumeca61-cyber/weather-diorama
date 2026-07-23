@@ -40,12 +40,14 @@ const KEYFRAMES: Record<Phase, Keyframe> = {
     sunPos: new THREE.Vector3(9, 14, 6),
   },
   dusk: {
-    sky: new THREE.Color('#f2b184'),
-    sun: new THREE.Color('#ff9d5c'),
-    sunIntensity: 1.7,
-    ambient: new THREE.Color('#8f7ba0'),
-    ambientIntensity: 0.5,
-    sunPos: new THREE.Vector3(-13, 5, 8),
+    // golden hour — a warm, glowing low sun for both sunrise (朝阳) and
+    // sunset (夕阳)
+    sky: new THREE.Color('#ff9e5e'),
+    sun: new THREE.Color('#ff7a2e'),
+    sunIntensity: 2.1,
+    ambient: new THREE.Color('#c78a6a'),
+    ambientIntensity: 0.55,
+    sunPos: new THREE.Vector3(-15, 4, 8),
   },
   night: {
     sky: new THREE.Color('#0c1524'),

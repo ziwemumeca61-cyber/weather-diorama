@@ -57,7 +57,7 @@ export default function Snow({ intensity }: SnowProps) {
     <points ref={pointsRef} geometry={geom} frustumCulled={false}>
       <pointsMaterial
         color={'#ffffff'}
-        size={0.12}
+        size={0.24}
         sizeAttenuation
         transparent
         opacity={0.9}

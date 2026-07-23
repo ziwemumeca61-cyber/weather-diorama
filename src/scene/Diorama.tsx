@@ -177,9 +177,9 @@ function WaterSurface({ water }: { water: ResolvedWater }) {
   useFrame(({ clock }, dt) => {
     const t = clock.elapsedTime
     if (matRef.current) matRef.current.emissiveIntensity = 0.04 + Math.sin(t * 0.8) * 0.02
-    flow.offset.x -= dt * (water.lake ? 0.006 : 0.03)
-    if (water.lake) flow.offset.y += dt * 0.003
-    foam.offset.x -= dt * 0.016
+    flow.offset.x -= dt * (water.lake ? 0.014 : 0.06)
+    if (water.lake) flow.offset.y += dt * 0.007
+    foam.offset.x -= dt * 0.035
 
     // gentle vertex ripples on the water surface (local z = world up)
     const m = meshRef.current
