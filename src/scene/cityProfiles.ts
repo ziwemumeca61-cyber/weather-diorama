@@ -63,6 +63,12 @@ const DezhouLandmarks = lazy(() => import('./landmarks/Dezhou'))
 const LiaochengLandmarks = lazy(() => import('./landmarks/Liaocheng'))
 const BinzhouLandmarks = lazy(() => import('./landmarks/Binzhou'))
 const HezeLandmarks = lazy(() => import('./landmarks/Heze'))
+const TaiyuanLandmarks = lazy(() => import('./landmarks/Taiyuan'))
+const KunmingLandmarks = lazy(() => import('./landmarks/Kunming'))
+const ZhengzhouLandmarks = lazy(() => import('./landmarks/Zhengzhou'))
+const NanchangLandmarks = lazy(() => import('./landmarks/Nanchang'))
+const ShenyangLandmarks = lazy(() => import('./landmarks/Shenyang'))
+const ChangshaLandmarks = lazy(() => import('./landmarks/Changsha'))
 
 /**
  * Registry of city dioramas. Add an entry per city: a landmark ensemble
@@ -461,6 +467,90 @@ export const CITY_PROFILES: CityProfile[] = [
     calmZones: [{ x: -0.8, z: -2.6, r: 5.5, maxHeight: 1.8 }], // gardens stay open
     // inland peony plain: a modest stream, no shipping
     water: { kind: 'river', z0: 8.4, boats: false, bridge: false },
+  },
+  {
+    id: 'taiyuan',
+    match: /太原|taiyuan/i,
+    Landmarks: TaiyuanLandmarks,
+    clearZones: [
+      { x: -2.4, z: -0.8, r: 1.6 }, // 凌霄双塔 west pagoda
+      { x: 1.5, z: -3.4, r: 1.6 }, // east pagoda
+    ],
+    // the old town stays low so the twin pagodas tower over it
+    calmZones: [{ x: -0.5, z: -2.0, r: 6.8, maxHeight: 2.2 }],
+    // 汾河 runs through the city — a modest river, no shipping
+    water: { kind: 'river', z0: 8.0, boats: false, bridge: false },
+  },
+  {
+    id: 'kunming',
+    match: /昆明|kunming/i,
+    Landmarks: KunmingLandmarks,
+    clearZones: [
+      { x: -2.5, z: 0.5, r: 2.6 }, // 金马坊 + its plaza
+      { x: 1.9, z: -3.4, r: 2.6 }, // 碧鸡坊 + its plaza
+    ],
+    // the whole old-town axis stays low so the twin gateways dominate
+    calmZones: [{ x: -0.3, z: -1.4, r: 7.5, maxHeight: 1.7 }],
+    // 滇池 — the great lake beside the spring city
+    water: { kind: 'lake', x: 0.6, z: 3.8, rx: 3.5, rz: 2.3 },
+  },
+  {
+    id: 'zhengzhou',
+    match: /郑州|zhengzhou/i,
+    Landmarks: ZhengzhouLandmarks,
+    clearZones: [
+      { x: -2.4, z: 0.4, r: 2.0 }, // 二七纪念塔
+      { x: 3.0, z: -4.2, r: 1.4 }, // 中原福塔
+    ],
+    calmZones: [
+      { x: -2.4, z: 0.4, r: 4.6, maxHeight: 2.6 },
+      { x: 3.0, z: -4.2, r: 3.4, maxHeight: 3.4 },
+    ],
+    // 黄河 lies north of the city — a modest waterway here, no shipping
+    water: { kind: 'river', z0: 8.4, boats: false, bridge: false },
+  },
+  {
+    id: 'nanchang',
+    match: /南昌|nanchang/i,
+    Landmarks: NanchangLandmarks,
+    clearZones: [
+      { x: -2.8, z: 0.6, r: 3.2 }, // 滕王阁 terrace
+      { x: 3.4, z: -3.8, r: 2.2 }, // 南昌之星 wheel
+    ],
+    calmZones: [
+      { x: -2.8, z: 0.6, r: 5.0, maxHeight: 2.0 },
+      { x: 3.4, z: -3.8, r: 3.6, maxHeight: 2.6 },
+    ],
+    // 赣江 — a broad river past the pavilion
+    water: { kind: 'river', z0: 6.6 },
+  },
+  {
+    id: 'shenyang',
+    match: /沈阳|shenyang|shenyáng/i,
+    Landmarks: ShenyangLandmarks,
+    clearZones: [
+      { x: -2.6, z: 0.6, r: 3.0 }, // 大政殿 terrace
+      { x: 3.0, z: -3.6, r: 2.2 }, // 凤凰楼
+    ],
+    // keep the palace precinct low so the hall and gate tower read clearly
+    calmZones: [
+      { x: -1.4, z: -1.4, r: 7.5, maxHeight: 1.7 },
+      { x: 3.0, z: -3.6, r: 3.6, maxHeight: 2.6 },
+    ],
+    // 浑河 — an inland river, no shipping
+    water: { kind: 'river', z0: 8.0, boats: false, bridge: false },
+  },
+  {
+    id: 'changsha',
+    match: /长沙|changsha/i,
+    Landmarks: ChangshaLandmarks,
+    clearZones: [
+      { x: -1.4, z: -3.4, r: 1.6 }, // IFS T1
+      { x: 1.6, z: -4.2, r: 1.4 }, // IFS T2
+    ],
+    calmZones: [{ x: 0, z: -3.8, r: 6.0, maxHeight: 3.4 }],
+    // 湘江 — the broad river carrying Orange Isle
+    water: { kind: 'river', z0: 6.2, boats: false },
   },
   {
     id: 'qingdao',
