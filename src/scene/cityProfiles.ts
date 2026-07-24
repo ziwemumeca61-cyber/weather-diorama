@@ -63,6 +63,27 @@ const DezhouLandmarks = lazy(() => import('./landmarks/Dezhou'))
 const LiaochengLandmarks = lazy(() => import('./landmarks/Liaocheng'))
 const BinzhouLandmarks = lazy(() => import('./landmarks/Binzhou'))
 const HezeLandmarks = lazy(() => import('./landmarks/Heze'))
+const TaiyuanLandmarks = lazy(() => import('./landmarks/Taiyuan'))
+const KunmingLandmarks = lazy(() => import('./landmarks/Kunming'))
+const ZhengzhouLandmarks = lazy(() => import('./landmarks/Zhengzhou'))
+const NanchangLandmarks = lazy(() => import('./landmarks/Nanchang'))
+const ShenyangLandmarks = lazy(() => import('./landmarks/Shenyang'))
+const ChangshaLandmarks = lazy(() => import('./landmarks/Changsha'))
+const LhasaLandmarks = lazy(() => import('./landmarks/Lhasa'))
+const TaipeiLandmarks = lazy(() => import('./landmarks/Taipei'))
+const GuiyangLandmarks = lazy(() => import('./landmarks/Guiyang'))
+const MacauLandmarks = lazy(() => import('./landmarks/Macau'))
+const HohhotLandmarks = lazy(() => import('./landmarks/Hohhot'))
+const LanzhouLandmarks = lazy(() => import('./landmarks/Lanzhou'))
+const ShijiazhuangLandmarks = lazy(() => import('./landmarks/Shijiazhuang'))
+const ChangchunLandmarks = lazy(() => import('./landmarks/Changchun'))
+const HefeiLandmarks = lazy(() => import('./landmarks/Hefei'))
+const FuzhouLandmarks = lazy(() => import('./landmarks/Fuzhou'))
+const HaikouLandmarks = lazy(() => import('./landmarks/Haikou'))
+const NanningLandmarks = lazy(() => import('./landmarks/Nanning'))
+const XiningLandmarks = lazy(() => import('./landmarks/Xining'))
+const YinchuanLandmarks = lazy(() => import('./landmarks/Yinchuan'))
+const UrumqiLandmarks = lazy(() => import('./landmarks/Urumqi'))
 
 /**
  * Registry of city dioramas. Add an entry per city: a landmark ensemble
@@ -461,6 +482,277 @@ export const CITY_PROFILES: CityProfile[] = [
     calmZones: [{ x: -0.8, z: -2.6, r: 5.5, maxHeight: 1.8 }], // gardens stay open
     // inland peony plain: a modest stream, no shipping
     water: { kind: 'river', z0: 8.4, boats: false, bridge: false },
+  },
+  {
+    id: 'taiyuan',
+    match: /太原|taiyuan/i,
+    Landmarks: TaiyuanLandmarks,
+    clearZones: [
+      { x: -2.4, z: -0.8, r: 1.6 }, // 凌霄双塔 west pagoda
+      { x: 1.5, z: -3.4, r: 1.6 }, // east pagoda
+    ],
+    // the old town stays low so the twin pagodas tower over it
+    calmZones: [{ x: -0.5, z: -2.0, r: 6.8, maxHeight: 2.2 }],
+    // 汾河 runs through the city — a modest river, no shipping
+    water: { kind: 'river', z0: 8.0, boats: false, bridge: false },
+  },
+  {
+    id: 'kunming',
+    match: /昆明|kunming/i,
+    Landmarks: KunmingLandmarks,
+    clearZones: [
+      { x: -2.5, z: 0.5, r: 2.6 }, // 金马坊 + its plaza
+      { x: 1.9, z: -3.4, r: 2.6 }, // 碧鸡坊 + its plaza
+    ],
+    // the whole old-town axis stays low so the twin gateways dominate
+    calmZones: [{ x: -0.3, z: -1.4, r: 7.5, maxHeight: 1.7 }],
+    // 滇池 — the great lake beside the spring city
+    water: { kind: 'lake', x: 0.6, z: 3.8, rx: 3.5, rz: 2.3 },
+  },
+  {
+    id: 'zhengzhou',
+    match: /郑州|zhengzhou/i,
+    Landmarks: ZhengzhouLandmarks,
+    clearZones: [
+      { x: -2.4, z: 0.4, r: 2.0 }, // 二七纪念塔
+      { x: 3.0, z: -4.2, r: 1.4 }, // 中原福塔
+    ],
+    calmZones: [
+      { x: -2.4, z: 0.4, r: 4.6, maxHeight: 2.6 },
+      { x: 3.0, z: -4.2, r: 3.4, maxHeight: 3.4 },
+    ],
+    // 黄河 lies north of the city — a modest waterway here, no shipping
+    water: { kind: 'river', z0: 8.4, boats: false, bridge: false },
+  },
+  {
+    id: 'nanchang',
+    match: /南昌|nanchang/i,
+    Landmarks: NanchangLandmarks,
+    clearZones: [
+      { x: -2.8, z: 0.6, r: 3.2 }, // 滕王阁 terrace
+      { x: 3.4, z: -3.8, r: 2.2 }, // 南昌之星 wheel
+    ],
+    calmZones: [
+      { x: -2.8, z: 0.6, r: 5.0, maxHeight: 2.0 },
+      { x: 3.4, z: -3.8, r: 3.6, maxHeight: 2.6 },
+    ],
+    // 赣江 — a broad river past the pavilion
+    water: { kind: 'river', z0: 6.6 },
+  },
+  {
+    id: 'shenyang',
+    match: /沈阳|shenyang|shenyáng/i,
+    Landmarks: ShenyangLandmarks,
+    clearZones: [
+      { x: -2.6, z: 0.6, r: 3.0 }, // 大政殿 terrace
+      { x: 3.0, z: -3.6, r: 2.2 }, // 凤凰楼
+    ],
+    // keep the palace precinct low so the hall and gate tower read clearly
+    calmZones: [
+      { x: -1.4, z: -1.4, r: 7.5, maxHeight: 1.7 },
+      { x: 3.0, z: -3.6, r: 3.6, maxHeight: 2.6 },
+    ],
+    // 浑河 — an inland river, no shipping
+    water: { kind: 'river', z0: 8.0, boats: false, bridge: false },
+  },
+  {
+    id: 'changsha',
+    match: /长沙|changsha/i,
+    Landmarks: ChangshaLandmarks,
+    clearZones: [
+      { x: -1.4, z: -3.4, r: 1.6 }, // IFS T1
+      { x: 1.6, z: -4.2, r: 1.4 }, // IFS T2
+    ],
+    calmZones: [{ x: 0, z: -3.8, r: 6.0, maxHeight: 3.4 }],
+    // 湘江 — the broad river carrying Orange Isle
+    water: { kind: 'river', z0: 6.2, boats: false },
+  },
+  {
+    id: 'lhasa',
+    match: /拉萨|lhasa|lasa/i,
+    Landmarks: LhasaLandmarks,
+    clearZones: [{ x: -0.6, z: -2.4, r: 4.6 }], // the Potala on its hill
+    // the old town stays low so the palace dominates the plateau skyline
+    calmZones: [{ x: -0.6, z: -2.4, r: 8.5, maxHeight: 1.6 }],
+    // high plateau town — no big waterway
+    water: { kind: 'none' },
+  },
+  {
+    id: 'taipei',
+    match: /台北|臺北|taipei/i,
+    Landmarks: TaipeiLandmarks,
+    clearZones: [
+      { x: 1.8, z: -4.0, r: 2.1 }, // 台北101
+      { x: -2.8, z: 0.8, r: 2.6 }, // 中正纪念堂
+    ],
+    calmZones: [
+      { x: 1.8, z: -4.0, r: 4.6, maxHeight: 3.2 },
+      { x: -2.8, z: 0.8, r: 4.2, maxHeight: 1.8 },
+    ],
+    // 淡水河 past the basin
+    water: { kind: 'river', z0: 6.6 },
+  },
+  {
+    id: 'guiyang',
+    match: /贵阳|guiyang/i,
+    Landmarks: GuiyangLandmarks,
+    clearZones: [{ x: -1.2, z: 4.4, r: 3.4 }], // 甲秀楼 pier + 浮玉桥
+    calmZones: [{ x: -1.0, z: 2.6, r: 5.5, maxHeight: 2.4 }],
+    // 南明河 bends past the tower — a broad calm reach
+    water: { kind: 'lake', x: -1.0, z: 4.6, rx: 3.6, rz: 2.2 },
+  },
+  {
+    id: 'macau',
+    match: /澳门|澳門|macau|macao/i,
+    Landmarks: MacauLandmarks,
+    clearZones: [
+      { x: -2.6, z: 1.0, r: 3.0 }, // 大三巴 facade + stairs
+      { x: 3.2, z: -4.0, r: 1.8 }, // 澳门旅游塔
+    ],
+    calmZones: [
+      { x: -2.6, z: 1.0, r: 4.6, maxHeight: 2.0 },
+      { x: 3.2, z: -4.0, r: 3.4, maxHeight: 3.2 },
+    ],
+    // the Pearl-estuary waterfront keeps ferries
+    water: { kind: 'river', z0: 6.4 },
+  },
+  {
+    id: 'hohhot',
+    match: /呼和浩特|hohhot|huhehaote/i,
+    Landmarks: HohhotLandmarks,
+    clearZones: [
+      { x: -2.4, z: -0.6, r: 3.0 }, // 五塔寺 diamond throne
+      { x: 2.8, z: 2.4, r: 2.6 }, // yurt camp
+    ],
+    // keep the whole low steppe town short so the temple + yurts read clearly
+    calmZones: [
+      { x: -1.0, z: -0.8, r: 7.5, maxHeight: 1.7 },
+      { x: 2.8, z: 2.4, r: 3.4, maxHeight: 1.4 },
+    ],
+    // steppe city — grassland runs to the edge
+    water: { kind: 'none' },
+  },
+  {
+    id: 'lanzhou',
+    match: /兰州|蘭州|lanzhou/i,
+    Landmarks: LanzhouLandmarks,
+    clearZones: [{ x: -2.6, z: -1.6, r: 2.6 }], // 白塔山白塔
+    // keep the riverbank town low so the hilltop pagoda dominates
+    calmZones: [{ x: -1.4, z: -1.6, r: 7.2, maxHeight: 1.9 }],
+    // 黄河 runs broad through the city with the iron bridge over it
+    water: { kind: 'river', z0: 6.2, bridge: false },
+  },
+  {
+    id: 'shijiazhuang',
+    match: /石家庄|shijiazhuang/i,
+    Landmarks: ShijiazhuangLandmarks,
+    clearZones: [{ x: -2.6, z: -3.6, r: 1.8 }], // TV tower
+    calmZones: [{ x: -2.6, z: -3.6, r: 5.5, maxHeight: 3.4 }],
+    // 滹沱河 — a broad river carrying the Zhaozhou stone arch bridge
+    water: { kind: 'river', z0: 6.2, bridge: false },
+  },
+  {
+    id: 'changchun',
+    match: /长春|長春|changchun/i,
+    Landmarks: ChangchunLandmarks,
+    clearZones: [
+      { x: -1.4, z: -3.4, r: 3.8 }, // 地质宫
+      { x: 2.6, z: 3.0, r: 1.6 }, // 太阳鸟
+    ],
+    calmZones: [{ x: -1.0, z: -2.4, r: 6.5, maxHeight: 2.2 }],
+    // 伊通河 — a modest city river
+    water: { kind: 'river', z0: 8.0, boats: false, bridge: false },
+  },
+  {
+    id: 'hefei',
+    match: /合肥|hefei/i,
+    Landmarks: HefeiLandmarks,
+    clearZones: [
+      { x: -1.2, z: 0.6, r: 4.4 }, // 徽派民居群
+      { x: 2.8, z: 3.6, r: 1.8 }, // 逍遥津阁
+    ],
+    // whitewashed Hui town stays low so the horse-head gables read
+    calmZones: [{ x: -0.6, z: 0.4, r: 9.0, maxHeight: 1.5 }],
+    // 逍遥津/巢湖 — a lake beside the old town
+    water: { kind: 'lake', x: 2.8, z: 4.4, rx: 2.6, rz: 1.8 },
+  },
+  {
+    id: 'fuzhou',
+    match: /福州|fuzhou/i,
+    Landmarks: FuzhouLandmarks,
+    clearZones: [
+      { x: -1.6, z: 2.2, r: 4.0 }, // 三坊七巷
+      { x: 2.6, z: -3.8, r: 2.6 }, // 镇海楼
+    ],
+    calmZones: [
+      { x: -1.4, z: 1.4, r: 7.0, maxHeight: 1.6 },
+      { x: 2.6, z: -3.8, r: 3.8, maxHeight: 2.8 },
+    ],
+    // 闽江 past the city
+    water: { kind: 'river', z0: 6.6 },
+  },
+  {
+    id: 'haikou',
+    match: /海口|haikou/i,
+    Landmarks: HaikouLandmarks,
+    clearZones: [{ x: -1.6, z: -3.0, r: 3.8 }], // 骑楼老街
+    calmZones: [{ x: -1.0, z: -2.0, r: 7.0, maxHeight: 2.0 }],
+    // 海甸溪 estuary with the Century cable-stay bridge
+    water: { kind: 'river', z0: 6.2, bridge: false },
+  },
+  {
+    id: 'nanning',
+    match: /南宁|南寧|nanning/i,
+    Landmarks: NanningLandmarks,
+    clearZones: [
+      { x: -1.6, z: -3.2, r: 3.8 }, // 会展中心
+      { x: 3.0, z: 1.6, r: 1.6 }, // 龙象塔
+    ],
+    calmZones: [{ x: -0.8, z: -2.2, r: 7.5, maxHeight: 2.2 }],
+    // 邕江 — the broad river of the Green City
+    water: { kind: 'river', z0: 6.6 },
+  },
+  {
+    id: 'xining',
+    match: /西宁|西寧|xining/i,
+    Landmarks: XiningLandmarks,
+    clearZones: [
+      { x: -1.8, z: -3.2, r: 3.8 }, // 东关清真大寺
+      { x: -1.0, z: 3.8, r: 3.8 }, // 如意八塔
+    ],
+    calmZones: [
+      { x: -1.4, z: -2.6, r: 7.0, maxHeight: 1.8 },
+      { x: -1.0, z: 3.8, r: 4.4, maxHeight: 1.3 },
+    ],
+    // 湟水 — a modest highland river
+    water: { kind: 'river', z0: 8.0, boats: false, bridge: false },
+  },
+  {
+    id: 'yinchuan',
+    match: /银川|銀川|yinchuan/i,
+    Landmarks: YinchuanLandmarks,
+    clearZones: [
+      { x: -2.6, z: -1.4, r: 1.9 }, // 承天寺塔
+      { x: 2.4, z: 1.6, r: 3.2 }, // 西夏王陵
+    ],
+    calmZones: [{ x: 0, z: -0.4, r: 6.8, maxHeight: 2.2 }],
+    // 黄河 skirts the city; the plain itself is arid
+    water: { kind: 'river', z0: 8.4, boats: false, bridge: false },
+  },
+  {
+    id: 'urumqi',
+    match: /乌鲁木齐|烏魯木齊|urumqi|urumchi/i,
+    Landmarks: UrumqiLandmarks,
+    clearZones: [
+      { x: -1.6, z: -3.4, r: 1.9 }, // 国际大巴扎
+      { x: 3.0, z: 2.2, r: 2.6 }, // 红山塔
+    ],
+    calmZones: [
+      { x: -1.6, z: -3.4, r: 5.5, maxHeight: 3.0 },
+      { x: 3.0, z: 2.2, r: 3.4, maxHeight: 1.6 },
+    ],
+    // arid inland basin — no waterway
+    water: { kind: 'none' },
   },
   {
     id: 'qingdao',
