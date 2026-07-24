@@ -15,7 +15,7 @@ export default function PrivacyGate() {
     <div className="consent-backdrop" role="dialog" aria-modal="true" aria-labelledby="consent-title">
       <div className="consent-card">
         <div className="consent-title" id="consent-title">
-          欢迎使用「微缩城市天气」
+          欢迎使用「3D微缩城市天气」
         </div>
         <div className="consent-body">
           <p>在开始前，请阅读并同意我们的隐私政策。我们非常重视你的隐私：</p>

@@ -4,7 +4,7 @@ import type { CapacitorConfig } from '@capacitor/cli'
 // before the first submission. appName is the label shown under the icon.
 const config: CapacitorConfig = {
   appId: 'com.weatherdiorama.app',
-  appName: '微缩城市天气',
+  appName: '3D微缩城市天气',
   webDir: 'dist',
   backgroundColor: '#0b1220',
   android: {
