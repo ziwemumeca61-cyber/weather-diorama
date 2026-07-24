@@ -26,8 +26,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'apple-touch-icon.png', 'og.png'],
       manifest: {
-        name: '微缩城市天气',
-        short_name: '城市天气',
+        name: '3D微缩城市天气',
+        short_name: '微缩天气',
         description: '把真实天气"下"到 3D 微缩城市上：雨打屋顶、雾罩街道、昼夜灯火。',
         lang: 'zh-CN',
         dir: 'ltr',

@@ -41,7 +41,7 @@ npm i -D @capacitor/assets
 npx @capacitor/assets generate --android
 ```
 
-应用名称已在 `capacitor.config.ts` 的 `appName`（微缩城市天气）中设置，
+应用名称已在 `capacitor.config.ts` 的 `appName`（3D微缩城市天气）中设置，
 `cap sync` 会写入原生工程。
 
 ## 三、构建可调试 APK（自测用）

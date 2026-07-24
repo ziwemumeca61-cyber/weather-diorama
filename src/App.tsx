@@ -116,7 +116,7 @@ export default function App() {
     return (
       <div className="app">
         <div className="fatal">
-          <div className="fatal-title">🏙️ 微缩城市天气</div>
+          <div className="fatal-title">🏙️ 3D微缩城市天气</div>
           <div className="fatal-text">
             当前浏览器不支持 WebGL，无法渲染 3D 城市。请改用较新的 Chrome / Edge / Safari 打开。
           </div>
