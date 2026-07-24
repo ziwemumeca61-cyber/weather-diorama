@@ -1,0 +1,40 @@
+<view class="app">
+  <!-- 3D 微缩城市 -->
+  <canvas type="webgl" id="gl" class="gl"></canvas>
+
+  <!-- 顶部天气卡 -->
+  <view class="card">
+    <view class="city">{{place}}</view>
+    <view class="emoji">{{emoji}}</view>
+    <view class="temp">{{temp}}<text class="deg">°</text></view>
+    <view class="kind">{{kindLabel}} · {{dateLabel}}</view>
+  </view>
+
+  <!-- 底部控制 -->
+  <view class="hud">
+    <view class="search">
+      <input
+        class="ipt"
+        placeholder="搜索城市，如 上海 / 北京"
+        placeholder-class="ph"
+        confirm-type="search"
+        value="{{q}}"
+        bindinput="onInput"
+        bindconfirm="onSearch"
+      />
+      <view class="btn" bindtap="onSearch">搜索</view>
+      <view class="btn" bindtap="onLocate">定位</view>
+    </view>
+    <scroll-view class="chips" scroll-x enable-flex>
+      <view
+        wx:for="{{kinds}}"
+        wx:key="*this"
+        class="chip {{item === curKind ? 'on' : ''}}"
+        data-k="{{item}}"
+        bindtap="onChip"
+      >{{labels[item]}}</view>
+    </scroll-view>
+  </view>
+
+  <view class="loading" wx:if="{{loading}}">加载中…</view>
+</view>

@@ -1,0 +1,16 @@
+{
+  "pages": ["pages/index/index"],
+  "window": {
+    "navigationStyle": "custom",
+    "backgroundColor": "#0b1220",
+    "backgroundTextStyle": "light",
+    "navigationBarTextStyle": "white"
+  },
+  "requiredPrivateInfos": ["getLocation"],
+  "permission": {
+    "scope.userLocation": {
+      "desc": "用于显示你所在城市的实时天气"
+    }
+  },
+  "sitemapLocation": "sitemap.json"
+}

@@ -1,0 +1,7 @@
+{
+  "name": "weather",
+  "version": "1.0.0",
+  "description": "3D微缩城市天气 · 天气代理云函数（Open-Meteo）",
+  "main": "index.js",
+  "dependencies": {}
+}

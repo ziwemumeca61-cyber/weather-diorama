@@ -1,0 +1,104 @@
+.app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+.gl {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* 顶部天气卡 */
+.card {
+  position: absolute;
+  top: 120rpx;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: #fff;
+  text-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+.city {
+  font-size: 60rpx;
+  font-weight: 700;
+  letter-spacing: 2rpx;
+}
+.emoji {
+  font-size: 64rpx;
+  margin: 6rpx 0;
+}
+.temp {
+  font-size: 78rpx;
+  font-weight: 300;
+}
+.temp .deg {
+  font-size: 44rpx;
+}
+.kind {
+  font-size: 28rpx;
+  opacity: 0.9;
+}
+
+/* 底部控制 */
+.hud {
+  position: absolute;
+  left: 24rpx;
+  right: 24rpx;
+  bottom: 48rpx;
+}
+.search {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 18rpx;
+}
+.ipt {
+  flex: 1;
+  height: 76rpx;
+  padding: 0 24rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 28rpx;
+  color: #1f2a44;
+}
+.ph {
+  color: #9aa4b4;
+}
+.btn {
+  height: 76rpx;
+  line-height: 76rpx;
+  padding: 0 26rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 255, 255, 0.9);
+  color: #2a3a5e;
+  font-size: 28rpx;
+}
+.chips {
+  white-space: nowrap;
+}
+.chip {
+  display: inline-block;
+  padding: 12rpx 28rpx;
+  margin-right: 14rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.82);
+  color: #3a4a6a;
+  font-size: 26rpx;
+}
+.chip.on {
+  background: #2a3a5e;
+  color: #fff;
+}
+.loading {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: #fff;
+  font-size: 30rpx;
+}
