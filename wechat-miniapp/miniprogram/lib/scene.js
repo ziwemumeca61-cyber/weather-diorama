@@ -145,8 +145,18 @@ export function createScene(canvas, opts) {
       renderer.setSize(w, h, false)
     },
     dispose() {
-      if (raf) canvas.cancelAnimationFrame(raf)
-      renderer.dispose()
+      // 小程序环境下 three 内部 cancelAnimationFrame 可能读到 null，
+      // 页面卸载/热重载时会抛错；逐项加保护，避免销毁流程崩溃。
+      try {
+        if (raf && canvas && canvas.cancelAnimationFrame) canvas.cancelAnimationFrame(raf)
+      } catch (e) {}
+      raf = null
+      try {
+        renderer.setAnimationLoop(null)
+      } catch (e) {}
+      try {
+        renderer.dispose()
+      } catch (e) {}
     },
   }
 }
