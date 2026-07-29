@@ -25,7 +25,12 @@ export function createScene(canvas, opts) {
   if (typeof canvas.removeEventListener !== 'function') canvas.removeEventListener = () => {}
   if (canvas.style === undefined) canvas.style = { width: '', height: '' }
 
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false })
+  // 小程序 canvas 只有 WebGL 1.0（不认 webgl2）。显式取 webgl1 上下文喂给渲染器，
+  // 避免 three 去请求不存在的 webgl2 而报 "Error creating WebGL context"。
+  const gl =
+    canvas.getContext('webgl', { antialias: true, alpha: false }) ||
+    canvas.getContext('experimental-webgl', { antialias: true, alpha: false })
+  const renderer = new THREE.WebGLRenderer({ canvas, context: gl, antialias: true, alpha: false })
   renderer.setSize(width, height, false)
   renderer.setPixelRatio(dpr)
   renderer.shadowMap.enabled = true
