@@ -1,7 +1,7 @@
 // 小程序原生 Three.js 微缩城市场景（第一版：托盘 + 楼群 + 主塔 + 光照 + 自动环绕）。
 // 用 InstancedMesh 控制 draw call；setWeather() 切换天空/雾/背景色调。
 // 这是移植的起点，跑通后再逐步搬入 web 版的地标、粒子特效、昼夜灯光。
-import * as THREE from 'three'
+import * as THREE from './three.module.min.js'
 import { generateCity, hashName } from './cityData'
 
 const SKY = {

@@ -1,8 +1,6 @@
 {
   "name": "3d-weather-diorama-mp",
   "version": "0.1.0",
-  "description": "3D微缩城市天气 · 微信小程序（原生 + 云开发）",
-  "dependencies": {
-    "three": "0.169.0"
-  }
+  "description": "3D微缩城市天气 · 微信小程序（原生 + 云开发）。three 已内置于 lib/three.module.min.js，无需 npm 安装/构建。",
+  "dependencies": {}
 }
