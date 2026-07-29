@@ -19,6 +19,12 @@ export function createScene(canvas, opts) {
   const height = opts.height
   const dpr = Math.min(opts.dpr || 2, 2)
 
+  // 小程序 canvas 节点缺少 DOM 事件/style 接口；three 的 WebGLRenderer 构造时会调
+  // canvas.addEventListener('webglcontextlost', …)，不补桩就报 "addEventListener is not a function"。
+  if (typeof canvas.addEventListener !== 'function') canvas.addEventListener = () => {}
+  if (typeof canvas.removeEventListener !== 'function') canvas.removeEventListener = () => {}
+  if (canvas.style === undefined) canvas.style = { width: '', height: '' }
+
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false })
   renderer.setSize(width, height, false)
   renderer.setPixelRatio(dpr)
