@@ -3,6 +3,7 @@
 // 这是移植的起点，跑通后再逐步搬入 web 版的地标、粒子特效、昼夜灯光。
 import * as THREE from './three.module.min.js'
 import { generateCity, hashName } from './cityData'
+import { buildLandmark } from './landmarks'
 
 const SKY = {
   clear: 0x8fc0ea,
@@ -97,13 +98,27 @@ export function createScene(canvas, opts) {
   scene.add(cityGroup)
   let buildingsMesh = null
   let buildMat = null
+  let landmarkObj = null // 当前城市地标 Group
+  let landmarkGlow = [] // 地标夜间点亮的材质
+  let landmarkSpin = null // 摩天轮等需每帧转动的部件
   let isNight = false
+
+  function applyLandmarkGlow() {
+    const on = isNight ? 0.9 : 0.15
+    for (let i = 0; i < landmarkGlow.length; i++) landmarkGlow[i].emissiveIntensity = on
+  }
 
   function buildCity(cityName) {
     if (buildingsMesh) {
       cityGroup.remove(buildingsMesh)
       buildingsMesh.geometry.dispose()
       buildingsMesh.material.dispose()
+    }
+    if (landmarkObj) {
+      cityGroup.remove(landmarkObj)
+      landmarkObj = null
+      landmarkGlow = []
+      landmarkSpin = null
     }
     const data = generateCity(hashName(cityName || '上海'))
     const geo = new THREE.BoxGeometry(1, 1, 1)
@@ -134,14 +149,28 @@ export function createScene(canvas, opts) {
     cityGroup.add(mesh)
     buildingsMesh = mesh
 
-    // 主塔（视觉焦点）
-    const tower = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.55, 0.7, 9, 6),
-      new THREE.MeshStandardMaterial({ color: 0x5f86ad, roughness: 0.3, metalness: 0.6 }),
-    )
-    tower.position.set(0.4, 4.5, -0.6)
-    tower.castShadow = true
-    cityGroup.add(tower)
+    // 城市专属地标（找不到则退回通用主塔）
+    const lm = buildLandmark(cityName)
+    if (lm) {
+      lm.group.position.set(0, 0, 0)
+      lm.group.traverse((o) => {
+        if (o.isMesh) o.castShadow = true
+      })
+      cityGroup.add(lm.group)
+      landmarkObj = lm.group
+      landmarkGlow = lm.glow || []
+      landmarkSpin = lm.spin || null
+    } else {
+      const tower = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.55, 0.7, 9, 6),
+        new THREE.MeshStandardMaterial({ color: 0x5f86ad, roughness: 0.3, metalness: 0.6 }),
+      )
+      tower.position.set(0.4, 4.5, -0.6)
+      tower.castShadow = true
+      cityGroup.add(tower)
+      landmarkObj = tower
+    }
+    applyLandmarkGlow()
   }
 
   function applyPrecip(kind) {
@@ -176,6 +205,7 @@ export function createScene(canvas, opts) {
     sun.color.set(0xfff2d8)
     amb.intensity = 0.75
     if (buildMat) buildMat.emissiveIntensity = 0
+    applyLandmarkGlow()
   }
 
   // 夜间：深蓝天空 + 暖光楼宇 + 弱冷月光
@@ -188,6 +218,7 @@ export function createScene(canvas, opts) {
     sun.intensity = 0.5
     sun.color.set(0x9fb4d8)
     if (buildMat) buildMat.emissiveIntensity = 0.42
+    applyLandmarkGlow()
   }
 
   function setNight(night) {
@@ -237,6 +268,9 @@ export function createScene(canvas, opts) {
     if (!dragging && now() > idleUntil) t += 0.0022
     camera.position.set(Math.cos(t) * R, elev, Math.sin(t) * R)
     camera.lookAt(camTarget)
+
+    // 摩天轮等地标自转
+    if (landmarkSpin) landmarkSpin.rotation.z += 0.004
 
     // 雷电闪光
     if (curKind === 'thunder') {
