@@ -40,7 +40,7 @@ export function createScene(canvas, opts) {
   scene.fog = new THREE.Fog(SKY.clear, 26, 60)
 
   const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 200)
-  const camTarget = new THREE.Vector3(0, 1.6, 0)
+  const camTarget = new THREE.Vector3(0, 1.2, 0)
 
   // 光照
   const amb = new THREE.AmbientLight(0xffffff, 0.75)
@@ -58,15 +58,6 @@ export function createScene(canvas, opts) {
   tray.position.y = -0.3
   tray.receiveShadow = true
   scene.add(tray)
-
-  // 诊断用：一个必定可见的大亮块（橙色自发光）。看得到它=渲染在画；
-  // 看不到=画布尺寸/上下文问题。确认没问题后会移除。
-  const test = new THREE.Mesh(
-    new THREE.BoxGeometry(4, 4, 4),
-    new THREE.MeshBasicMaterial({ color: 0xff7a1a }),
-  )
-  test.position.set(0, 4, 0)
-  scene.add(test)
 
   // 云托底
   const cloud = new THREE.Mesh(
@@ -89,7 +80,6 @@ export function createScene(canvas, opts) {
       buildingsMesh.material.dispose()
     }
     const data = generateCity(hashName(cityName || '上海'))
-    console.log('[scene] buildings', data.length)
     const geo = new THREE.BoxGeometry(1, 1, 1)
     const mat = new THREE.MeshStandardMaterial({ roughness: 0.82, metalness: 0.05 })
     const mesh = new THREE.InstancedMesh(geo, mat, data.length)
@@ -134,10 +124,10 @@ export function createScene(canvas, opts) {
   // 渲染循环 + 自动环绕
   let raf = null
   let t = 0
-  const R = 19
+  const R = 23
   function frame() {
     t += 0.0022
-    camera.position.set(Math.cos(t) * R, 8, Math.sin(t) * R)
+    camera.position.set(Math.cos(t) * R, 9, Math.sin(t) * R)
     camera.lookAt(camTarget)
     renderer.render(scene, camera)
     raf = canvas.requestAnimationFrame(frame)
