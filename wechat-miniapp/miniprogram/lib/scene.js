@@ -72,6 +72,8 @@ export function createScene(canvas, opts) {
   const cityGroup = new THREE.Group()
   scene.add(cityGroup)
   let buildingsMesh = null
+  let buildMat = null
+  let isNight = false
 
   function buildCity(cityName) {
     if (buildingsMesh) {
@@ -81,7 +83,13 @@ export function createScene(canvas, opts) {
     }
     const data = generateCity(hashName(cityName || '上海'))
     const geo = new THREE.BoxGeometry(1, 1, 1)
-    const mat = new THREE.MeshStandardMaterial({ roughness: 0.82, metalness: 0.05 })
+    const mat = new THREE.MeshStandardMaterial({
+      roughness: 0.82,
+      metalness: 0.05,
+      emissive: new THREE.Color(0xffcf7a),
+      emissiveIntensity: isNight ? 0.35 : 0,
+    })
+    buildMat = mat
     const mesh = new THREE.InstancedMesh(geo, mat, data.length)
     mesh.castShadow = true
     mesh.receiveShadow = true
@@ -112,13 +120,38 @@ export function createScene(canvas, opts) {
     cityGroup.add(tower)
   }
 
+  let curKind = 'clear'
   function setWeather(kind) {
+    curKind = kind
+    if (isNight) return applyNight() // 夜间由 applyNight 统一定色
     const c = new THREE.Color(SKY[kind] != null ? SKY[kind] : SKY.clear)
     scene.background = c
     scene.fog.color.copy(c)
-    const foggy = kind === 'fog'
-    scene.fog.near = foggy ? 10 : 26
+    scene.fog.near = kind === 'fog' ? 10 : 26
     sun.intensity = kind === 'clear' ? 2.2 : kind === 'thunder' || kind === 'overcast' ? 0.9 : 1.5
+    sun.color.set(0xfff2d8)
+    amb.intensity = 0.75
+    if (buildMat) buildMat.emissiveIntensity = 0
+  }
+
+  // 夜间：深蓝天空 + 暖光楼宇 + 弱冷月光
+  function applyNight() {
+    const c = new THREE.Color(0x0d1730)
+    scene.background = c
+    scene.fog.color.copy(c)
+    scene.fog.near = curKind === 'fog' ? 10 : 26
+    amb.intensity = 0.32
+    sun.intensity = 0.5
+    sun.color.set(0x9fb4d8)
+    if (buildMat) buildMat.emissiveIntensity = 0.42
+  }
+
+  function setNight(night) {
+    isNight = !!night
+    try {
+      if (isNight) applyNight()
+      else setWeather(curKind)
+    } catch (e) {}
   }
 
   // 渲染循环 + 自动环绕
@@ -139,6 +172,7 @@ export function createScene(canvas, opts) {
   return {
     setCity: buildCity,
     setWeather,
+    setNight,
     resize(w, h) {
       camera.aspect = w / h
       camera.updateProjectionMatrix()

@@ -13,68 +13,85 @@
   width: 100%;
 }
 
-/* 下半屏控制面板（不与 canvas 重叠） */
+/* 下半屏控制面板：深色磨砂玻璃卡片（圆角上翻，不与 canvas 重叠） */
 .panel {
   flex: none;
-  padding: 24rpx 28rpx calc(24rpx + env(safe-area-inset-bottom));
-  background: #121a2b;
-  box-shadow: 0 -6rpx 24rpx rgba(0, 0, 0, 0.3);
+  padding: 8rpx 30rpx calc(28rpx + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, #18233c 0%, #0e1626 100%);
+  border-top-left-radius: 36rpx;
+  border-top-right-radius: 36rpx;
+  box-shadow: 0 -10rpx 40rpx rgba(0, 0, 0, 0.45);
+}
+.grip {
+  width: 72rpx;
+  height: 8rpx;
+  border-radius: 8rpx;
+  background: rgba(255, 255, 255, 0.22);
+  margin: 14rpx auto 22rpx;
 }
 
 .summary {
   display: flex;
   flex-direction: row;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
-  margin-bottom: 18rpx;
+  margin-bottom: 26rpx;
 }
 .s-left {
   display: flex;
   flex-direction: column;
 }
 .s-city {
-  font-size: 44rpx;
+  font-size: 48rpx;
   font-weight: 700;
   color: #ffffff;
+  letter-spacing: 1rpx;
 }
 .s-kind {
   font-size: 26rpx;
-  color: #aeb8c8;
-  margin-top: 4rpx;
+  color: #9fb0c8;
+  margin-top: 8rpx;
 }
 .s-temp {
-  font-size: 72rpx;
-  font-weight: 300;
+  font-size: 96rpx;
+  font-weight: 200;
   color: #ffffff;
+  line-height: 1;
 }
 
 .row {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 14rpx;
-  margin-bottom: 18rpx;
+  gap: 16rpx;
+  margin-bottom: 22rpx;
 }
 .ipt {
   flex: 1;
-  height: 74rpx;
-  padding: 0 24rpx;
-  border-radius: 18rpx;
-  background: #1e2942;
+  height: 80rpx;
+  padding: 0 28rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.07);
+  border: 2rpx solid rgba(255, 255, 255, 0.1);
   color: #ffffff;
-  font-size: 27rpx;
+  font-size: 28rpx;
 }
 .ph {
-  color: #7f8aa0;
+  color: #7c88a0;
 }
 .btn {
-  height: 74rpx;
-  line-height: 74rpx;
-  padding: 0 28rpx;
-  border-radius: 18rpx;
-  background: #2a3a5e;
+  height: 80rpx;
+  line-height: 80rpx;
+  padding: 0 30rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #3b6fd6, #5a86e6);
   color: #ffffff;
-  font-size: 27rpx;
+  font-size: 28rpx;
+  box-shadow: 0 6rpx 18rpx rgba(59, 111, 214, 0.35);
+}
+.btn.ghost {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
 }
 
 .chips {
@@ -83,20 +100,23 @@
 }
 .chip {
   display: inline-block;
-  padding: 12rpx 28rpx;
+  padding: 14rpx 30rpx;
   margin-right: 14rpx;
   border-radius: 999rpx;
-  background: #1e2942;
-  color: #cdd6e6;
+  background: rgba(255, 255, 255, 0.07);
+  border: 2rpx solid rgba(255, 255, 255, 0.08);
+  color: #c3cde0;
   font-size: 26rpx;
 }
 .chip.on {
-  background: #3b6fd6;
+  background: linear-gradient(135deg, #3b6fd6, #5a86e6);
+  border-color: transparent;
   color: #ffffff;
+  box-shadow: 0 6rpx 18rpx rgba(59, 111, 214, 0.4);
 }
 .hint {
-  margin-top: 12rpx;
+  margin-top: 14rpx;
   text-align: center;
-  color: #aeb8c8;
+  color: #9fb0c8;
   font-size: 26rpx;
 }
