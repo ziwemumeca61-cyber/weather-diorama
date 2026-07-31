@@ -5,13 +5,13 @@ import * as THREE from './three.module.min.js'
 import { generateCity, hashName } from './cityData'
 
 const SKY = {
-  clear: 0xdfeaf6,
-  cloudy: 0xcfd6de,
-  overcast: 0x9aa3ad,
-  fog: 0xc3c8cd,
-  rain: 0x8b939d,
-  snow: 0xdfe6ee,
-  thunder: 0x6b7079,
+  clear: 0x8fc0ea,
+  cloudy: 0xb3c0cc,
+  overcast: 0x8a94a0,
+  fog: 0xb6bcc2,
+  rain: 0x71797f,
+  snow: 0xcdd6e0,
+  thunder: 0x565b64,
 }
 
 export function createScene(canvas, opts) {
@@ -40,7 +40,7 @@ export function createScene(canvas, opts) {
   scene.fog = new THREE.Fog(SKY.clear, 26, 60)
 
   const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 200)
-  const camTarget = new THREE.Vector3(0, -0.5, 0)
+  const camTarget = new THREE.Vector3(0, 1.6, 0)
 
   // 光照
   const amb = new THREE.AmbientLight(0xffffff, 0.75)
@@ -124,10 +124,10 @@ export function createScene(canvas, opts) {
   // 渲染循环 + 自动环绕
   let raf = null
   let t = 0
-  const R = 26
+  const R = 19
   function frame() {
-    t += 0.0025
-    camera.position.set(Math.cos(t) * R, 9, Math.sin(t) * R)
+    t += 0.0022
+    camera.position.set(Math.cos(t) * R, 8, Math.sin(t) * R)
     camera.lookAt(camTarget)
     renderer.render(scene, camera)
     raf = canvas.requestAnimationFrame(frame)
