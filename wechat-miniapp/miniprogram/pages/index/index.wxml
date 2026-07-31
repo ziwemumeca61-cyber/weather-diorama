@@ -4,6 +4,7 @@
 
   <!-- 下半屏：控制面板（普通 view，不与 canvas 重叠，一定可见） -->
   <view class="panel">
+    <view class="grip"></view>
     <view class="summary">
       <view class="s-left">
         <text class="s-city">{{place}}</text>
@@ -23,7 +24,7 @@
         bindconfirm="onSearch"
       />
       <view class="btn" bindtap="onSearch">搜索</view>
-      <view class="btn" bindtap="onLocate">定位</view>
+      <view class="btn ghost" bindtap="onLocate">📍</view>
     </view>
 
     <scroll-view class="chips" scroll-x enable-flex>

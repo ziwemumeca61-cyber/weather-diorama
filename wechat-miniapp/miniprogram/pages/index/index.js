@@ -44,8 +44,9 @@ Page({
         try {
           sceneApi = createScene(canvas, { width: cssW, height: cssH, dpr, city: '上海' })
           console.log('[scene] created OK')
-          if (this._pendingKind) sceneApi.setWeather(this._pendingKind)
           if (this._pendingCity) sceneApi.setCity(this._pendingCity)
+          if (this._pendingNight != null) sceneApi.setNight(this._pendingNight)
+          if (this._pendingKind) sceneApi.setWeather(this._pendingKind)
         } catch (e) {
           console.error('[scene] init failed', e)
           wx.showToast({ title: '3D 初始化失败，查看控制台', icon: 'none' })
@@ -66,10 +67,12 @@ Page({
     })
     if (sceneApi) {
       sceneApi.setCity(d.place.name)
+      sceneApi.setNight(!d.isDay)
       sceneApi.setWeather(d.kind)
     } else {
       this._pendingCity = d.place.name
       this._pendingKind = d.kind
+      this._pendingNight = !d.isDay
     }
   },
 
