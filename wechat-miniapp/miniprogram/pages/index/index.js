@@ -27,13 +27,23 @@ Page({
       .fields({ node: true, size: true })
       .exec((res) => {
         const info = res && res[0]
-        if (!info || !info.node) return
+        console.log('[scene] query result', info && { w: info.width, h: info.height, hasNode: !!info.node })
+        if (!info || !info.node) {
+          console.error('[scene] canvas node not found')
+          return
+        }
         const canvas = info.node
-        const dpr = (wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()).pixelRatio || 2
-        canvas.width = info.width * dpr
-        canvas.height = info.height * dpr
+        const win = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
+        const dpr = win.pixelRatio || 2
+        // 尺寸兜底：SelectorQuery 偶尔拿到 0，退回窗口尺寸，避免 0 尺寸画布导致全空白
+        const cssW = info.width || win.windowWidth
+        const cssH = info.height || win.windowHeight
+        canvas.width = Math.floor(cssW * dpr)
+        canvas.height = Math.floor(cssH * dpr)
+        console.log('[scene] canvas size', { cssW, cssH, dpr, cw: canvas.width, ch: canvas.height })
         try {
-          sceneApi = createScene(canvas, { width: info.width, height: info.height, dpr, city: '上海' })
+          sceneApi = createScene(canvas, { width: cssW, height: cssH, dpr, city: '上海' })
+          console.log('[scene] created OK')
           if (this._pendingKind) sceneApi.setWeather(this._pendingKind)
           if (this._pendingCity) sceneApi.setCity(this._pendingCity)
         } catch (e) {
