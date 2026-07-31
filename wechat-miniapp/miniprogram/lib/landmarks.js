@@ -3,6 +3,7 @@
 // glow 是夜间会点亮的材质数组，交给 scene 统一在昼夜间调节自发光强度。
 // 找不到对应城市时返回 null，scene 退回到通用主塔。
 import * as THREE from './three.module.min.js'
+import { makeConcaveRoof, makeHipRoof } from './roofKit'
 
 function std(color, opts) {
   return new THREE.MeshStandardMaterial(
@@ -116,9 +117,9 @@ function pagoda(opts) {
     body.position.y = y + tierH * 0.36
     body.rotation.y = Math.PI / sides
     g.add(body)
-    const roof = new THREE.Mesh(new THREE.ConeGeometry(r * 1.18, tierH * 0.5, sides), roofMat)
-    roof.position.y = y + tierH * 0.72 + tierH * 0.25
-    roof.rotation.y = Math.PI / sides
+    // 起翘飞檐（Web 版同款 LatheGeometry，原点在檐口）
+    const roof = new THREE.Mesh(makeConcaveRoof(r * 1.2, tierH * 0.52, 0.04), roofMat)
+    roof.position.y = y + tierH * 0.72
     g.add(roof)
     y += tierH * 0.92
   }
@@ -153,21 +154,18 @@ function tiananmen() {
     arch.position.set(i * 1.0, 2.0, 0.96)
     g.add(arch)
   }
+  // 重檐庑殿顶（Web 版同款 makeHipRoof：屋面下凹 + 四角起翘）
   const eave1 = new THREE.Mesh(new THREE.BoxGeometry(6.0, 0.5, 2.5), gold)
   eave1.position.y = 3.9
   g.add(eave1)
-  const roof1 = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 3.2, 1.0, 4), gold)
-  roof1.position.y = 4.6
-  roof1.rotation.y = Math.PI / 4
-  roof1.scale.set(1, 1, 0.42)
+  const roof1 = new THREE.Mesh(makeHipRoof(6.4, 2.8, 1.1), gold)
+  roof1.position.y = 4.15
   g.add(roof1)
   const eave2 = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.4, 1.9), gold)
-  eave2.position.y = 5.1
+  eave2.position.y = 5.45
   g.add(eave2)
-  const roof2 = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 2.5, 0.9, 4), gold)
-  roof2.position.y = 5.7
-  roof2.rotation.y = Math.PI / 4
-  roof2.scale.set(1, 1, 0.42)
+  const roof2 = new THREE.Mesh(makeHipRoof(4.9, 2.1, 0.95), gold)
+  roof2.position.y = 5.65
   g.add(roof2)
   return { group: g, glow }
 }

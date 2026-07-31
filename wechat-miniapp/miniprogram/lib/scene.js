@@ -93,6 +93,30 @@ export function createScene(canvas, opts) {
   scene.add(precip)
   let precipMode = null // 'rain' | 'snow' | null
 
+  // 街道雾团：几片贴地的半透明雾体，雾天渐显并缓缓漂移（体积雾近似）
+  const fogBanks = new THREE.Group()
+  const fogMats = []
+  const FOG_OPACITY = []
+  const fogGeo = new THREE.SphereGeometry(1, 14, 10)
+  for (let i = 0; i < 7; i++) {
+    const fm = new THREE.MeshBasicMaterial({
+      color: 0xdfe6ee,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+    })
+    const fmesh = new THREE.Mesh(fogGeo, fm)
+    const a = (i / 7) * Math.PI * 2
+    const rad = 3.5 + Math.random() * 5
+    fmesh.position.set(Math.cos(a) * rad, 0.5 + Math.random() * 0.9, Math.sin(a) * rad)
+    fmesh.scale.set(4.5 + Math.random() * 2.5, 0.8, 4.5 + Math.random() * 2.5)
+    fogBanks.add(fmesh)
+    fogMats.push(fm)
+    FOG_OPACITY.push(0.3 + Math.random() * 0.22)
+  }
+  fogBanks.visible = false
+  scene.add(fogBanks)
+
   // 楼群（InstancedMesh）
   const cityGroup = new THREE.Group()
   scene.add(cityGroup)
@@ -104,8 +128,7 @@ export function createScene(canvas, opts) {
   let isNight = false
 
   function applyLandmarkGlow() {
-    const on = isNight ? 0.9 : 0.15
-    for (let i = 0; i < landmarkGlow.length; i++) landmarkGlow[i].emissiveIntensity = on
+    for (let i = 0; i < landmarkGlow.length; i++) landmarkGlow[i].emissiveIntensity = cur.landmark
   }
 
   function buildCity(cityName) {
@@ -192,40 +215,89 @@ export function createScene(canvas, opts) {
     }
   }
 
+  // —— 天气 / 昼夜渐变过渡 ——
+  // setWeather、setNight 只设定「目标值」，由帧循环把当前值平滑插值过去，
+  // 切天气不再是瞬间硬切，而是天色、雾、光照一起缓缓变化。
   let curKind = 'clear'
+  const cur = {
+    sky: new THREE.Color(SKY.clear),
+    sunColor: new THREE.Color(0xfff2d8),
+    fogNear: 26,
+    sun: 2.2,
+    amb: 0.75,
+    build: 0, // 楼宇窗光
+    landmark: 0.15, // 地标自发光
+    bank: 0, // 街道雾团浓度
+  }
+  const tgt = {
+    sky: new THREE.Color(SKY.clear),
+    sunColor: new THREE.Color(0xfff2d8),
+    fogNear: 26,
+    sun: 2.2,
+    amb: 0.75,
+    build: 0,
+    landmark: 0.15,
+    bank: 0,
+  }
+
+  function refreshTargets() {
+    const kind = curKind
+    tgt.fogNear = kind === 'fog' ? 9 : 26
+    tgt.bank = kind === 'fog' ? 1 : 0
+    if (isNight) {
+      // 夜间：深蓝天空 + 暖光楼宇 + 弱冷月光
+      tgt.sky.set(0x0d1730)
+      tgt.sunColor.set(0x9fb4d8)
+      tgt.sun = 0.5
+      tgt.amb = 0.32
+      tgt.build = 0.42
+      tgt.landmark = 0.9
+    } else {
+      tgt.sky.set(SKY[kind] != null ? SKY[kind] : SKY.clear)
+      tgt.sunColor.set(0xfff2d8)
+      tgt.sun = kind === 'clear' ? 2.2 : kind === 'thunder' || kind === 'overcast' ? 0.9 : 1.5
+      tgt.amb = 0.75
+      tgt.build = 0
+      tgt.landmark = 0.15
+    }
+  }
+
+  // 每帧把 cur 拉向 tgt，并写入场景
+  function tickTransition() {
+    const k = 0.06
+    cur.sky.lerp(tgt.sky, k)
+    cur.sunColor.lerp(tgt.sunColor, k)
+    cur.fogNear += (tgt.fogNear - cur.fogNear) * k
+    cur.sun += (tgt.sun - cur.sun) * k
+    cur.amb += (tgt.amb - cur.amb) * k
+    cur.build += (tgt.build - cur.build) * k
+    cur.landmark += (tgt.landmark - cur.landmark) * k
+    cur.bank += (tgt.bank - cur.bank) * k
+
+    scene.background = cur.sky
+    scene.fog.color.copy(cur.sky)
+    scene.fog.near = cur.fogNear
+    sun.color.copy(cur.sunColor)
+    if (buildMat) buildMat.emissiveIntensity = cur.build
+    applyLandmarkGlow()
+
+    fogBanks.visible = cur.bank > 0.02
+    if (fogBanks.visible) {
+      for (let i = 0; i < fogMats.length; i++) fogMats[i].opacity = cur.bank * FOG_OPACITY[i]
+      fogBanks.rotation.y += 0.0006 // 雾团缓缓漂移
+    }
+  }
+
   function setWeather(kind) {
     curKind = kind
     applyPrecip(kind)
-    if (isNight) return applyNight() // 夜间由 applyNight 统一定色
-    const c = new THREE.Color(SKY[kind] != null ? SKY[kind] : SKY.clear)
-    scene.background = c
-    scene.fog.color.copy(c)
-    scene.fog.near = kind === 'fog' ? 10 : 26
-    sun.intensity = kind === 'clear' ? 2.2 : kind === 'thunder' || kind === 'overcast' ? 0.9 : 1.5
-    sun.color.set(0xfff2d8)
-    amb.intensity = 0.75
-    if (buildMat) buildMat.emissiveIntensity = 0
-    applyLandmarkGlow()
-  }
-
-  // 夜间：深蓝天空 + 暖光楼宇 + 弱冷月光
-  function applyNight() {
-    const c = new THREE.Color(0x0d1730)
-    scene.background = c
-    scene.fog.color.copy(c)
-    scene.fog.near = curKind === 'fog' ? 10 : 26
-    amb.intensity = 0.32
-    sun.intensity = 0.5
-    sun.color.set(0x9fb4d8)
-    if (buildMat) buildMat.emissiveIntensity = 0.42
-    applyLandmarkGlow()
+    refreshTargets()
   }
 
   function setNight(night) {
     isNight = !!night
     try {
-      if (isNight) applyNight()
-      else setWeather(curKind)
+      refreshTargets()
     } catch (e) {}
   }
 
@@ -262,7 +334,6 @@ export function createScene(canvas, opts) {
   // 雷电闪光：curKind==='thunder' 时随机触发全场景亮度脉冲
   let flash = 0 // 0..1 剩余强度
   let nextBolt = 0
-  const baseAmb = () => (isNight ? 0.32 : 0.75)
 
   function frame() {
     if (!dragging && now() > idleUntil) t += 0.0022
@@ -272,21 +343,20 @@ export function createScene(canvas, opts) {
     // 摩天轮等地标自转
     if (landmarkSpin) landmarkSpin.rotation.z += 0.004
 
-    // 雷电闪光
+    // 天气/昼夜渐变
+    tickTransition()
+
+    // 雷电闪光：叠加在渐变后的基准亮度之上
     if (curKind === 'thunder') {
       const ts = now()
       if (ts > nextBolt) {
         flash = 1
         nextBolt = ts + 2200 + Math.random() * 3800
       }
-      if (flash > 0.001) {
-        flash *= 0.82
-        amb.intensity = baseAmb() + flash * 1.6
-        sun.intensity = 0.9 + flash * 2.2
-      } else {
-        amb.intensity = baseAmb()
-      }
     }
+    flash = flash > 0.001 ? flash * 0.82 : 0
+    amb.intensity = cur.amb + flash * 1.6
+    sun.intensity = cur.sun + flash * 2.2
 
     // 降水动画
     if (precipMode) {
