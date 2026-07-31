@@ -68,6 +68,30 @@ export function createScene(canvas, opts) {
   cloud.position.y = -3.2
   scene.add(cloud)
 
+  // 降水粒子（雨 / 雪），落在城市上空
+  const PCOUNT = 700
+  const AREA = 15
+  const TOP = 24
+  const pPos = new Float32Array(PCOUNT * 3)
+  for (let i = 0; i < PCOUNT; i++) {
+    pPos[i * 3] = (Math.random() - 0.5) * 2 * AREA
+    pPos[i * 3 + 1] = Math.random() * TOP
+    pPos[i * 3 + 2] = (Math.random() - 0.5) * 2 * AREA
+  }
+  const pGeo = new THREE.BufferGeometry()
+  pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3))
+  const pMat = new THREE.PointsMaterial({
+    color: 0xbfd4e6,
+    size: 0.12,
+    transparent: true,
+    opacity: 0.85,
+    depthWrite: false,
+  })
+  const precip = new THREE.Points(pGeo, pMat)
+  precip.visible = false
+  scene.add(precip)
+  let precipMode = null // 'rain' | 'snow' | null
+
   // 楼群（InstancedMesh）
   const cityGroup = new THREE.Group()
   scene.add(cityGroup)
@@ -120,9 +144,29 @@ export function createScene(canvas, opts) {
     cityGroup.add(tower)
   }
 
+  function applyPrecip(kind) {
+    if (kind === 'rain' || kind === 'thunder') {
+      precipMode = 'rain'
+      precip.visible = true
+      pMat.color.set(0xaebfce)
+      pMat.size = 0.09
+      pMat.opacity = 0.8
+    } else if (kind === 'snow') {
+      precipMode = 'snow'
+      precip.visible = true
+      pMat.color.set(0xffffff)
+      pMat.size = 0.2
+      pMat.opacity = 0.95
+    } else {
+      precipMode = null
+      precip.visible = false
+    }
+  }
+
   let curKind = 'clear'
   function setWeather(kind) {
     curKind = kind
+    applyPrecip(kind)
     if (isNight) return applyNight() // 夜间由 applyNight 统一定色
     const c = new THREE.Color(SKY[kind] != null ? SKY[kind] : SKY.clear)
     scene.background = c
@@ -162,6 +206,25 @@ export function createScene(canvas, opts) {
     t += 0.0022
     camera.position.set(Math.cos(t) * R, 9, Math.sin(t) * R)
     camera.lookAt(camTarget)
+
+    // 降水动画
+    if (precipMode) {
+      const speed = precipMode === 'rain' ? 0.55 : 0.13
+      for (let i = 0; i < PCOUNT; i++) {
+        const yi = i * 3 + 1
+        pPos[yi] -= speed
+        if (precipMode === 'snow') {
+          pPos[i * 3] += Math.sin((t * 40 + i) * 0.5) * 0.01
+        }
+        if (pPos[yi] < 0) {
+          pPos[yi] = TOP
+          pPos[i * 3] = (Math.random() - 0.5) * 2 * AREA
+          pPos[i * 3 + 2] = (Math.random() - 0.5) * 2 * AREA
+        }
+      }
+      pGeo.attributes.position.needsUpdate = true
+    }
+
     renderer.render(scene, camera)
     raf = canvas.requestAnimationFrame(frame)
   }
