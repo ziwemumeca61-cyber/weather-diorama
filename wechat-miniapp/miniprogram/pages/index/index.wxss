@@ -20,7 +20,8 @@
   right: 0;
   text-align: center;
   color: #fff;
-  text-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.35);
+  /* 强暗色描边，保证白字在浅色天空下也清晰 */
+  text-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.55), 0 0 6rpx rgba(0, 0, 0, 0.45);
   pointer-events: none;
 }
 .city {
@@ -61,9 +62,10 @@
   height: 76rpx;
   padding: 0 24rpx;
   border-radius: 20rpx;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.92);
   font-size: 28rpx;
   color: #1f2a44;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.18);
 }
 .ph {
   color: #9aa4b4;
@@ -73,9 +75,10 @@
   line-height: 76rpx;
   padding: 0 26rpx;
   border-radius: 20rpx;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.92);
   color: #2a3a5e;
   font-size: 28rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.18);
 }
 .chips {
   white-space: nowrap;
@@ -85,9 +88,10 @@
   padding: 12rpx 28rpx;
   margin-right: 14rpx;
   border-radius: 999rpx;
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.88);
   color: #3a4a6a;
   font-size: 26rpx;
+  box-shadow: 0 3rpx 12rpx rgba(0, 0, 0, 0.16);
 }
 .chip.on {
   background: #2a3a5e;
