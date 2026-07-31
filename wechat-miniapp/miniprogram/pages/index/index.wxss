@@ -1,101 +1,102 @@
 .app {
-  position: relative;
+  display: flex;
+  flex-direction: column;
   width: 100vw;
   height: 100vh;
-  overflow: hidden;
-}
-.gl {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  background: #0b1220;
 }
 
-/* 顶部天气卡（cover-view：不支持 text-shadow，用半透明深色药丸保证可读） */
-.card {
-  position: absolute;
-  top: 110rpx;
-  left: 0;
-  right: 0;
+/* 上半屏 3D 画布 */
+.gl {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+
+/* 下半屏控制面板（不与 canvas 重叠） */
+.panel {
+  flex: none;
+  padding: 24rpx 28rpx calc(24rpx + env(safe-area-inset-bottom));
+  background: #121a2b;
+  box-shadow: 0 -6rpx 24rpx rgba(0, 0, 0, 0.3);
+}
+
+.summary {
   display: flex;
   flex-direction: row;
-  justify-content: center;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18rpx;
 }
-.pill {
+.s-left {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 20rpx 40rpx;
-  border-radius: 32rpx;
-  background-color: rgba(16, 24, 40, 0.42);
 }
-.city {
-  font-size: 56rpx;
+.s-city {
+  font-size: 44rpx;
+  font-weight: 700;
   color: #ffffff;
 }
-.emoji {
-  font-size: 60rpx;
-  color: #ffffff;
-}
-.temp {
-  font-size: 72rpx;
-  color: #ffffff;
-}
-.kind {
+.s-kind {
   font-size: 26rpx;
-  color: #eaf0f8;
+  color: #aeb8c8;
+  margin-top: 4rpx;
+}
+.s-temp {
+  font-size: 72rpx;
+  font-weight: 300;
+  color: #ffffff;
 }
 
-/* 底部控制 */
-.hud {
-  position: absolute;
-  left: 20rpx;
-  right: 20rpx;
-  bottom: 48rpx;
-  display: flex;
-  flex-direction: column;
-}
 .row {
   display: flex;
   flex-direction: row;
-  flex-wrap: wrap;
-  margin-bottom: 14rpx;
+  align-items: center;
+  gap: 14rpx;
+  margin-bottom: 18rpx;
 }
-.btn {
-  padding: 12rpx 26rpx;
-  margin: 0 14rpx 14rpx 0;
-  border-radius: 999rpx;
-  background-color: rgba(255, 255, 255, 0.9);
-  color: #2a3a5e;
+.ipt {
+  flex: 1;
+  height: 74rpx;
+  padding: 0 24rpx;
+  border-radius: 18rpx;
+  background: #1e2942;
+  color: #ffffff;
   font-size: 27rpx;
 }
-.btn.locate {
-  background-color: rgba(42, 58, 94, 0.92);
-  color: #ffffff;
+.ph {
+  color: #7f8aa0;
 }
-.btn.on {
-  background-color: #2a3a5e;
+.btn {
+  height: 74rpx;
+  line-height: 74rpx;
+  padding: 0 28rpx;
+  border-radius: 18rpx;
+  background: #2a3a5e;
   color: #ffffff;
+  font-size: 27rpx;
+}
+
+.chips {
+  white-space: nowrap;
+  width: 100%;
 }
 .chip {
+  display: inline-block;
   padding: 12rpx 28rpx;
-  margin: 0 14rpx 14rpx 0;
+  margin-right: 14rpx;
   border-radius: 999rpx;
-  background-color: rgba(255, 255, 255, 0.88);
-  color: #3a4a6a;
+  background: #1e2942;
+  color: #cdd6e6;
   font-size: 26rpx;
 }
 .chip.on {
-  background-color: #2a3a5e;
+  background: #3b6fd6;
   color: #ffffff;
 }
-.loading {
-  position: absolute;
-  top: 46%;
-  left: 0;
-  right: 0;
+.hint {
+  margin-top: 12rpx;
   text-align: center;
-  color: #ffffff;
-  font-size: 30rpx;
+  color: #aeb8c8;
+  font-size: 26rpx;
 }

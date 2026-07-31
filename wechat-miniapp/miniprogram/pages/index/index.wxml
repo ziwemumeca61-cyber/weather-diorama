@@ -1,39 +1,41 @@
 <view class="app">
-  <!-- 3D 微缩城市（原生 canvas，会盖住普通 view，所以上面的 UI 用 cover-view） -->
+  <!-- 上半屏：3D 微缩城市 -->
   <canvas type="webgl" id="gl" class="gl"></canvas>
 
-  <!-- 顶部天气卡 -->
-  <cover-view class="card">
-    <cover-view class="pill">
-      <cover-view class="city">{{place}}</cover-view>
-      <cover-view class="emoji">{{emoji}}</cover-view>
-      <cover-view class="temp">{{temp}}°</cover-view>
-      <cover-view class="kind">{{kindLabel}} · {{dateLabel}}</cover-view>
-    </cover-view>
-  </cover-view>
+  <!-- 下半屏：控制面板（普通 view，不与 canvas 重叠，一定可见） -->
+  <view class="panel">
+    <view class="summary">
+      <view class="s-left">
+        <text class="s-city">{{place}}</text>
+        <text class="s-kind">{{emoji}} {{kindLabel}} · {{dateLabel}}</text>
+      </view>
+      <text class="s-temp">{{temp}}°</text>
+    </view>
 
-  <!-- 底部控制 -->
-  <cover-view class="hud">
-    <cover-view class="row">
-      <cover-view class="btn locate" bindtap="onLocate">📍 定位</cover-view>
-      <cover-view
-        wx:for="{{cities}}"
-        wx:key="*this"
-        class="btn {{item === place ? 'on' : ''}}"
-        data-c="{{item}}"
-        bindtap="onCity"
-      >{{item}}</cover-view>
-    </cover-view>
-    <cover-view class="row chips">
-      <cover-view
+    <view class="row">
+      <input
+        class="ipt"
+        placeholder="搜索城市，如 上海 / 北京"
+        placeholder-class="ph"
+        confirm-type="search"
+        value="{{q}}"
+        bindinput="onInput"
+        bindconfirm="onSearch"
+      />
+      <view class="btn" bindtap="onSearch">搜索</view>
+      <view class="btn" bindtap="onLocate">定位</view>
+    </view>
+
+    <scroll-view class="chips" scroll-x enable-flex>
+      <view
         wx:for="{{kinds}}"
         wx:key="*this"
         class="chip {{item === curKind ? 'on' : ''}}"
         data-k="{{item}}"
         bindtap="onChip"
-      >{{labels[item]}}</cover-view>
-    </cover-view>
-  </cover-view>
+      >{{labels[item]}}</view>
+    </scroll-view>
 
-  <cover-view class="loading" wx:if="{{loading}}">加载中…</cover-view>
+    <view class="hint" wx:if="{{loading}}">加载中…</view>
+  </view>
 </view>
