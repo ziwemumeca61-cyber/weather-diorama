@@ -59,6 +59,15 @@ export function createScene(canvas, opts) {
   tray.receiveShadow = true
   scene.add(tray)
 
+  // 诊断用：一个必定可见的大亮块（橙色自发光）。看得到它=渲染在画；
+  // 看不到=画布尺寸/上下文问题。确认没问题后会移除。
+  const test = new THREE.Mesh(
+    new THREE.BoxGeometry(4, 4, 4),
+    new THREE.MeshBasicMaterial({ color: 0xff7a1a }),
+  )
+  test.position.set(0, 4, 0)
+  scene.add(test)
+
   // 云托底
   const cloud = new THREE.Mesh(
     new THREE.SphereGeometry(9, 24, 16),
@@ -80,6 +89,7 @@ export function createScene(canvas, opts) {
       buildingsMesh.material.dispose()
     }
     const data = generateCity(hashName(cityName || '上海'))
+    console.log('[scene] buildings', data.length)
     const geo = new THREE.BoxGeometry(1, 1, 1)
     const mat = new THREE.MeshStandardMaterial({ roughness: 0.82, metalness: 0.05 })
     const mesh = new THREE.InstancedMesh(geo, mat, data.length)
