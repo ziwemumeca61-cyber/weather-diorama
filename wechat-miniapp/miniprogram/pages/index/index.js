@@ -10,11 +10,12 @@ Page({
     temp: '—',
     kindLabel: '',
     dateLabel: '',
-    q: '',
     kinds: KINDS,
     labels: KIND_LABEL,
     curKind: 'clear',
     loading: true,
+    // 快捷城市（cover-view 里无法放输入框，先用预设城市 + 定位；键盘搜索后续加独立搜索页）
+    cities: ['北京', '上海', '广州', '深圳', '成都', '西安', '杭州', '重庆'],
   },
 
   onLoad() {
@@ -97,12 +98,9 @@ Page({
     this.callWeather({ query })
   },
 
-  onInput(e) {
-    this.setData({ q: e.detail.value })
-  },
-  onSearch() {
-    const q = (this.data.q || '').trim()
-    if (q) this.load(q)
+  onCity(e) {
+    const c = e.currentTarget.dataset.c
+    if (c) this.load(c)
   },
   onLocate() {
     wx.getLocation({

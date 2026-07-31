@@ -12,97 +12,90 @@
   height: 100vh;
 }
 
-/* 顶部天气卡 */
+/* 顶部天气卡（cover-view：不支持 text-shadow，用半透明深色药丸保证可读） */
 .card {
   position: absolute;
-  top: 120rpx;
+  top: 110rpx;
   left: 0;
   right: 0;
-  text-align: center;
-  color: #fff;
-  /* 强暗色描边，保证白字在浅色天空下也清晰 */
-  text-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.55), 0 0 6rpx rgba(0, 0, 0, 0.45);
-  pointer-events: none;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+}
+.pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20rpx 40rpx;
+  border-radius: 32rpx;
+  background-color: rgba(16, 24, 40, 0.42);
 }
 .city {
-  font-size: 60rpx;
-  font-weight: 700;
-  letter-spacing: 2rpx;
+  font-size: 56rpx;
+  color: #ffffff;
 }
 .emoji {
-  font-size: 64rpx;
-  margin: 6rpx 0;
+  font-size: 60rpx;
+  color: #ffffff;
 }
 .temp {
-  font-size: 78rpx;
-  font-weight: 300;
-}
-.temp .deg {
-  font-size: 44rpx;
+  font-size: 72rpx;
+  color: #ffffff;
 }
 .kind {
-  font-size: 28rpx;
-  opacity: 0.9;
+  font-size: 26rpx;
+  color: #eaf0f8;
 }
 
 /* 底部控制 */
 .hud {
   position: absolute;
-  left: 24rpx;
-  right: 24rpx;
+  left: 20rpx;
+  right: 20rpx;
   bottom: 48rpx;
-}
-.search {
   display: flex;
-  gap: 16rpx;
-  margin-bottom: 18rpx;
+  flex-direction: column;
 }
-.ipt {
-  flex: 1;
-  height: 76rpx;
-  padding: 0 24rpx;
-  border-radius: 20rpx;
-  background: rgba(255, 255, 255, 0.92);
-  font-size: 28rpx;
-  color: #1f2a44;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.18);
-}
-.ph {
-  color: #9aa4b4;
+.row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  margin-bottom: 14rpx;
 }
 .btn {
-  height: 76rpx;
-  line-height: 76rpx;
-  padding: 0 26rpx;
-  border-radius: 20rpx;
-  background: rgba(255, 255, 255, 0.92);
+  padding: 12rpx 26rpx;
+  margin: 0 14rpx 14rpx 0;
+  border-radius: 999rpx;
+  background-color: rgba(255, 255, 255, 0.9);
   color: #2a3a5e;
-  font-size: 28rpx;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.18);
+  font-size: 27rpx;
 }
-.chips {
-  white-space: nowrap;
+.btn.locate {
+  background-color: rgba(42, 58, 94, 0.92);
+  color: #ffffff;
+}
+.btn.on {
+  background-color: #2a3a5e;
+  color: #ffffff;
 }
 .chip {
-  display: inline-block;
   padding: 12rpx 28rpx;
-  margin-right: 14rpx;
+  margin: 0 14rpx 14rpx 0;
   border-radius: 999rpx;
-  background: rgba(255, 255, 255, 0.88);
+  background-color: rgba(255, 255, 255, 0.88);
   color: #3a4a6a;
   font-size: 26rpx;
-  box-shadow: 0 3rpx 12rpx rgba(0, 0, 0, 0.16);
 }
 .chip.on {
-  background: #2a3a5e;
-  color: #fff;
+  background-color: #2a3a5e;
+  color: #ffffff;
 }
 .loading {
   position: absolute;
-  top: 50%;
+  top: 46%;
   left: 0;
   right: 0;
   text-align: center;
-  color: #fff;
+  color: #ffffff;
   font-size: 30rpx;
 }
