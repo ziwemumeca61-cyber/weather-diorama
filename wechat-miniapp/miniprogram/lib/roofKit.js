@@ -5,7 +5,7 @@
 import * as THREE from './three.module.min.js'
 
 /** 凹曲圆屋顶 + 起翘飞檐（圆形亭/塔用）。原点在檐口，尖顶在 y=height。 */
-export function makeConcaveRoof(eaveR, height, peakR) {
+export function makeConcaveRoof(eaveR, height, peakR, seg) {
   if (peakR == null) peakR = 0.05
   const pts = []
   const N = 22
@@ -16,7 +16,9 @@ export function makeConcaveRoof(eaveR, height, peakR) {
     pts.push(new THREE.Vector2(r, y))
   }
   pts.push(new THREE.Vector2(eaveR * 1.07, height * 0.1)) // 飞檐翘唇
-  return new THREE.LatheGeometry(pts, 40)
+  // 默认 28 段：小屋檐上与 Web 版的 48 段肉眼无差，但三角面少约 4 成，照顾低端机。
+  // 更小的檐（如并联双塔）可传更低的 seg 进一步减面。
+  return new THREE.LatheGeometry(pts, seg || 28)
 }
 
 /** 庑殿顶（矩形四坡）：屋面下凹、四角起翘。原点在檐口，正脊在 y=h。 */
