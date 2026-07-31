@@ -125,6 +125,7 @@ export function createScene(canvas, opts) {
   let landmarkObj = null // 当前城市地标 Group
   let landmarkGlow = [] // 地标夜间点亮的材质
   let landmarkSpin = null // 摩天轮等需每帧转动的部件
+  let landmarkAnim = null // 地标专属灯光动画（彩虹流光/呼吸灯/跑马灯）
   let isNight = false
 
   function applyLandmarkGlow() {
@@ -142,6 +143,7 @@ export function createScene(canvas, opts) {
       landmarkObj = null
       landmarkGlow = []
       landmarkSpin = null
+      landmarkAnim = null
     }
     const data = generateCity(hashName(cityName || '上海'))
     const geo = new THREE.BoxGeometry(1, 1, 1)
@@ -183,6 +185,7 @@ export function createScene(canvas, opts) {
       landmarkObj = lm.group
       landmarkGlow = lm.glow || []
       landmarkSpin = lm.spin || null
+      landmarkAnim = typeof lm.animate === 'function' ? lm.animate : null
     } else {
       const tower = new THREE.Mesh(
         new THREE.CylinderGeometry(0.55, 0.7, 9, 6),
@@ -334,6 +337,7 @@ export function createScene(canvas, opts) {
   // 雷电闪光：curKind==='thunder' 时随机触发全场景亮度脉冲
   let flash = 0 // 0..1 剩余强度
   let nextBolt = 0
+  const t0 = now() // 地标灯光动画的时间基准（秒），不受拖拽暂停影响
 
   function frame() {
     if (!dragging && now() > idleUntil) t += 0.0022
@@ -345,6 +349,12 @@ export function createScene(canvas, opts) {
 
     // 天气/昼夜渐变
     tickTransition()
+
+    // 地标专属灯光（在 applyLandmarkGlow 之后，可覆盖自发光强度）
+    if (landmarkAnim) {
+      const nf = Math.max(0, Math.min(1, (cur.landmark - 0.15) / 0.75))
+      landmarkAnim((now() - t0) * 0.001, cur.landmark, nf)
+    }
 
     // 雷电闪光：叠加在渐变后的基准亮度之上
     if (curKind === 'thunder') {
