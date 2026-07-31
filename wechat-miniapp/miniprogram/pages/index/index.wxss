@@ -13,6 +13,22 @@
   width: 100%;
 }
 
+/* 昼夜切换按钮：浮在画布右上角的磨砂圆钮 */
+.daynight {
+  position: absolute;
+  top: calc(24rpx + env(safe-area-inset-top));
+  right: 30rpx;
+  width: 76rpx;
+  height: 76rpx;
+  line-height: 76rpx;
+  text-align: center;
+  font-size: 38rpx;
+  border-radius: 999rpx;
+  background: rgba(12, 20, 38, 0.42);
+  border: 2rpx solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 6rpx 20rpx rgba(0, 0, 0, 0.3);
+}
+
 /* 下半屏控制面板：深色磨砂玻璃卡片（圆角上翻，不与 canvas 重叠） */
 .panel {
   flex: none;
