@@ -1,6 +1,17 @@
 <view class="app">
-  <!-- 上半屏：3D 微缩城市 -->
-  <canvas type="webgl" id="gl" class="gl"></canvas>
+  <!-- 上半屏：3D 微缩城市（可手指拖拽转动镜头） -->
+  <canvas
+    type="webgl"
+    id="gl"
+    class="gl"
+    bindtouchstart="onCanvasTouchStart"
+    bindtouchmove="onCanvasTouchMove"
+    bindtouchend="onCanvasTouchEnd"
+    bindtouchcancel="onCanvasTouchEnd"
+  ></canvas>
+
+  <!-- 昼夜切换（浮在画布右上角） -->
+  <view class="daynight" bindtap="onToggleNight">{{night ? '🌙' : '☀️'}}</view>
 
   <!-- 下半屏：控制面板（普通 view，不与 canvas 重叠，一定可见） -->
   <view class="panel">

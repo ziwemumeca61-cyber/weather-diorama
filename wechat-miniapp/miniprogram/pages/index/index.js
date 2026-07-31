@@ -14,6 +14,7 @@ Page({
     kinds: KINDS,
     labels: KIND_LABEL,
     curKind: 'clear',
+    night: false,
     loading: true,
   },
 
@@ -63,6 +64,7 @@ Page({
       kindLabel: KIND_LABEL[d.kind],
       emoji: KIND_EMOJI[d.kind],
       dateLabel: lt.dateLabel,
+      night: !d.isDay,
       loading: false,
     })
     if (sceneApi) {
@@ -122,6 +124,27 @@ Page({
     const k = e.currentTarget.dataset.k
     this.setData({ curKind: k, kindLabel: KIND_LABEL[k], emoji: KIND_EMOJI[k] })
     if (sceneApi) sceneApi.setWeather(k)
+  },
+
+  // 手动昼夜切换
+  onToggleNight() {
+    const night = !this.data.night
+    this.setData({ night })
+    if (sceneApi) sceneApi.setNight(night)
+    else this._pendingNight = night
+  },
+
+  // 手指拖拽转动镜头
+  onCanvasTouchStart(e) {
+    const p = e.touches && e.touches[0]
+    if (p && sceneApi) sceneApi.onTouchStart(p.x != null ? p.x : p.clientX, p.y != null ? p.y : p.clientY)
+  },
+  onCanvasTouchMove(e) {
+    const p = e.touches && e.touches[0]
+    if (p && sceneApi) sceneApi.onTouchMove(p.x != null ? p.x : p.clientX, p.y != null ? p.y : p.clientY)
+  },
+  onCanvasTouchEnd() {
+    if (sceneApi) sceneApi.onTouchEnd()
   },
 
   onUnload() {

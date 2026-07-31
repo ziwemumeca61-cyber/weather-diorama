@@ -198,14 +198,61 @@ export function createScene(canvas, opts) {
     } catch (e) {}
   }
 
-  // 渲染循环 + 自动环绕
+  // 相机：自动环绕 + 手势拖拽（横向转角、纵向抬升），松手静置片刻后恢复自动巡航
   let raf = null
-  let t = 0
+  let t = 0 // 方位角
+  let elev = 9 // 相机高度
   const R = 23
+  let dragging = false
+  let lastX = 0
+  let lastY = 0
+  let idleUntil = 0 // 时间戳（ms）之前不自动环绕
+  function now() {
+    return Date.now ? Date.now() : new Date().getTime()
+  }
+  function onTouchStart(x, y) {
+    dragging = true
+    lastX = x
+    lastY = y
+    idleUntil = now() + 999999
+  }
+  function onTouchMove(x, y) {
+    if (!dragging) return
+    t -= (x - lastX) * 0.008
+    elev = Math.max(3.5, Math.min(16, elev - (y - lastY) * 0.03))
+    lastX = x
+    lastY = y
+  }
+  function onTouchEnd() {
+    dragging = false
+    idleUntil = now() + 2600 // 静置 2.6s 后恢复自动环绕
+  }
+
+  // 雷电闪光：curKind==='thunder' 时随机触发全场景亮度脉冲
+  let flash = 0 // 0..1 剩余强度
+  let nextBolt = 0
+  const baseAmb = () => (isNight ? 0.32 : 0.75)
+
   function frame() {
-    t += 0.0022
-    camera.position.set(Math.cos(t) * R, 9, Math.sin(t) * R)
+    if (!dragging && now() > idleUntil) t += 0.0022
+    camera.position.set(Math.cos(t) * R, elev, Math.sin(t) * R)
     camera.lookAt(camTarget)
+
+    // 雷电闪光
+    if (curKind === 'thunder') {
+      const ts = now()
+      if (ts > nextBolt) {
+        flash = 1
+        nextBolt = ts + 2200 + Math.random() * 3800
+      }
+      if (flash > 0.001) {
+        flash *= 0.82
+        amb.intensity = baseAmb() + flash * 1.6
+        sun.intensity = 0.9 + flash * 2.2
+      } else {
+        amb.intensity = baseAmb()
+      }
+    }
 
     // 降水动画
     if (precipMode) {
@@ -236,6 +283,10 @@ export function createScene(canvas, opts) {
     setCity: buildCity,
     setWeather,
     setNight,
+    isNight: () => isNight,
+    onTouchStart,
+    onTouchMove,
+    onTouchEnd,
     resize(w, h) {
       camera.aspect = w / h
       camera.updateProjectionMatrix()
