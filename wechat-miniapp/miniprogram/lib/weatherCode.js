@@ -32,6 +32,30 @@ export function kindFromCode(code) {
   return 'clear'
 }
 
+const WEEK = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+
+/** 把云函数返回的 daily 整理成七天预报卡片数据 */
+export function buildForecast(daily) {
+  if (!daily || !daily.time || !daily.time.length) return []
+  const code = daily.weather_code || []
+  const hi = daily.temperature_2m_max || []
+  const lo = daily.temperature_2m_min || []
+  const out = []
+  for (let i = 0; i < daily.time.length && i < 7; i++) {
+    const kind = kindFromCode(code[i])
+    const d = new Date(daily.time[i] + 'T00:00:00Z')
+    const wd = isNaN(d.getTime()) ? '' : WEEK[d.getUTCDay()]
+    out.push({
+      label: i === 0 ? '今天' : i === 1 ? '明天' : wd,
+      emoji: KIND_EMOJI[kind],
+      kind: kind,
+      hi: hi[i] == null ? '—' : Math.round(hi[i]),
+      lo: lo[i] == null ? '—' : Math.round(lo[i]),
+    })
+  }
+  return out
+}
+
 /** 由 UTC 偏移得到当地小时 + 中文日期 */
 export function localTime(utcOffsetSeconds) {
   const d = new Date(Date.now() + (utcOffsetSeconds || 0) * 1000)

@@ -1,7 +1,9 @@
 import { createScene } from '../../lib/scene'
-import { KIND_LABEL, KIND_EMOJI, KINDS, localTime } from '../../lib/weatherCode'
+import { KIND_LABEL, KIND_EMOJI, KINDS, localTime, buildForecast } from '../../lib/weatherCode'
+import { nearestCity } from '../../lib/cityCoords'
 
 let sceneApi = null
+const LAST_CITY = 'lastCity'
 
 Page({
   data: {
@@ -15,20 +17,38 @@ Page({
     labels: KIND_LABEL,
     curKind: 'clear',
     night: false,
+    forecast: [],
     loading: true,
   },
 
-  onLoad() {
-    this.load('上海')
+  onLoad(options) {
+    // 分享出去的链接带城市参数，点开直接看那座城
+    const shared = options && options.city ? decodeURIComponent(options.city) : ''
+    if (shared) {
+      this.load(shared)
+      return
+    }
+    const last = wx.getStorageSync(LAST_CITY) || ''
+    // 已授权过定位就静默自动定位；没授权则不弹窗打扰，先显示上次看的城市
+    wx.getSetting({
+      success: (res) => {
+        const authed = res && res.authSetting && res.authSetting['scope.userLocation']
+        if (authed) this.locate(true)
+        else this.load(last || '上海')
+      },
+      fail: () => this.load(last || '上海'),
+    })
   },
 
   onReady() {
+    if (wx.showShareMenu) {
+      wx.showShareMenu({ withShareTicket: false, menus: ['shareAppMessage', 'shareTimeline'] })
+    }
     wx.createSelectorQuery()
       .select('#gl')
       .fields({ node: true, size: true })
       .exec((res) => {
         const info = res && res[0]
-        console.log('[scene] query result', info && { w: info.width, h: info.height, hasNode: !!info.node })
         if (!info || !info.node) {
           console.error('[scene] canvas node not found')
           return
@@ -41,10 +61,8 @@ Page({
         const cssH = info.height || win.windowHeight
         canvas.width = Math.floor(cssW * dpr)
         canvas.height = Math.floor(cssH * dpr)
-        console.log('[scene] canvas size', { cssW, cssH, dpr, cw: canvas.width, ch: canvas.height })
         try {
           sceneApi = createScene(canvas, { width: cssW, height: cssH, dpr, city: '上海' })
-          console.log('[scene] created OK')
           if (this._pendingCity) sceneApi.setCity(this._pendingCity)
           if (this._pendingNight != null) sceneApi.setNight(this._pendingNight)
           if (this._pendingKind) sceneApi.setWeather(this._pendingKind)
@@ -57,22 +75,25 @@ Page({
 
   applyWeather(d) {
     const lt = localTime(d.utcOffsetSeconds)
+    const name = d.place.name
     this.setData({
-      place: d.place.name,
+      place: name,
       temp: d.temperature,
       curKind: d.kind,
       kindLabel: KIND_LABEL[d.kind],
       emoji: KIND_EMOJI[d.kind],
       dateLabel: lt.dateLabel,
       night: !d.isDay,
+      forecast: buildForecast(d.daily),
       loading: false,
     })
+    if (name) wx.setStorage({ key: LAST_CITY, data: name })
     if (sceneApi) {
-      sceneApi.setCity(d.place.name)
+      sceneApi.setCity(name)
       sceneApi.setNight(!d.isDay)
       sceneApi.setWeather(d.kind)
     } else {
-      this._pendingCity = d.place.name
+      this._pendingCity = name
       this._pendingKind = d.kind
       this._pendingNight = !d.isDay
     }
@@ -102,6 +123,26 @@ Page({
     this.callWeather({ query })
   },
 
+  /** silent=true 时失败不弹提示，静默退回上次城市（用于启动自动定位） */
+  locate(silent) {
+    wx.getLocation({
+      type: 'gcj02',
+      success: (loc) => {
+        // 就近匹配已注册城市，好让地标是真的那座城，而不是通用塔
+        const hit = nearestCity(loc.latitude, loc.longitude)
+        this.callWeather({
+          latitude: loc.latitude,
+          longitude: loc.longitude,
+          name: hit ? hit.name : '当前位置',
+        })
+      },
+      fail: () => {
+        if (silent) this.load(wx.getStorageSync(LAST_CITY) || '上海')
+        else wx.showToast({ title: '需要定位授权', icon: 'none' })
+      },
+    })
+  },
+
   onInput(e) {
     this.setData({ q: e.detail.value })
   },
@@ -110,13 +151,7 @@ Page({
     if (q) this.load(q)
   },
   onLocate() {
-    wx.getLocation({
-      type: 'gcj02',
-      success: (loc) => {
-        this.callWeather({ latitude: loc.latitude, longitude: loc.longitude, name: '当前位置' })
-      },
-      fail: () => wx.showToast({ title: '需要定位授权', icon: 'none' }),
-    })
+    this.locate(false)
   },
 
   // 手动切换天气特效（演示 / 不联网）
@@ -145,6 +180,32 @@ Page({
   },
   onCanvasTouchEnd() {
     if (sceneApi) sceneApi.onTouchEnd()
+  },
+
+  /** 还没加载出数据时不要把占位符「—」带进分享链接，否则打开会查无此城 */
+  shareCity() {
+    const p = this.data.place
+    return !p || p === '—' || p === '当前位置' ? '' : p
+  },
+  shareTitle() {
+    const d = this.data
+    const c = this.shareCity()
+    if (!c) return '3D微缩城市天气'
+    return `${c} ${d.temp}° ${d.kindLabel} — 来看看你的城市长啥样`
+  },
+  onShareAppMessage() {
+    const c = this.shareCity()
+    return {
+      title: this.shareTitle(),
+      path: '/pages/index/index' + (c ? '?city=' + encodeURIComponent(c) : ''),
+    }
+  },
+  onShareTimeline() {
+    const c = this.shareCity()
+    return {
+      title: this.shareTitle(),
+      query: c ? 'city=' + encodeURIComponent(c) : '',
+    }
   },
 
   onUnload() {

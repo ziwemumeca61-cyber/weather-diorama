@@ -24,6 +24,16 @@
       <text class="s-temp">{{temp}}°</text>
     </view>
 
+    <!-- 七天预报（云函数早就返回了 daily，之前一直没用上） -->
+    <scroll-view class="fc" scroll-x enable-flex wx:if="{{forecast.length}}">
+      <view class="fc-item" wx:for="{{forecast}}" wx:key="label">
+        <text class="fc-d">{{item.label}}</text>
+        <text class="fc-e">{{item.emoji}}</text>
+        <text class="fc-hi">{{item.hi}}°</text>
+        <text class="fc-lo">{{item.lo}}°</text>
+      </view>
+    </scroll-view>
+
     <view class="row">
       <input
         class="ipt"
