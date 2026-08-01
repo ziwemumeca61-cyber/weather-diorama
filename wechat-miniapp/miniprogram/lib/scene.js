@@ -145,7 +145,20 @@ export function createScene(canvas, opts) {
       landmarkSpin = null
       landmarkAnim = null
     }
-    const data = generateCity(hashName(cityName || '上海'))
+    // 先建地标并量出占地，好在城市中心留出等大的广场。
+    // 否则中心那圈最高的楼（可达 14 单位）会把矮地标（蒙古包、铁桥）整个埋掉。
+    const lm = buildLandmark(cityName)
+    let clearX = 1.6
+    let clearZ = 1.6
+    if (lm) {
+      lm.group.updateMatrixWorld(true)
+      const bb = new THREE.Box3().setFromObject(lm.group)
+      clearX = Math.max(1.6, Math.min(5.5, (bb.max.x - bb.min.x) / 2 + 0.9))
+      clearZ = Math.max(1.6, Math.min(5.5, (bb.max.z - bb.min.z) / 2 + 0.9))
+    }
+    const data = generateCity(hashName(cityName || '上海')).filter(
+      (b) => Math.abs(b.x) > clearX || Math.abs(b.z) > clearZ,
+    )
     const geo = new THREE.BoxGeometry(1, 1, 1)
     const mat = new THREE.MeshStandardMaterial({
       roughness: 0.82,
@@ -175,7 +188,6 @@ export function createScene(canvas, opts) {
     buildingsMesh = mesh
 
     // 城市专属地标（找不到则退回通用主塔）
-    const lm = buildLandmark(cityName)
     if (lm) {
       lm.group.position.set(0, 0, 0)
       lm.group.traverse((o) => {
