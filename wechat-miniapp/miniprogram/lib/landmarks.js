@@ -1926,6 +1926,17 @@ const BUILDERS = {
   南宁: hibiscusHall, // 朱槿花会展中心
 }
 
+// 这些城市的地标自带水面（河/海/运河/水池），城市配景就不要再叠一条河了
+const OWN_WATER = ['兰州', '青岛', '日照', '威海', '枣庄', '济南', '贵阳']
+
+export function hasOwnWater(name) {
+  const key = ('' + (name || '')).replace(/[市区县省]/g, '').trim()
+  for (let i = 0; i < OWN_WATER.length; i++) {
+    if (key.indexOf(OWN_WATER[i]) !== -1) return true
+  }
+  return false
+}
+
 // 去掉「市/区/县」等后缀，做包含匹配，提升命中率。
 // 没有专属造型的城市不再退回同一根通用主塔，而是按城市名哈希生成一座
 // 程序化地标（4 种原型 × 8 种配色 × 随机朝向），让每座陌生城市各不相同。

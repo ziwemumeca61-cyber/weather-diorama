@@ -30,12 +30,28 @@ const CORE = ['#8ea6bd', '#7f97b4', '#9fb8cf', '#aebfce']
  * 生成一批楼房 { x, z, w, d, h, color, core }。中心高、边缘低。
  * 返回纯数据，渲染层（scene.js）据此建 InstancedMesh。
  */
+export const GRID = { step: 1.55, min: -7, max: 7 }
+
+/**
+ * 街道中心线坐标。generateCity 每隔 4 格跳过一行/列当街道，
+ * 这里把那些坐标导出来，好让路面、行人、车、路灯都对齐同一套网格。
+ */
+export function streetLines() {
+  const xs = []
+  const zs = []
+  let i = 0
+  for (let x = GRID.min; x <= GRID.max; x += GRID.step, i++) if (i % 4 === 0) xs.push(x)
+  i = 0
+  for (let z = GRID.min; z <= GRID.max; z += GRID.step, i++) if (i % 4 === 0) zs.push(z)
+  return { xs, zs }
+}
+
 export function generateCity(seed) {
   const rand = mulberry32(seed)
   const out = []
-  const step = 1.55
-  const min = -7,
-    max = 7
+  const step = GRID.step
+  const min = GRID.min,
+    max = GRID.max
   let ix = 0
   for (let x = min; x <= max; x += step, ix++) {
     let iz = 0
