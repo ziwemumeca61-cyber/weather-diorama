@@ -5,6 +5,42 @@ import * as THREE from './three.module.min.js'
 import { generateCity, hashName } from './cityData'
 import { buildLandmark, hasOwnWater } from './landmarks'
 import { createProps } from './props'
+import { createSky } from './sky'
+import { makeWindowTexture } from './tileTexture'
+
+/** 坡屋顶（人字顶）：底面 1×1，屋脊沿 X，高 1。用单位几何配合实例缩放。 */
+function makeGableGeo() {
+  const v = new Float32Array([
+    // 前坡
+    -0.5, 0, 0.5, 0.5, 0, 0.5, 0.5, 1, 0, -0.5, 0, 0.5, 0.5, 1, 0, -0.5, 1, 0,
+    // 后坡
+    0.5, 0, -0.5, -0.5, 0, -0.5, -0.5, 1, 0, 0.5, 0, -0.5, -0.5, 1, 0, 0.5, 1, 0,
+    // 两侧山墙
+    -0.5, 0, 0.5, -0.5, 1, 0, -0.5, 0, -0.5, 0.5, 0, -0.5, 0.5, 1, 0, 0.5, 0, 0.5,
+  ])
+  const g = new THREE.BufferGeometry()
+  g.setAttribute('position', new THREE.BufferAttribute(v, 3))
+  g.computeVertexNormals()
+  return g
+}
+const GABLE_GEO = makeGableGeo()
+// 四坡顶：四棱锥，底面 1×1（半径 √2/2 且转 45° 后正好是单位方形）
+const HIP_GEO = new THREE.ConeGeometry(Math.SQRT2 / 2, 1, 4).rotateY(Math.PI / 4).translate(0, 0.5, 0)
+
+/** 楼身幕墙材质：窗格贴图 + 只有窗户会亮的自发光图 */
+function makeFacadeMat(rows) {
+  const tex = makeWindowTexture(0xffffff, 0xc4d2e2, 0xffd08a)
+  tex.map.repeat.set(2, rows)
+  tex.emissiveMap.repeat.set(2, rows)
+  return new THREE.MeshStandardMaterial({
+    map: tex.map,
+    emissive: new THREE.Color(0xffffff),
+    emissiveMap: tex.emissiveMap,
+    emissiveIntensity: 0,
+    roughness: 0.82,
+    metalness: 0.05,
+  })
+}
 
 const SKY = {
   clear: 0x8fc0ea,
@@ -94,6 +130,62 @@ export function createScene(canvas, opts) {
   scene.add(precip)
   let precipMode = null // 'rain' | 'snow' | null
 
+  // 雨滴溅落：在地面和屋顶随机炸开的小水环（兑现「雨滴打在屋顶」）
+  const SPLASH = 40
+  const splashMat = new THREE.MeshBasicMaterial({
+    color: 0xdcebf7,
+    transparent: true,
+    opacity: 0.5,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  })
+  const splashes = new THREE.InstancedMesh(
+    new THREE.RingGeometry(0.5, 1, 10).rotateX(-Math.PI / 2),
+    splashMat,
+    SPLASH,
+  )
+  splashes.visible = false
+  scene.add(splashes)
+  const drops = []
+  for (let i = 0; i < SPLASH; i++) {
+    drops.push({ x: 0, y: 0, z: 0, age: Math.random(), life: 0.45 + Math.random() * 0.35 })
+  }
+  // 一半落地面、一半落屋顶
+  function reseed(d, i) {
+    const roof = i % 2 === 1 && rooftops.length
+    if (roof) {
+      const b = rooftops[Math.floor(Math.random() * rooftops.length)]
+      d.x = b.x + (Math.random() - 0.5) * b.w
+      d.z = b.z + (Math.random() - 0.5) * b.d
+      d.y = b.h + 0.03
+    } else {
+      d.x = (Math.random() - 0.5) * 15
+      d.z = (Math.random() - 0.5) * 15
+      d.y = 0.04
+    }
+    d.age = 0
+    d.life = 0.42 + Math.random() * 0.36
+  }
+  const sMat = new THREE.Matrix4()
+  const sQ = new THREE.Quaternion()
+  const sS = new THREE.Vector3()
+  const sP = new THREE.Vector3()
+  function stepSplash(dt) {
+    for (let i = 0; i < SPLASH; i++) {
+      const d = drops[i]
+      d.age += dt
+      if (d.age >= d.life) reseed(d, i)
+      const t01 = d.age / d.life
+      // 先扩散后收束，无需逐实例透明度也能读出「溅起又消失」
+      const r = Math.sin(t01 * Math.PI) * 0.26
+      sP.set(d.x, d.y, d.z)
+      sS.set(r, 1, r)
+      sMat.compose(sP, sQ, sS)
+      splashes.setMatrixAt(i, sMat)
+    }
+    splashes.instanceMatrix.needsUpdate = true
+  }
+
   // 街道雾团：几片贴地的半透明雾体，雾天渐显并缓缓漂移（体积雾近似）
   const fogBanks = new THREE.Group()
   const fogMats = []
@@ -118,11 +210,17 @@ export function createScene(canvas, opts) {
   fogBanks.visible = false
   scene.add(fogBanks)
 
+  // 星空 / 月亮 / 太阳
+  const sky = createSky()
+  scene.add(sky.group)
+
   // 楼群（InstancedMesh）
   const cityGroup = new THREE.Group()
   scene.add(cityGroup)
-  let buildingsMesh = null
-  let buildMat = null
+  let buildingMeshes = [] // 楼身（按高度分档）+ 各类屋顶
+  let buildMats = [] // 楼身材质（夜间窗户发光）
+  let buildRoofMat = null
+  let rooftops = [] // 当前楼群数据，雨滴溅落用它挑屋顶落点
   let landmarkObj = null // 当前城市地标 Group
   let landmarkGlow = [] // 地标夜间点亮的材质
   let landmarkSpin = null // 摩天轮等需每帧转动的部件
@@ -139,11 +237,29 @@ export function createScene(canvas, opts) {
   }
 
   function buildCity(cityName) {
-    if (buildingsMesh) {
-      cityGroup.remove(buildingsMesh)
-      buildingsMesh.geometry.dispose()
-      buildingsMesh.material.dispose()
+    for (let i = 0; i < buildingMeshes.length; i++) {
+      const bm = buildingMeshes[i]
+      cityGroup.remove(bm)
+      // GABLE_GEO / HIP_GEO 是模块级共享几何，所有城市反复复用，
+      // 释放了下一座城市就画不出屋顶——只释放本次 buildCity 内新建的。
+      if (bm.geometry === GABLE_GEO || bm.geometry === HIP_GEO) continue
+      try {
+        bm.geometry.dispose()
+      } catch (e) {}
     }
+    for (let i = 0; i < buildMats.length; i++) {
+      try {
+        buildMats[i].dispose()
+      } catch (e) {}
+    }
+    if (buildRoofMat) {
+      try {
+        buildRoofMat.dispose()
+      } catch (e) {}
+    }
+    buildingMeshes = []
+    buildMats = []
+    buildRoofMat = null
     if (landmarkObj) {
       cityGroup.remove(landmarkObj)
       landmarkObj = null
@@ -179,33 +295,80 @@ export function createScene(canvas, opts) {
       if (!skipRiver && Math.abs(b.z - 6.0) < 1.75) return false // 河道
       return true
     })
-    const geo = new THREE.BoxGeometry(1, 1, 1)
-    const mat = new THREE.MeshStandardMaterial({
-      roughness: 0.82,
-      metalness: 0.05,
-      emissive: new THREE.Color(0xffcf7a),
-      emissiveIntensity: isNight ? 0.35 : 0,
-    })
-    buildMat = mat
-    const mesh = new THREE.InstancedMesh(geo, mat, data.length)
-    mesh.castShadow = true
-    mesh.receiveShadow = true
+    rooftops = data // 供雨滴溅落挑落点
+
+    // 楼身按高度分三档，每档用不同的窗格重复次数，
+    // 否则同一张贴图铺在 1 米和 14 米的楼上，窗户会被拉得又高又扁。
+    const BUCKETS = [
+      { max: 3.2, rows: 3 },
+      { max: 7.0, rows: 7 },
+      { max: Infinity, rows: 13 },
+    ]
     const m = new THREE.Matrix4()
     const q = new THREE.Quaternion()
     const s = new THREE.Vector3()
     const p = new THREE.Vector3()
     const col = new THREE.Color()
-    data.forEach((b, i) => {
-      p.set(b.x, b.h / 2, b.z)
-      s.set(b.w, b.h, b.d)
-      m.compose(p, q, s)
-      mesh.setMatrixAt(i, m)
-      mesh.setColorAt(i, col.set(b.color))
+    const c2 = new THREE.Color()
+    const boxGeo = new THREE.BoxGeometry(1, 1, 1)
+
+    BUCKETS.forEach((bk, bi) => {
+      const lo = bi === 0 ? 0 : BUCKETS[bi - 1].max
+      const list = data.filter((b) => b.h > lo && b.h <= bk.max)
+      if (!list.length) return
+      const mat = makeFacadeMat(bk.rows)
+      buildMats.push(mat)
+      const mesh = new THREE.InstancedMesh(boxGeo, mat, list.length)
+      mesh.castShadow = true
+      mesh.receiveShadow = true
+      list.forEach((b, i) => {
+        p.set(b.x, b.h / 2, b.z)
+        s.set(b.w, b.h, b.d)
+        m.compose(p, q, s)
+        mesh.setMatrixAt(i, m)
+        mesh.setColorAt(i, col.set(b.color))
+      })
+      mesh.instanceMatrix.needsUpdate = true
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
+      cityGroup.add(mesh)
+      buildingMeshes.push(mesh)
     })
-    mesh.instanceMatrix.needsUpdate = true
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
-    cityGroup.add(mesh)
-    buildingsMesh = mesh
+
+    // 屋顶造型：坡屋顶 / 四坡顶 / 退台，各自一个 InstancedMesh
+    const roofMat = new THREE.MeshStandardMaterial({ roughness: 0.86, metalness: 0.04 })
+    buildRoofMat = roofMat
+    const ROOFS = [
+      { kind: 'gable', geo: GABLE_GEO },
+      { kind: 'hip', geo: HIP_GEO },
+      { kind: 'setback', geo: boxGeo },
+    ]
+    ROOFS.forEach((r) => {
+      const list = data.filter((b) => b.roof === r.kind)
+      if (!list.length) return
+      const mesh = new THREE.InstancedMesh(r.geo, roofMat, list.length)
+      mesh.castShadow = true
+      list.forEach((b, i) => {
+        if (r.kind === 'setback') {
+          const sh = Math.min(1.5, b.h * 0.16)
+          p.set(b.x, b.h + sh / 2, b.z)
+          s.set(b.w * 0.62, sh, b.d * 0.62)
+        } else {
+          const rh = Math.min(0.85, Math.max(0.3, b.w * 0.55))
+          p.set(b.x, b.h, b.z)
+          s.set(b.w, rh, b.d)
+        }
+        m.compose(p, q, s)
+        mesh.setMatrixAt(i, m)
+        // 坡屋顶压暗成瓦色，退台沿用楼身色
+        c2.set(b.color)
+        if (r.kind !== 'setback') c2.multiplyScalar(0.62)
+        mesh.setColorAt(i, c2)
+      })
+      mesh.instanceMatrix.needsUpdate = true
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
+      cityGroup.add(mesh)
+      buildingMeshes.push(mesh)
+    })
 
     // 城市专属地标（找不到则退回通用主塔）
     if (lm) {
@@ -248,6 +411,7 @@ export function createScene(canvas, opts) {
       precipMode = null
       precip.visible = false
     }
+    splashes.visible = precipMode === 'rain'
   }
 
   // —— 天气 / 昼夜渐变过渡 ——
@@ -313,7 +477,7 @@ export function createScene(canvas, opts) {
     scene.fog.color.copy(cur.sky)
     scene.fog.near = cur.fogNear
     sun.color.copy(cur.sunColor)
-    if (buildMat) buildMat.emissiveIntensity = cur.build
+    for (let i = 0; i < buildMats.length; i++) buildMats[i].emissiveIntensity = cur.build * 2.2
     applyLandmarkGlow()
 
     fogBanks.visible = cur.bank > 0.02
@@ -370,6 +534,7 @@ export function createScene(canvas, opts) {
   let flash = 0 // 0..1 剩余强度
   let nextBolt = 0
   const t0 = now() // 地标灯光动画的时间基准（秒），不受拖拽暂停影响
+  let lastSplashT = 0
 
   function frame() {
     if (!dragging && now() > idleUntil) t += 0.0022
@@ -383,7 +548,20 @@ export function createScene(canvas, opts) {
     tickTransition()
 
     // 行人、车流
-    if (props) props.step((now() - t0) * 0.001)
+    const secs = (now() - t0) * 0.001
+    if (props) props.step(secs)
+
+    // 雨滴溅落
+    if (splashes.visible) stepSplash(Math.min(0.05, secs - lastSplashT || 0.016))
+    lastSplashT = secs
+
+    // 星月与太阳：跟随昼夜因子与当前天气
+    sky.update(
+      Math.max(0, Math.min(1, (cur.landmark - 0.15) / 0.75)),
+      curKind === 'clear' || curKind === 'cloudy',
+      camera,
+      secs,
+    )
 
     // 地标专属灯光（在 applyLandmarkGlow 之后，可覆盖自发光强度）
     if (landmarkAnim) {
@@ -453,6 +631,9 @@ export function createScene(canvas, opts) {
       } catch (e) {}
       try {
         if (props) props.dispose()
+      } catch (e) {}
+      try {
+        sky.dispose()
       } catch (e) {}
       try {
         renderer.dispose()

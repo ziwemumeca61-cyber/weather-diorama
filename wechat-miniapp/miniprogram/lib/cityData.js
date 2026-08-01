@@ -48,6 +48,8 @@ export function streetLines() {
 
 export function generateCity(seed) {
   const rand = mulberry32(seed)
+  // 屋顶造型用独立随机流：不占用 rand()，已有城市的天际线布局保持不变
+  const rroof = mulberry32((seed ^ 0x9e3779b9) >>> 0)
   const out = []
   const step = GRID.step
   const min = GRID.min,
@@ -69,6 +71,11 @@ export function generateCity(seed) {
       }
       const isCore = coreness > 0.55 && rand() < 0.6
       const pal = isCore ? CORE : PALETTE
+      // 屋顶：矮楼多坡顶（民居感），高楼多退台/平顶（写字楼感）
+      const rk = rroof()
+      let roof = 'flat'
+      if (h < 3.2) roof = rk < 0.34 ? 'gable' : rk < 0.52 ? 'hip' : 'flat'
+      else if (h > 5.5) roof = rk < 0.3 ? 'setback' : 'flat'
       out.push({
         x: x + (rand() - 0.5) * 0.4,
         z: z + (rand() - 0.5) * 0.4,
@@ -77,6 +84,7 @@ export function generateCity(seed) {
         h,
         color: pal[Math.floor(rand() * pal.length)],
         core: coreness,
+        roof,
       })
     }
   }
