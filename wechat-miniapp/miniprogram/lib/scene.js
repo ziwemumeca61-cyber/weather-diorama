@@ -3,7 +3,8 @@
 // 这是移植的起点，跑通后再逐步搬入 web 版的地标、粒子特效、昼夜灯光。
 import * as THREE from './three.module.min.js'
 import { generateCity, hashName } from './cityData'
-import { buildLandmark } from './landmarks'
+import { buildLandmark, hasOwnWater } from './landmarks'
+import { createProps } from './props'
 
 const SKY = {
   clear: 0x8fc0ea,
@@ -126,10 +127,15 @@ export function createScene(canvas, opts) {
   let landmarkGlow = [] // 地标夜间点亮的材质
   let landmarkSpin = null // 摩天轮等需每帧转动的部件
   let landmarkAnim = null // 地标专属灯光动画（彩虹流光/呼吸灯/跑马灯）
+  let props = null // 路面/河/行人/车/树/路灯
+  let propsGlow = [] // 路灯材质，夜间点亮
   let isNight = false
 
   function applyLandmarkGlow() {
     for (let i = 0; i < landmarkGlow.length; i++) landmarkGlow[i].emissiveIntensity = cur.landmark
+    // 路灯：白天全灭，入夜渐亮
+    const lamp = Math.max(0, (cur.landmark - 0.15) / 0.75) * 1.5
+    for (let i = 0; i < propsGlow.length; i++) propsGlow[i].emissiveIntensity = lamp
   }
 
   function buildCity(cityName) {
@@ -156,9 +162,23 @@ export function createScene(canvas, opts) {
       clearX = Math.max(1.6, Math.min(5.5, (bb.max.x - bb.min.x) / 2 + 0.9))
       clearZ = Math.max(1.6, Math.min(5.5, (bb.max.z - bb.min.z) / 2 + 0.9))
     }
-    const data = generateCity(hashName(cityName || '上海')).filter(
-      (b) => Math.abs(b.x) > clearX || Math.abs(b.z) > clearZ,
-    )
+    // 配景：路面、河、桥、行人、车、行道树、路灯
+    if (props) {
+      cityGroup.remove(props.group)
+      props.dispose()
+      props = null
+      propsGlow = []
+    }
+    const skipRiver = hasOwnWater(cityName)
+    props = createProps(cityName, { clearX: clearX, clearZ: clearZ, skipRiver: skipRiver })
+    cityGroup.add(props.group)
+    propsGlow = props.glow || []
+
+    const data = generateCity(hashName(cityName || '上海')).filter((b) => {
+      if (Math.abs(b.x) <= clearX && Math.abs(b.z) <= clearZ) return false // 地标广场
+      if (!skipRiver && Math.abs(b.z - 6.0) < 1.75) return false // 河道
+      return true
+    })
     const geo = new THREE.BoxGeometry(1, 1, 1)
     const mat = new THREE.MeshStandardMaterial({
       roughness: 0.82,
@@ -362,6 +382,9 @@ export function createScene(canvas, opts) {
     // 天气/昼夜渐变
     tickTransition()
 
+    // 行人、车流
+    if (props) props.step((now() - t0) * 0.001)
+
     // 地标专属灯光（在 applyLandmarkGlow 之后，可覆盖自发光强度）
     if (landmarkAnim) {
       const nf = Math.max(0, Math.min(1, (cur.landmark - 0.15) / 0.75))
@@ -427,6 +450,9 @@ export function createScene(canvas, opts) {
       raf = null
       try {
         renderer.setAnimationLoop(null)
+      } catch (e) {}
+      try {
+        if (props) props.dispose()
       } catch (e) {}
       try {
         renderer.dispose()
