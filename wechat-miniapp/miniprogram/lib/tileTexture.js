@@ -15,6 +15,58 @@ export function darken(hex, f) {
 }
 
 /**
+ * 幕墙窗格贴图。返回 { map, emissiveMap }：
+ * map 是框+玻璃的固有色；emissiveMap 只有窗格发亮、框为黑，
+ * 这样夜里调 emissiveIntensity 时只有窗户点亮，不会整栋楼发光。
+ */
+export function makeWindowTexture(frameHex, paneHex, litHex) {
+  const S = 64
+  const CELL = 8
+  const map = new Uint8Array(S * S * 4)
+  const emi = new Uint8Array(S * S * 4)
+  const fr = (frameHex >> 16) & 255
+  const fg = (frameHex >> 8) & 255
+  const fb = frameHex & 255
+  const pr = (paneHex >> 16) & 255
+  const pg = (paneHex >> 8) & 255
+  const pb = paneHex & 255
+  const lr = (litHex >> 16) & 255
+  const lg = (litHex >> 8) & 255
+  const lb = litHex & 255
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const cx = x % CELL
+      const cy = y % CELL
+      const inPane = cx >= 1 && cx <= CELL - 2 && cy >= 1 && cy <= CELL - 3
+      const i = (y * S + x) * 4
+      map[i] = inPane ? pr : fr
+      map[i + 1] = inPane ? pg : fg
+      map[i + 2] = inPane ? pb : fb
+      map[i + 3] = 255
+      // 每格用坐标哈希决定亮不亮，制造「有的房间开灯」的参差感
+      const h = (((x / CELL) | 0) * 73856093) ^ (((y / CELL) | 0) * 19349663)
+      const on = inPane && (h >>> 4) % 5 !== 0
+      emi[i] = on ? lr : 0
+      emi[i + 1] = on ? lg : 0
+      emi[i + 2] = on ? lb : 0
+      emi[i + 3] = 255
+    }
+  }
+  const mk = (arr) => {
+    const t = new THREE.DataTexture(arr, S, S)
+    t.wrapS = THREE.RepeatWrapping
+    t.wrapT = THREE.RepeatWrapping
+    t.magFilter = THREE.LinearFilter
+    t.minFilter = THREE.LinearMipmapLinearFilter
+    t.generateMipmaps = true
+    if (THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace
+    t.needsUpdate = true
+    return t
+  }
+  return { map: mk(map), emissiveMap: mk(emi) }
+}
+
+/**
  * 生成一张竖向瓦垄 + 横向瓦当线的贴图。
  * repX/repY 控制在屋面上重复多少次。
  */
