@@ -1482,7 +1482,9 @@ function peonyGarden() {
   const roofMat = tiledRoof(0x2f6b4f, 8, 1)
   const soil = std(0x7a6a55, { roughness: 0.96 })
   const BLOOM = [0xd94f7a, 0xe8759a, 0xf0e0e8, 0xc03a5a, 0xefc0d0, 0xa8447a]
-  // 环形花田
+  // 环形花田。48 朵牡丹若逐朵建 Mesh 就是 48 个 draw call（本地标一度高达 64），
+  // 合成一个 InstancedMesh，花色用 instanceColor 区分。
+  const blooms = []
   for (let ring = 0; ring < 3; ring++) {
     const rr = 2.4 + ring * 0.85
     const bed = new THREE.Mesh(new THREE.TorusGeometry(rr, 0.3, 6, 26), soil)
@@ -1492,14 +1494,35 @@ function peonyGarden() {
     const n = 12 + ring * 4
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2 + ring * 0.3
-      const col = BLOOM[(i + ring) % BLOOM.length]
-      const f = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), glowMat(col, col))
-      glow.push(f.material)
-      f.position.set(Math.cos(a) * rr, 0.42 + ring * 0.06, Math.sin(a) * rr)
-      f.scale.y = 0.72
-      g.add(f)
+      blooms.push({
+        x: Math.cos(a) * rr,
+        y: 0.42 + ring * 0.06,
+        z: Math.sin(a) * rr,
+        c: BLOOM[(i + ring) % BLOOM.length],
+      })
     }
   }
+  const bloomMat = glowMat(0xffffff, 0xffffff)
+  glow.push(bloomMat)
+  const bloomMesh = new THREE.InstancedMesh(
+    new THREE.SphereGeometry(0.2, 8, 6),
+    bloomMat,
+    blooms.length,
+  )
+  const bm = new THREE.Matrix4()
+  const bp = new THREE.Vector3()
+  const bq = new THREE.Quaternion()
+  const bs = new THREE.Vector3(1, 0.72, 1)
+  const bc = new THREE.Color()
+  blooms.forEach((f, i) => {
+    bp.set(f.x, f.y, f.z)
+    bm.compose(bp, bq, bs)
+    bloomMesh.setMatrixAt(i, bm)
+    bloomMesh.setColorAt(i, bc.set(f.c))
+  })
+  bloomMesh.instanceMatrix.needsUpdate = true
+  if (bloomMesh.instanceColor) bloomMesh.instanceColor.needsUpdate = true
+  g.add(bloomMesh)
   // 牡丹亭：圆形重檐亭
   const plat = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.65, 0.4, 12), std(0xcfc9bd))
   plat.position.y = 0.2

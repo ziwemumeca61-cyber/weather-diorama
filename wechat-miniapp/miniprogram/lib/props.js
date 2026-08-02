@@ -43,15 +43,28 @@ export function createProps(cityName, opts) {
     r.receiveShadow = true
     group.add(r)
   })
-  // 中心虚线
+  // 中心虚线：约 30 段，逐个建 Mesh 就是 30 个 draw call，合成一个 InstancedMesh
+  const dashSpots = []
   lines.xs.forEach((x) => {
     for (let s = -6.5; s <= 6.5; s += 1.3) {
       if (withRiver && Math.abs(s - riverZ) < riverW / 2) continue
-      const d = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.01, 0.5), lineMat)
-      d.position.set(x, ROAD_Y + 0.012, s)
-      group.add(d)
+      dashSpots.push([x, s])
     }
   })
+  if (dashSpots.length) {
+    const dm = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(0.07, 0.01, 0.5),
+      lineMat,
+      dashSpots.length,
+    )
+    const im = new THREE.Matrix4()
+    dashSpots.forEach((d, i) => {
+      im.makeTranslation(d[0], ROAD_Y + 0.012, d[1])
+      dm.setMatrixAt(i, im)
+    })
+    dm.instanceMatrix.needsUpdate = true
+    group.add(dm)
+  }
 
   /* ---------------- 河流 + 桥 ---------------- */
   if (withRiver) {
@@ -112,30 +125,41 @@ export function createProps(cityName, opts) {
   const okSpot = (x, z) =>
     !(Math.abs(x) <= clearX && Math.abs(z) <= clearZ) && !inRiver(z) && Math.abs(z) < 7.4
 
+  // 先收集位置，再分别合成 InstancedMesh：
+  // 逐棵树/逐盏灯建 Mesh 会有 50+ 个 draw call，是配景开销的大头。
+  const treeSpots = []
+  const lampSpots = []
   lines.xs.forEach((x, li) => {
     for (let z = -6.6; z <= 6.6; z += 1.65) {
       const side = ((li + Math.round(z)) % 2 ? 1 : -1) * 0.78
       const px = x + side
       const jz = z + (rand() - 0.5) * 0.3
       if (!okSpot(px, jz)) continue
-      if (rand() < 0.34) {
-        const pole = new THREE.Mesh(poleGeo, poleMat)
-        pole.position.set(px, 0.62, jz)
-        group.add(pole)
-        const head = new THREE.Mesh(lampGeo, lampMat)
-        head.position.set(px, 1.3, jz)
-        group.add(head)
-      } else {
-        const tr = new THREE.Mesh(trunkGeo, trunkMat)
-        tr.position.set(px, 0.25, jz)
-        group.add(tr)
-        const lf = new THREE.Mesh(leafGeo, leafMat)
-        lf.position.set(px, 0.68, jz)
-        lf.scale.set(1, 1.15, 1)
-        group.add(lf)
-      }
+      ;(rand() < 0.34 ? lampSpots : treeSpots).push([px, jz])
     }
   })
+
+  const im = new THREE.Matrix4()
+  const iP = new THREE.Vector3()
+  const iQ = new THREE.Quaternion()
+  const iS = new THREE.Vector3(1, 1, 1)
+  function instanced(geo, mat, spots, y, sy) {
+    if (!spots.length) return null
+    const mesh = new THREE.InstancedMesh(geo, mat, spots.length)
+    iS.set(1, sy || 1, 1)
+    spots.forEach((sp, i) => {
+      iP.set(sp[0], y, sp[1])
+      im.compose(iP, iQ, iS)
+      mesh.setMatrixAt(i, im)
+    })
+    mesh.instanceMatrix.needsUpdate = true
+    group.add(mesh)
+    return mesh
+  }
+  instanced(trunkGeo, trunkMat, treeSpots, 0.25)
+  instanced(leafGeo, leafMat, treeSpots, 0.68, 1.15)
+  instanced(poleGeo, poleMat, lampSpots, 0.62)
+  instanced(lampGeo, lampMat, lampSpots, 1.3)
 
   /* ---------------- 行人（InstancedMesh） ---------------- */
   const PEOPLE = 26
@@ -147,7 +171,6 @@ export function createProps(cityName, opts) {
     PEOPLE,
   )
   const heads = new THREE.InstancedMesh(new THREE.SphereGeometry(0.052, 7, 6), headMat, PEOPLE)
-  bodies.castShadow = true
   group.add(bodies, heads)
 
   const walkers = []
@@ -175,7 +198,6 @@ export function createProps(cityName, opts) {
   const CARN = 11
   const carMat = new THREE.MeshStandardMaterial({ roughness: 0.45, metalness: 0.35 })
   const cars = new THREE.InstancedMesh(new THREE.BoxGeometry(0.42, 0.17, 0.22), carMat, CARN)
-  cars.castShadow = true
   group.add(cars)
   const drivers = []
   for (let i = 0; i < CARN; i++) {
