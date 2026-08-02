@@ -19,6 +19,8 @@ Page({
     night: false,
     forecast: [],
     loading: true,
+    errMsg: '',
+    glFailed: false,
   },
 
   onLoad(options) {
@@ -51,6 +53,7 @@ Page({
         const info = res && res[0]
         if (!info || !info.node) {
           console.error('[scene] canvas node not found')
+          this.setData({ glFailed: true })
           return
         }
         const canvas = info.node
@@ -67,8 +70,9 @@ Page({
           if (this._pendingNight != null) sceneApi.setNight(this._pendingNight)
           if (this._pendingKind) sceneApi.setWeather(this._pendingKind)
         } catch (e) {
+          // 设备不支持 WebGL 时不让整页作废：标记降级，天气信息照常可看
           console.error('[scene] init failed', e)
-          wx.showToast({ title: '3D 初始化失败，查看控制台', icon: 'none' })
+          this.setData({ glFailed: true })
         }
       })
   },
@@ -86,6 +90,7 @@ Page({
       night: !d.isDay,
       forecast: buildForecast(d.daily),
       loading: false,
+      errMsg: '',
     })
     if (name) wx.setStorage({ key: LAST_CITY, data: name })
     if (sceneApi) {
@@ -100,12 +105,14 @@ Page({
   },
 
   callWeather(payload) {
-    this.setData({ loading: true })
+    this._lastPayload = payload // 供「重试」用
+    this.setData({ loading: true, errMsg: '' })
     wx.cloud
       .callFunction({ name: 'weather', data: payload })
       .then((r) => {
         const d = (r && r.result) || {}
         if (!d.ok) {
+          // 城市查不到属于输入问题，提示即可，不摆重试条
           wx.showToast({ title: d.error || '加载失败', icon: 'none' })
           this.setData({ loading: false })
           return
@@ -114,9 +121,27 @@ Page({
       })
       .catch((e) => {
         console.error('[cloud] weather failed', e)
-        wx.showToast({ title: '云函数调用失败', icon: 'none' })
-        this.setData({ loading: false })
+        // 弱网/断网下审核会踩到这里：给明确文案和重试入口，而不是空白页
+        wx.getNetworkType({
+          success: (n) => {
+            const off = !n || n.networkType === 'none'
+            this.setData({
+              loading: false,
+              errMsg: off ? '网络未连接' : '加载失败，请稍后重试',
+            })
+          },
+          fail: () => this.setData({ loading: false, errMsg: '加载失败，请稍后重试' }),
+        })
       })
+  },
+
+  onRetry() {
+    if (this._lastPayload) this.callWeather(this._lastPayload)
+    else this.load(wx.getStorageSync(LAST_CITY) || '上海')
+  },
+
+  onAbout() {
+    wx.navigateTo({ url: '/pages/about/about' })
   },
 
   load(query) {

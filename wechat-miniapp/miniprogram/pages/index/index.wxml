@@ -10,8 +10,15 @@
     bindtouchcancel="onCanvasTouchEnd"
   ></canvas>
 
+  <!-- 3D 初始化失败时的降级提示：天气信息仍可正常使用 -->
+  <view class="glfail" wx:if="{{glFailed}}">
+    <text class="glfail-e">🏙️</text>
+    <text class="glfail-t">当前设备无法显示 3D 城市</text>
+    <text class="glfail-s">天气信息仍可正常查看</text>
+  </view>
+
   <!-- 昼夜切换（浮在画布右上角） -->
-  <view class="daynight" bindtap="onToggleNight">{{night ? '🌙' : '☀️'}}</view>
+  <view class="daynight" wx:if="{{!glFailed}}" bindtap="onToggleNight">{{night ? '🌙' : '☀️'}}</view>
 
   <!-- 下半屏：控制面板（普通 view，不与 canvas 重叠，一定可见） -->
   <view class="panel">
@@ -59,5 +66,15 @@
     </scroll-view>
 
     <view class="hint" wx:if="{{loading}}">加载中…</view>
+    <view class="errbar" wx:elif="{{errMsg}}">
+      <text class="err-t">{{errMsg}}</text>
+      <view class="err-btn" bindtap="onRetry">重试</view>
+    </view>
+
+    <!-- Open-Meteo 为 CC-BY 4.0，署名必须在界面上可见 -->
+    <view class="credit">
+      <text class="credit-t">天气数据 Open-Meteo (CC-BY 4.0) · 定位仅用于查询本地天气</text>
+      <text class="credit-a" bindtap="onAbout">关于</text>
+    </view>
   </view>
 </view>
