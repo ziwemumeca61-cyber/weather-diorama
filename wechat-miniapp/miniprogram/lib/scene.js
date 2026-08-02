@@ -42,6 +42,23 @@ function makeFacadeMat(rows) {
   })
 }
 
+/** 释放材质及其引用的贴图（material.dispose() 不管贴图） */
+function disposeMat(m) {
+  if (!m) return
+  const maps = ['map', 'emissiveMap', 'bumpMap', 'normalMap']
+  for (let i = 0; i < maps.length; i++) {
+    const t = m[maps[i]]
+    if (t && t.dispose) {
+      try {
+        t.dispose()
+      } catch (e) {}
+    }
+  }
+  try {
+    m.dispose()
+  } catch (e) {}
+}
+
 const SKY = {
   clear: 0x8fc0ea,
   cloudy: 0xb3c0cc,
@@ -86,6 +103,18 @@ export function createScene(canvas, opts) {
   const sun = new THREE.DirectionalLight(0xfff2d8, 2.0)
   sun.position.set(12, 18, 8)
   sun.castShadow = true
+  // DirectionalLight 的默认阴影相机只有正交 ±5，而城市跨度 ±10，
+  // 不配的话中心以外根本没有阴影，却照样付一整遍渲染的代价。
+  const sc = sun.shadow.camera
+  sc.left = -12
+  sc.right = 12
+  sc.top = 12
+  sc.bottom = -12
+  sc.near = 1
+  sc.far = 60
+  sc.updateProjectionMatrix()
+  sun.shadow.mapSize.set(1024, 1024)
+  sun.shadow.bias = -0.0012
   scene.add(sun)
 
   // 托盘
@@ -247,16 +276,10 @@ export function createScene(canvas, opts) {
         bm.geometry.dispose()
       } catch (e) {}
     }
-    for (let i = 0; i < buildMats.length; i++) {
-      try {
-        buildMats[i].dispose()
-      } catch (e) {}
-    }
-    if (buildRoofMat) {
-      try {
-        buildRoofMat.dispose()
-      } catch (e) {}
-    }
+    // material.dispose() 不会释放它引用的贴图，
+    // 幕墙每档 2 张、切一次城市就泄漏 6 张 DataTexture，必须手动释放。
+    for (let i = 0; i < buildMats.length; i++) disposeMat(buildMats[i])
+    disposeMat(buildRoofMat)
     buildingMeshes = []
     buildMats = []
     buildRoofMat = null
