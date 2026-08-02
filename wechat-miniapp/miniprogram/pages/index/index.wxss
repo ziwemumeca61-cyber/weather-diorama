@@ -172,3 +172,70 @@
   color: #9fb0c8;
   font-size: 26rpx;
 }
+
+/* 署名（Open-Meteo CC-BY 4.0 要求界面可见）+ 关于入口 */
+.credit {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  margin-top: 16rpx;
+}
+.credit-t {
+  font-size: 20rpx;
+  color: #6b788c;
+}
+.credit-a {
+  margin-left: 14rpx;
+  font-size: 20rpx;
+  color: #7f9ec4;
+  padding: 4rpx 12rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* 加载失败重试 */
+.errbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  margin-top: 14rpx;
+}
+.err-t {
+  font-size: 26rpx;
+  color: #e0908a;
+}
+.err-btn {
+  margin-left: 16rpx;
+  padding: 6rpx 24rpx;
+  border-radius: 999rpx;
+  font-size: 24rpx;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* 3D 不可用时的降级占位 */
+.glfail {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 22%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.glfail-e {
+  font-size: 96rpx;
+  opacity: 0.5;
+}
+.glfail-t {
+  margin-top: 18rpx;
+  font-size: 30rpx;
+  color: #c3cde0;
+}
+.glfail-s {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #7c88a0;
+}
