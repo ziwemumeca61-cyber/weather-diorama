@@ -1,7 +1,7 @@
 // 城市配景：路面、河流与桥、行人、车、行道树、路灯。
 // 全部对齐 cityData 的街道网格，并避开中心地标广场。
 // 行人和车用 InstancedMesh，每帧只更新矩阵，不新建对象。
-import * as THREE from './three.module.min.js'
+import * as THREE from './three.core.js'
 import { mulberry32, hashName, streetLines, GRID } from './cityData'
 
 const ROAD_Y = 0.012 // 略高于托盘面，避免 z-fighting

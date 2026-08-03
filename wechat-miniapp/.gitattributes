@@ -1,0 +1,4 @@
+# 内置的 three 是 vendor 压缩产物，禁止任何行尾转换。
+# Windows 上 core.autocrlf 默认开启，会在检出时改写文件，
+# 既污染 diff 也可能影响构建工具对该文件的处理。
+miniprogram/lib/three.core.js -text

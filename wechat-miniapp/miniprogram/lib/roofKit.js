@@ -2,7 +2,7 @@
 // （原文件是纯 Three.js，不含 React，去掉 TS 类型即可直接用）。
 // 只搬几何：Web 版的釉面瓦贴图依赖 document.createElement('canvas')，
 // 小程序里不可靠，这里用纯色材质代替。
-import * as THREE from './three.module.min.js'
+import * as THREE from './three.core.js'
 
 /** 凹曲圆屋顶 + 起翘飞檐（圆形亭/塔用）。原点在檐口，尖顶在 y=height。 */
 export function makeConcaveRoof(eaveR, height, peakR, seg) {
