@@ -172,18 +172,20 @@ function makeRoundedTrayGeometry() {
 }
 
 function makePuffTexture() {
-  const size = 64
+  const size = 128
   const data = new Uint8Array(size * size * 4)
   const center = (size - 1) / 2
   const radius = size * 0.5
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const distance = Math.hypot(x - center, y - center) / radius
-      const edge = Math.max(0, 1 - distance)
-      const alpha = Math.round(Math.pow(edge, 1.35) * 255)
+      let alpha = 0
+      if (distance <= 0.45) alpha = 1 - (distance / 0.45) * 0.08
+      else if (distance <= 0.8) alpha = 0.92 - ((distance - 0.45) / 0.35) * 0.57
+      else if (distance <= 1) alpha = 0.35 * (1 - (distance - 0.8) / 0.2)
       const p = (y * size + x) * 4
       data[p] = data[p + 1] = data[p + 2] = 255
-      data[p + 3] = alpha
+      data[p + 3] = Math.round(Math.max(0, alpha) * 255)
     }
   }
   return dataTexture(data, size, size)
@@ -193,124 +195,51 @@ function makeCloudBase(group) {
   const cloudGroup = new THREE.Group()
   group.add(cloudGroup)
   const texture = makePuffTexture()
-  const cloudMat = new THREE.MeshStandardMaterial({
-    color: 0xf2f6fd,
-    roughness: 1,
-    metalness: 0,
-    transparent: true,
-    opacity: 0.94,
-    depthWrite: false,
-    fog: false,
-  })
-  const shadowMat = new THREE.MeshStandardMaterial({
-    color: 0xaebaca,
-    roughness: 1,
-    metalness: 0,
-    transparent: true,
-    opacity: 0.48,
-    depthWrite: false,
-    fog: false,
-  })
-  const haloMat = new THREE.SpriteMaterial({
+  const material = new THREE.SpriteMaterial({
     map: texture,
     color: 0xf6f9fe,
     transparent: true,
-    opacity: 0.22,
+    opacity: 0.92,
     depthWrite: false,
-    fog: false,
   })
-  const rand = mulberry32(9127)
+  let seed = 4177
+  const rand = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff)
   const slabHalf = CITY.trayHalf + 0.8
-  const bodyPuffs = []
-  const shadowPuffs = []
-  const haloPuffs = []
-  const addHalo = (puff) => haloPuffs.push(puff)
-  const addPuff = (list, x, y, z, size, flatten) => {
-    list.push({
-      x,
-      y,
-      z,
-      sx: size * (1.05 + rand() * 0.16),
-      sy: size * flatten,
-      sz: size * (0.9 + rand() * 0.18),
-    })
+  const addPuff = (x, y, z, size) => {
+    const sprite = new THREE.Sprite(material)
+    sprite.position.set(x, y, z)
+    sprite.scale.set(size, size, 1)
+    sprite.frustumCulled = false
+    cloudGroup.add(sprite)
   }
 
-  // A soft top blanket keeps the underside of the diorama rounded instead of flat.
-  const grid = 6
+  // Web CloudBase 的同款柔边 Sprite；网格从 6×6 降到 5×5，减少底盘下云量。
+  const grid = 5
   for (let ix = 0; ix < grid; ix++) {
     for (let iz = 0; iz < grid; iz++) {
       const gx = (ix / (grid - 1) - 0.5) * 2 * slabHalf * 0.92
       const gz = (iz / (grid - 1) - 0.5) * 2 * slabHalf * 0.92
-      const size = 3.0 + rand() * 1.9
-      const puff = {
-        x: gx + (rand() - 0.5) * 1.8,
-        y: -0.55 - size * 0.45 - rand() * 0.24,
-        z: gz + (rand() - 0.5) * 1.8,
-        sx: size * (1.05 + rand() * 0.16),
-        sy: size * (0.4 + rand() * 0.1),
-        sz: size * (0.9 + rand() * 0.18),
-      }
-      bodyPuffs.push(puff)
-      if ((ix + iz) % 2 === 0) addHalo(puff)
+      const size = 3.4 + rand() * 2.2
+      addPuff(gx + (rand() - 0.5) * 2, -0.55 - size * 0.42 - rand() * 0.3, gz + (rand() - 0.5) * 2, size)
     }
   }
 
-  // Uneven rim billows create the soft silhouette visible around the tray edge.
-  for (let i = 0; i < 18; i++) {
-    const angle = (i / 18) * Math.PI * 2 + rand() * 0.3
+  const ring = 10
+  for (let i = 0; i < ring; i++) {
+    const angle = (i / ring) * Math.PI * 2 + rand() * 0.3
     const radius = slabHalf * (0.9 + rand() * 0.1)
-    const size = 2.6 + rand() * 1.5
-    const puff = {
-      x: Math.cos(angle) * radius,
-      y: -0.65 - size * 0.43 - rand() * 0.45,
-      z: Math.sin(angle) * radius,
-      sx: size * (1.05 + rand() * 0.16),
-      sy: size * (0.44 + rand() * 0.1),
-      sz: size * (0.9 + rand() * 0.18),
-    }
-    bodyPuffs.push(puff)
-    addHalo(puff)
+    const size = 2.8 + rand() * 1.6
+    addPuff(Math.cos(angle) * radius, -0.55 - size * 0.42 - 0.3 - rand() * 0.6, Math.sin(angle) * radius, size)
   }
 
-  // Cooler, lower puffs add depth without turning the whole cloud into a solid blob.
-  for (let i = 0; i < 24; i++) {
+  for (let i = 0; i < 8; i++) {
     const angle = rand() * Math.PI * 2
     const t = rand()
-    const radius = (1 - t * 0.82) * slabHalf * 0.62
-    const size = 1.8 + (1 - t) * 2.0
-    addPuff(shadowPuffs, Math.cos(angle) * radius, -2.6 - t * 2.2, Math.sin(angle) * radius, size, 0.52 + rand() * 0.12)
+    const radius = (1 - t * 0.85) * slabHalf * 0.6
+    const size = 1.8 + (1 - t) * 2.2
+    addPuff(Math.cos(angle) * radius, -2.8 - t * 2, Math.sin(angle) * radius, size)
   }
-
-  const cloudGeometry = new THREE.SphereGeometry(1, 14, 10)
-  const makeInstances = (material, list) => {
-    const mesh = new THREE.InstancedMesh(cloudGeometry, material, list.length)
-    const matrix = new THREE.Matrix4()
-    const position = new THREE.Vector3()
-    const quaternion = new THREE.Quaternion()
-    const scale = new THREE.Vector3()
-    list.forEach((puff, i) => {
-      position.set(puff.x, puff.y, puff.z)
-      scale.set(puff.sx, puff.sy, puff.sz)
-      matrix.compose(position, quaternion, scale)
-      mesh.setMatrixAt(i, matrix)
-    })
-    mesh.instanceMatrix.needsUpdate = true
-    mesh.frustumCulled = false
-    cloudGroup.add(mesh)
-    return mesh
-  }
-  makeInstances(cloudMat, bodyPuffs)
-  makeInstances(shadowMat, shadowPuffs)
-
-  haloPuffs.forEach((data) => {
-    const sprite = new THREE.Sprite(haloMat)
-    sprite.position.set(data.x, data.y, data.z)
-    sprite.scale.set(data.sx * 1.18, data.sy * 1.1, 1)
-    sprite.frustumCulled = false
-    cloudGroup.add(sprite)
-  })
-  return { group: cloudGroup, materials: [cloudMat, shadowMat, haloMat], texture }
+  return { group: cloudGroup, materials: [material], texture }
 }
 
 function makeWater(group, water, flow, foam) {
@@ -528,9 +457,6 @@ export function createEnvironment(water) {
   }
 
   function step(t, dt) {
-    clouds.group.position.x = Math.sin(t * 0.018) * 0.32
-    clouds.group.position.z = Math.cos(t * 0.014) * 0.18
-    clouds.group.scale.y = 1 + Math.sin(t * 0.11) * 0.018
     flow.offset.x -= dt * (water.lake ? 0.009 : 0.035)
     if (water.lake) flow.offset.y += dt * 0.004
     foam.offset.x -= dt * 0.02
