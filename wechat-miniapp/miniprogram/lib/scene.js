@@ -30,8 +30,10 @@ const HIP_GEO = new THREE.ConeGeometry(Math.SQRT2 / 2, 1, 4).rotateY(Math.PI / 4
 /** 楼身幕墙材质：窗格贴图 + 只有窗户会亮的自发光图 */
 function makeFacadeMat(rows) {
   const tex = makeWindowTexture(0xffffff, 0xc4d2e2, 0xffd08a)
-  tex.map.repeat.set(2, rows)
-  tex.emissiveMap.repeat.set(2, rows)
+  // 横向只铺 1 遍（贴图本身 4 列）→ 一个立面 4 个窗。
+  // 原来 repeat.x=2 配 8 列贴图 = 16 个窗，在 26 单位外糊成一片灰。
+  tex.map.repeat.set(1, rows)
+  tex.emissiveMap.repeat.set(1, rows)
   return new THREE.MeshStandardMaterial({
     map: tex.map,
     emissive: new THREE.Color(0xffffff),
@@ -95,7 +97,7 @@ export function createScene(canvas, opts) {
   scene.fog = new THREE.Fog(SKY.clear, 26, 60)
 
   const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 200)
-  const camTarget = new THREE.Vector3(0, 1.2, 0)
+  const camTarget = new THREE.Vector3(0, 2.0, 0)
 
   // 光照
   const amb = new THREE.AmbientLight(0xffffff, 0.75)
@@ -322,10 +324,11 @@ export function createScene(canvas, opts) {
 
     // 楼身按高度分三档，每档用不同的窗格重复次数，
     // 否则同一张贴图铺在 1 米和 14 米的楼上，窗户会被拉得又高又扁。
+    // rows = 纵向重复次数，贴图每遍 4 行窗 → 实际窗行数 = rows × 4
     const BUCKETS = [
-      { max: 3.2, rows: 3 },
-      { max: 7.0, rows: 7 },
-      { max: Infinity, rows: 13 },
+      { max: 3.2, rows: 1 },
+      { max: 7.0, rows: 2 },
+      { max: Infinity, rows: 3.5 },
     ]
     const m = new THREE.Matrix4()
     const q = new THREE.Quaternion()
@@ -526,8 +529,10 @@ export function createScene(canvas, opts) {
   // 相机：自动环绕 + 手势拖拽（横向转角、纵向抬升），松手静置片刻后恢复自动巡航
   let raf = null
   let t = 0 // 方位角
-  let elev = 9 // 相机高度
-  const R = 23
+  // 俯角 = atan((elev - target.y) / R)。原来 R=23/elev=9 只有 18.7°，几乎是平视，
+  // 看着像站在街上而不是俯看模型 —— 微缩感需要 30~40°。
+  let elev = 19 // → 约 33°
+  const R = 26
   let dragging = false
   let lastX = 0
   let lastY = 0
@@ -544,7 +549,7 @@ export function createScene(canvas, opts) {
   function onTouchMove(x, y) {
     if (!dragging) return
     t -= (x - lastX) * 0.008
-    elev = Math.max(3.5, Math.min(16, elev - (y - lastY) * 0.03))
+    elev = Math.max(9, Math.min(30, elev - (y - lastY) * 0.06))
     lastX = x
     lastY = y
   }

@@ -37,7 +37,7 @@ function orientalPearl() {
   const glow = []
   const steel = std(0xc8ccd6, { metalness: 0.35, roughness: 0.45 })
   const steelDk = std(0x9aa1ac, { metalness: 0.25, roughness: 0.6 })
-  const pearl = glowMat(0xc9366b, 0xff4f92)
+  const pearl = glowMat(0xa83a5a, 0xd94f7a) // 原来的艳粉在真机上过于玩具化
   glow.push(pearl)
 
   const base = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.25, 0.3, 20), steelDk)
@@ -45,22 +45,22 @@ function orientalPearl() {
   g.add(base)
   for (let i = 0; i < 3; i++) {
     const th = (i / 3) * Math.PI * 2 + Math.PI / 6
-    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.24, 2.9, 10), steel)
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.18, 2.9, 8), steel)
     leg.position.set(Math.cos(th) * 0.47, 1.5, Math.sin(th) * 0.47)
     leg.rotation.z = Math.cos(th) * 0.2
     leg.rotation.x = -Math.sin(th) * 0.2
     g.add(leg)
   }
-  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.2, 7.2, 14), steel)
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.15, 7.2, 12), steel)
   shaft.position.y = 5.2
   g.add(shaft)
-  const lower = new THREE.Mesh(new THREE.SphereGeometry(1.02, 24, 20), pearl)
+  const lower = new THREE.Mesh(new THREE.SphereGeometry(0.72, 20, 16), pearl)
   lower.position.y = 3.25
   g.add(lower)
-  const upper = new THREE.Mesh(new THREE.SphereGeometry(0.62, 20, 16), pearl)
+  const upper = new THREE.Mesh(new THREE.SphereGeometry(0.45, 16, 12), pearl)
   upper.position.y = 6.9
   g.add(upper)
-  const bead = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 12), pearl)
+  const bead = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 10), pearl)
   bead.position.y = 8.6
   g.add(bead)
   const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.12, 2.6, 8), steelDk)

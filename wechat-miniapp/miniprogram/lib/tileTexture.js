@@ -21,7 +21,7 @@ export function darken(hex, f) {
  */
 export function makeWindowTexture(frameHex, paneHex, litHex) {
   const S = 64
-  const CELL = 8
+  const CELL = 16 // 每遍 4×4 个窗；8px 时是 8×8，远看糊成一片
   const map = new Uint8Array(S * S * 4)
   const emi = new Uint8Array(S * S * 4)
   const fr = (frameHex >> 16) & 255
@@ -37,7 +37,7 @@ export function makeWindowTexture(frameHex, paneHex, litHex) {
     for (let x = 0; x < S; x++) {
       const cx = x % CELL
       const cy = y % CELL
-      const inPane = cx >= 1 && cx <= CELL - 2 && cy >= 1 && cy <= CELL - 3
+      const inPane = cx >= 2 && cx <= CELL - 3 && cy >= 2 && cy <= CELL - 5
       const i = (y * S + x) * 4
       map[i] = inPane ? pr : fr
       map[i + 1] = inPane ? pg : fg
