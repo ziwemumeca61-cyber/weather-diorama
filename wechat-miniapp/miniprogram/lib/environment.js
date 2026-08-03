@@ -193,29 +193,47 @@ function makeCloudBase(group) {
   const cloudGroup = new THREE.Group()
   group.add(cloudGroup)
   const texture = makePuffTexture()
-  const cloudMat = new THREE.SpriteMaterial({
-    map: texture,
+  const cloudMat = new THREE.MeshStandardMaterial({
     color: 0xf2f6fd,
+    roughness: 1,
+    metalness: 0,
     transparent: true,
-    opacity: 0.9,
+    opacity: 0.94,
     depthWrite: false,
     fog: false,
   })
-  const shadowMat = new THREE.SpriteMaterial({
-    map: texture,
+  const shadowMat = new THREE.MeshStandardMaterial({
     color: 0xaebaca,
+    roughness: 1,
+    metalness: 0,
     transparent: true,
-    opacity: 0.18,
+    opacity: 0.48,
+    depthWrite: false,
+    fog: false,
+  })
+  const haloMat = new THREE.SpriteMaterial({
+    map: texture,
+    color: 0xf6f9fe,
+    transparent: true,
+    opacity: 0.22,
     depthWrite: false,
     fog: false,
   })
   const rand = mulberry32(9127)
   const slabHalf = CITY.trayHalf + 0.8
-  const addPuff = (material, x, y, z, size, flatten) => {
-    const puff = new THREE.Sprite(material)
-    puff.position.set(x, y, z)
-    puff.scale.set(size * (1.08 + rand() * 0.18), size * flatten, 1)
-    cloudGroup.add(puff)
+  const bodyPuffs = []
+  const shadowPuffs = []
+  const haloPuffs = []
+  const addHalo = (puff) => haloPuffs.push(puff)
+  const addPuff = (list, x, y, z, size, flatten) => {
+    list.push({
+      x,
+      y,
+      z,
+      sx: size * (1.05 + rand() * 0.16),
+      sy: size * flatten,
+      sz: size * (0.9 + rand() * 0.18),
+    })
   }
 
   // A soft top blanket keeps the underside of the diorama rounded instead of flat.
@@ -224,28 +242,75 @@ function makeCloudBase(group) {
     for (let iz = 0; iz < grid; iz++) {
       const gx = (ix / (grid - 1) - 0.5) * 2 * slabHalf * 0.92
       const gz = (iz / (grid - 1) - 0.5) * 2 * slabHalf * 0.92
-      const size = 3.2 + rand() * 2.0
-      addPuff(cloudMat, gx + (rand() - 0.5) * 1.8, -0.55 - size * 0.42 - rand() * 0.3, gz + (rand() - 0.5) * 1.8, size, 0.54)
+      const size = 3.0 + rand() * 1.9
+      const puff = {
+        x: gx + (rand() - 0.5) * 1.8,
+        y: -0.55 - size * 0.45 - rand() * 0.24,
+        z: gz + (rand() - 0.5) * 1.8,
+        sx: size * (1.05 + rand() * 0.16),
+        sy: size * (0.4 + rand() * 0.1),
+        sz: size * (0.9 + rand() * 0.18),
+      }
+      bodyPuffs.push(puff)
+      if ((ix + iz) % 2 === 0) addHalo(puff)
     }
   }
 
   // Uneven rim billows create the soft silhouette visible around the tray edge.
-  for (let i = 0; i < 16; i++) {
-    const angle = (i / 16) * Math.PI * 2 + rand() * 0.3
+  for (let i = 0; i < 18; i++) {
+    const angle = (i / 18) * Math.PI * 2 + rand() * 0.3
     const radius = slabHalf * (0.9 + rand() * 0.1)
-    const size = 2.7 + rand() * 1.5
-    addPuff(cloudMat, Math.cos(angle) * radius, -0.65 - size * 0.42 - rand() * 0.5, Math.sin(angle) * radius, size, 0.58)
+    const size = 2.6 + rand() * 1.5
+    const puff = {
+      x: Math.cos(angle) * radius,
+      y: -0.65 - size * 0.43 - rand() * 0.45,
+      z: Math.sin(angle) * radius,
+      sx: size * (1.05 + rand() * 0.16),
+      sy: size * (0.44 + rand() * 0.1),
+      sz: size * (0.9 + rand() * 0.18),
+    }
+    bodyPuffs.push(puff)
+    addHalo(puff)
   }
 
   // Cooler, lower puffs add depth without turning the whole cloud into a solid blob.
-  for (let i = 0; i < 18; i++) {
+  for (let i = 0; i < 24; i++) {
     const angle = rand() * Math.PI * 2
     const t = rand()
     const radius = (1 - t * 0.82) * slabHalf * 0.62
     const size = 1.8 + (1 - t) * 2.0
-    addPuff(shadowMat, Math.cos(angle) * radius, -2.7 - t * 2.1, Math.sin(angle) * radius, size, 0.62)
+    addPuff(shadowPuffs, Math.cos(angle) * radius, -2.6 - t * 2.2, Math.sin(angle) * radius, size, 0.52 + rand() * 0.12)
   }
-  return { group: cloudGroup, materials: [cloudMat, shadowMat], texture }
+
+  const cloudGeometry = new THREE.SphereGeometry(1, 14, 10)
+  const makeInstances = (material, list) => {
+    const mesh = new THREE.InstancedMesh(cloudGeometry, material, list.length)
+    const matrix = new THREE.Matrix4()
+    const position = new THREE.Vector3()
+    const quaternion = new THREE.Quaternion()
+    const scale = new THREE.Vector3()
+    list.forEach((puff, i) => {
+      position.set(puff.x, puff.y, puff.z)
+      scale.set(puff.sx, puff.sy, puff.sz)
+      matrix.compose(position, quaternion, scale)
+      mesh.setMatrixAt(i, matrix)
+    })
+    mesh.instanceMatrix.needsUpdate = true
+    mesh.frustumCulled = false
+    cloudGroup.add(mesh)
+    return mesh
+  }
+  makeInstances(cloudMat, bodyPuffs)
+  makeInstances(shadowMat, shadowPuffs)
+
+  haloPuffs.forEach((data) => {
+    const sprite = new THREE.Sprite(haloMat)
+    sprite.position.set(data.x, data.y, data.z)
+    sprite.scale.set(data.sx * 1.18, data.sy * 1.1, 1)
+    sprite.frustumCulled = false
+    cloudGroup.add(sprite)
+  })
+  return { group: cloudGroup, materials: [cloudMat, shadowMat, haloMat], texture }
 }
 
 function makeWater(group, water, flow, foam) {

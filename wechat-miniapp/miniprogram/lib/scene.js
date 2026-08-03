@@ -430,26 +430,90 @@ export function createScene(canvas, opts) {
   let elevation = 18
   let radius = 31
   let dragging = false
-  let lastX = 0
-  let lastY = 0
-  let idleUntil = 0
+  let userInteracted = false
+  let lastTouches = []
+  let lastCenter = null
+  let lastDistance = 0
   const now = () => (Date.now ? Date.now() : new Date().getTime())
-  function onTouchStart(x, y) {
+
+  function normalizeTouches(value, y) {
+    if (Array.isArray(value)) {
+      return value.map((point) => ({
+        x: Number(point && point.x != null ? point.x : point && point.clientX) || 0,
+        y: Number(point && point.y != null ? point.y : point && point.clientY) || 0,
+      }))
+    }
+    if (value && typeof value === 'object' && value.touches) return normalizeTouches(value.touches)
+    if (value == null) return []
+    return [{ x: Number(value) || 0, y: Number(y) || 0 }]
+  }
+
+  function touchCenter(points) {
+    if (!points.length) return { x: 0, y: 0 }
+    let x = 0
+    let y = 0
+    points.forEach((point) => {
+      x += point.x
+      y += point.y
+    })
+    return { x: x / points.length, y: y / points.length }
+  }
+
+  function touchDistance(points) {
+    if (points.length < 2) return 0
+    const dx = points[0].x - points[1].x
+    const dy = points[0].y - points[1].y
+    return Math.sqrt(dx * dx + dy * dy)
+  }
+
+  function onTouchStart(value, y) {
+    const points = normalizeTouches(value, y)
+    if (!points.length) return
+    userInteracted = true
     dragging = true
-    lastX = x
-    lastY = y
-    idleUntil = now() + 999999
+    lastTouches = points
+    lastCenter = touchCenter(points)
+    lastDistance = touchDistance(points)
   }
-  function onTouchMove(x, y) {
-    if (!dragging) return
-    angle -= (x - lastX) * 0.008
-    elevation = Math.max(4, Math.min(30, elevation - (y - lastY) * 0.06))
-    lastX = x
-    lastY = y
+
+  function onTouchMove(value, y) {
+    const points = normalizeTouches(value, y)
+    if (!dragging || !points.length) return
+    const center = touchCenter(points)
+    const previousCenter = lastCenter || center
+
+    if (points.length >= 2 && lastTouches.length >= 2) {
+      // 双指中心仍可旋转和俯仰，捏合距离只负责缩放，操作更接近 3D 地图。
+      angle -= (center.x - previousCenter.x) * 0.007
+      elevation = Math.max(5, Math.min(34, elevation - (center.y - previousCenter.y) * 0.05))
+      const distance = touchDistance(points)
+      if (distance > 1 && lastDistance > 1) {
+        radius = Math.max(16, Math.min(48, radius * lastDistance / distance))
+      }
+      lastDistance = distance
+    } else if (lastTouches.length) {
+      angle -= (points[0].x - lastTouches[0].x) * 0.008
+      elevation = Math.max(5, Math.min(34, elevation - (points[0].y - lastTouches[0].y) * 0.06))
+      lastDistance = touchDistance(points)
+    }
+
+    lastTouches = points
+    lastCenter = center
   }
-  function onTouchEnd() {
+
+  function onTouchEnd(value) {
+    const points = normalizeTouches(value)
+    if (points.length) {
+      // 一根手指抬起后，保留另一根手指的连续拖动状态。
+      lastTouches = points
+      lastCenter = touchCenter(points)
+      lastDistance = touchDistance(points)
+      return
+    }
     dragging = false
-    idleUntil = now() + 2600
+    lastTouches = []
+    lastCenter = null
+    lastDistance = 0
   }
 
   let raf = null
@@ -460,7 +524,7 @@ export function createScene(canvas, opts) {
     const dt = Math.min(0.05, Math.max(0.001, (stamp - lastFrame) * 0.001))
     const t = (stamp - started) * 0.001
     lastFrame = stamp
-    if (!dragging && stamp > idleUntil) angle += dt * 0.042
+    if (!dragging && !userInteracted) angle += dt * 0.042
     camera.position.set(Math.cos(angle) * radius, elevation, Math.sin(angle) * radius)
     camera.lookAt(cameraTarget)
 
