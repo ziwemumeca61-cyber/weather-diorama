@@ -214,30 +214,40 @@ function makeCloudBase(group) {
   }
 
   // Web CloudBase 的同款柔边 Sprite；底盘下增加多层疏密错落的云团，避免边缘露空。
-  const grid = 6
+  const grid = 8
   for (let ix = 0; ix < grid; ix++) {
     for (let iz = 0; iz < grid; iz++) {
-      const gx = (ix / (grid - 1) - 0.5) * 2 * slabHalf * 0.92
-      const gz = (iz / (grid - 1) - 0.5) * 2 * slabHalf * 0.92
+      const gx = (ix / (grid - 1) - 0.5) * 2 * slabHalf * 0.95
+      const gz = (iz / (grid - 1) - 0.5) * 2 * slabHalf * 0.95
       const size = 3.4 + rand() * 2.2
       addPuff(gx + (rand() - 0.5) * 2, -0.55 - size * 0.42 - rand() * 0.3, gz + (rand() - 0.5) * 2, size)
     }
   }
 
-  const ring = 14
+  const ring = 22
   for (let i = 0; i < ring; i++) {
     const angle = (i / ring) * Math.PI * 2 + rand() * 0.3
-    const radius = slabHalf * (0.9 + rand() * 0.1)
+    const radius = slabHalf * (0.92 + rand() * 0.13)
     const size = 2.8 + rand() * 1.6
     addPuff(Math.cos(angle) * radius, -0.55 - size * 0.42 - 0.3 - rand() * 0.6, Math.sin(angle) * radius, size)
   }
 
-  for (let i = 0; i < 18; i++) {
+  // 下层圆团增加密度，让底盘从斜视和仰视角度都能看到完整云托。
+  for (let i = 0; i < 28; i++) {
     const angle = rand() * Math.PI * 2
     const t = rand()
-    const radius = (1 - t * 0.85) * slabHalf * 0.6
-    const size = 1.8 + (1 - t) * 2.2
-    addPuff(Math.cos(angle) * radius, -2.8 - t * 2, Math.sin(angle) * radius, size)
+    const radius = (1 - t * 0.82) * slabHalf * 0.68
+    const size = 1.8 + (1 - t) * 2.4
+    addPuff(Math.cos(angle) * radius, -2.65 - t * 2.1, Math.sin(angle) * radius, size)
+  }
+
+  // 底盘外沿再加一圈较小的云，补齐四角和边缘的露空。
+  const lowerRing = 14
+  for (let i = 0; i < lowerRing; i++) {
+    const angle = (i / lowerRing) * Math.PI * 2 + rand() * 0.25
+    const radius = slabHalf * (1.02 + rand() * 0.14)
+    const size = 2.1 + rand() * 1.7
+    addPuff(Math.cos(angle) * radius, -1.65 - rand() * 1.45, Math.sin(angle) * radius, size)
   }
   return { group: cloudGroup, materials: [material], texture }
 }
