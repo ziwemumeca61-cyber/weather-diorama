@@ -1,4 +1,4 @@
-miniprogram/node_modules/
-miniprogram/miniprogram_npm/
-cloudfunctions/**/node_modules/
+# 个人本地配置：AppID、本机编译选项等。
+# 微信开发者工具会优先读取这个文件，且它不入库，
+# 因此你填的 AppID 不会被我的提交覆盖，也不会出现在这个公开仓库里。
 project.private.config.json

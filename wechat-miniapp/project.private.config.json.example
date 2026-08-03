@@ -1,0 +1,6 @@
+{
+  "$schema": "https://developers.weixin.qq.com/miniprogram/dev/devtools/projectconfig.html",
+  "projectname": "3d-weather-diorama",
+  "setting": {},
+  "appid": "在这里填你自己的 AppID"
+}
