@@ -262,8 +262,9 @@ function modernTower(opts) {
   opts = opts || {}
   const g = new THREE.Group()
   const glow = []
-  const body = glowMat(opts.color || 0x5f86ad, 0xffcf7a)
+  const body = curtainWall(opts.color || 0x5f86ad, 1.8, 8)
   glow.push(body)
+  const trim = std(0xd7e0e8, { metalness: 0.55, roughness: 0.32 })
   const seg = opts.tapered !== false ? 5 : 1
   let y = 0
   let r = 0.85
@@ -273,9 +274,15 @@ function modernTower(opts) {
     const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, r, h, 6), body)
     m.position.y = y + h / 2
     g.add(m)
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(r * 1.01, 0.035, 6, 18), trim)
+    ring.position.y = y + h
+    g.add(ring)
     y += h
     r = rt
   }
+  const crown = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.08, r * 1.08, 0.12, 6), trim)
+  crown.position.y = y + 0.06
+  g.add(crown)
   const spire = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.1, 2.0, 8), std(0xcfd6df, { metalness: 0.5 }))
   spire.position.y = y + 1.0
   g.add(spire)
@@ -1926,17 +1933,32 @@ function slabTower(opts) {
   const glow = []
   const H = opts.h || 8.5
   const w = opts.w || 0.95
-  const mat = glowMat(opts.color || 0x8fb0cc, 0xffd9a0)
+  const mat = curtainWall(opts.color || 0x8fb0cc, 2.2, Math.max(4, Math.round(H * 1.4)))
   glow.push(mat)
+  const trim = std(0xd7e0e8, { metalness: 0.55, roughness: 0.32 })
+  const base = new THREE.Mesh(new THREE.BoxGeometry(w * 1.65, 0.28, w * 1.35), std(shade(opts.color || 0x8fb0cc, -0.24), { metalness: 0.35, roughness: 0.62 }))
+  base.position.y = 0.14
+  g.add(base)
   const seg = 5
   let y = 0
   for (let i = 0; i < seg; i++) {
     const f = 1 - (i / seg) * (opts.taper == null ? 0.32 : opts.taper)
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w * f, H / seg, w * f * 0.8), mat)
-    m.position.y = y + H / seg / 2
+    const h = H / seg
+    const depth = w * f * 0.8
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w * f, h, depth), mat)
+    m.position.y = y + h / 2 + 0.28
     g.add(m)
-    y += H / seg
+    const band = new THREE.Mesh(new THREE.BoxGeometry(w * f * 1.06, 0.055, depth * 1.06), trim)
+    band.position.y = y + h + 0.28
+    g.add(band)
+    const mullion = new THREE.Mesh(new THREE.BoxGeometry(0.035, h * 0.9, 0.035), trim)
+    mullion.position.set(w * f * 0.5, y + h / 2 + 0.28, depth * 0.5)
+    g.add(mullion)
+    y += h
   }
+  const crown = new THREE.Mesh(new THREE.BoxGeometry(w * 0.68, 0.14, w * 0.56), trim)
+  crown.position.y = H + 0.35
+  g.add(crown)
   const spire = new THREE.Mesh(
     new THREE.CylinderGeometry(0.02, 0.07, opts.spire || 1.4, 6),
     std(0xcfd6df, { metalness: 0.6 }),
@@ -1950,8 +1972,9 @@ function slabTower(opts) {
 function shanghaiTower() {
   const g = new THREE.Group()
   const glow = []
-  const mat = glowMat(0x9fc2d8, 0xbfe4ff)
+  const mat = curtainWall(0x9fc2d8, 1.6, 14)
   glow.push(mat)
+  const trim = std(0xe2ebf2, { metalness: 0.62, roughness: 0.28 })
   const SEG = 9
   const H = 12.5
   let r = 0.62
@@ -1961,6 +1984,9 @@ function shanghaiTower() {
     m.position.y = i * h + h / 2
     m.rotation.y = i * 0.16 // 逐段扭转，形成螺旋
     g.add(m)
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(r * 0.96, 0.028, 6, 16), trim)
+    ring.position.y = i * h + h
+    g.add(ring)
     r *= 0.93
   }
   const cap = new THREE.Mesh(new THREE.ConeGeometry(r, 0.9, 5), mat)
@@ -1973,7 +1999,7 @@ function shanghaiTower() {
 function jinMao() {
   const g = new THREE.Group()
   const glow = []
-  const mat = glowMat(0xbfc8d2, 0xffd9a0)
+  const mat = curtainWall(0xbfc8d2, 1.4, 10)
   glow.push(mat)
   const trim = std(0x8f98a4, { metalness: 0.4, roughness: 0.45 })
   let y = 0
@@ -2001,7 +2027,7 @@ function jinMao() {
 function bottleOpener() {
   const g = new THREE.Group()
   const glow = []
-  const mat = glowMat(0x8aa6bd, 0xbfe4ff)
+  const mat = curtainWall(0x8aa6bd, 1.6, 12)
   glow.push(mat)
   const H = 11.0
   const body = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.92, H, 4), mat)
@@ -2009,6 +2035,13 @@ function bottleOpener() {
   body.rotation.y = Math.PI / 4
   body.scale.z = 0.42
   g.add(body)
+  const floorTrim = std(0xd7e0e8, { metalness: 0.55, roughness: 0.32 })
+  for (let i = 1; i < 5; i++) {
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.42 + (0.92 - 0.42) * (1 - i / 5), 0.026, 5, 4), floorTrim)
+    band.rotation.x = Math.PI / 2
+    band.position.y = i * (H / 5)
+    g.add(band)
+  }
   // 顶部的「开瓶口」：用四根边框围出一个方洞
   const fr = std(0x7d8b99, { metalness: 0.45, roughness: 0.4 })
   const hy = H - 0.75

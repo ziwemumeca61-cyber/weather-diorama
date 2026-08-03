@@ -190,6 +190,8 @@ function makePuffTexture() {
 }
 
 function makeCloudBase(group) {
+  const cloudGroup = new THREE.Group()
+  group.add(cloudGroup)
   const texture = makePuffTexture()
   const cloudMat = new THREE.SpriteMaterial({
     map: texture,
@@ -213,7 +215,7 @@ function makeCloudBase(group) {
     const puff = new THREE.Sprite(material)
     puff.position.set(x, y, z)
     puff.scale.set(size * (1.08 + rand() * 0.18), size * flatten, 1)
-    group.add(puff)
+    cloudGroup.add(puff)
   }
 
   // A soft top blanket keeps the underside of the diorama rounded instead of flat.
@@ -243,7 +245,7 @@ function makeCloudBase(group) {
     const size = 1.8 + (1 - t) * 2.0
     addPuff(shadowMat, Math.cos(angle) * radius, -2.7 - t * 2.1, Math.sin(angle) * radius, size, 0.62)
   }
-  return { materials: [cloudMat, shadowMat], texture }
+  return { group: cloudGroup, materials: [cloudMat, shadowMat], texture }
 }
 
 function makeWater(group, water, flow, foam) {
@@ -461,6 +463,9 @@ export function createEnvironment(water) {
   }
 
   function step(t, dt) {
+    clouds.group.position.x = Math.sin(t * 0.018) * 0.32
+    clouds.group.position.z = Math.cos(t * 0.014) * 0.18
+    clouds.group.scale.y = 1 + Math.sin(t * 0.11) * 0.018
     flow.offset.x -= dt * (water.lake ? 0.009 : 0.035)
     if (water.lake) flow.offset.y += dt * 0.004
     foam.offset.x -= dt * 0.02
