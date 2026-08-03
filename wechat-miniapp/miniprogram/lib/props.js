@@ -4,6 +4,10 @@
 import * as THREE from './three.core.js'
 import { mulberry32, hashName, streetLines, GRID } from './cityData'
 
+// 河道参数集中在这里导出：scene.js 生成楼群时要按同样的范围避让，
+// 之前两个文件各写一份 z=6.0，改一处就会不同步。
+export const RIVER = { z: 4.2, w: 2.6, clear: 1.75 }
+
 const ROAD_Y = 0.012 // 略高于托盘面，避免 z-fighting
 const HALF = 7.6 // 行人/车走到这个范围外就回绕
 
@@ -21,9 +25,10 @@ export function createProps(cityName, opts) {
   const glow = [] // 夜里点亮的材质（路灯、车灯）
   const lines = streetLines()
 
-  // 河流在城市后侧横穿；有河时最靠后的那条街让位给河
-  const riverZ = 6.0
-  const riverW = 2.6
+  // 河穿城而过（原来放在 z=6.0 太靠边，那一侧几乎没楼，
+  // 看着像「托盘边上的一汪水」而不是河）
+  const riverZ = RIVER.z
+  const riverW = RIVER.w
   const inRiver = (z) => withRiver && Math.abs(z - riverZ) < riverW / 2 + 0.35
 
   /* ---------------- 路面 ---------------- */
@@ -71,11 +76,11 @@ export function createProps(cityName, opts) {
     const water = new THREE.Mesh(
       new THREE.BoxGeometry(roadLen + 3, 0.14, riverW),
       new THREE.MeshStandardMaterial({
-        color: 0x4a86a8,
-        roughness: 0.18,
-        metalness: 0.45,
+        color: 0x74aecb, // 原 0x4a86a8 太深，在浅色托盘上像挖了个洞
+        roughness: 0.34,
+        metalness: 0.2,
         transparent: true,
-        opacity: 0.92,
+        opacity: 0.9,
       }),
     )
     water.position.set(0, 0.02, riverZ)
