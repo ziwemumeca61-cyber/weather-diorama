@@ -1,129 +1,114 @@
-// 天空元素：夜里的星空穹顶与月亮、晴天的太阳。
-// 全部用 MeshBasicMaterial / PointsMaterial 且关掉 fog，
-// 否则会被场景雾吃掉（它们在 70 单位外，远超雾的 near/far）。
+// Web 端 NightSky.tsx / Sun.tsx 的小程序场景版本。
 import * as THREE from './three.core.js'
+import { mulberry32 } from './cityData'
 
-export function createSky() {
-  const group = new THREE.Group()
-
-  /* 星空穹顶 */
-  const N = 320
-  const R = 78
-  const pos = new Float32Array(N * 3)
-  for (let i = 0; i < N; i++) {
-    // 只铺上半球，地平线以下看不到
-    const u = Math.random()
-    const v = Math.random() * 0.82 + 0.06
-    const th = u * Math.PI * 2
-    const ph = Math.acos(1 - v)
-    pos[i * 3] = R * Math.sin(ph) * Math.cos(th)
-    pos[i * 3 + 1] = R * Math.cos(ph) * 0.9 + 6
-    pos[i * 3 + 2] = R * Math.sin(ph) * Math.sin(th)
+function starLayer(count, radius, seed, color, size) {
+  const rand = mulberry32(seed)
+  const positions = new Float32Array(count * 3)
+  for (let i = 0; i < count; i++) {
+    const u = rand()
+    const theta = rand() * Math.PI * 2
+    const y = 0.12 + u * 0.88
+    const r = Math.sqrt(1 - y * y)
+    positions[i * 3] = Math.cos(theta) * r * radius
+    positions[i * 3 + 1] = y * radius
+    positions[i * 3 + 2] = Math.sin(theta) * r * radius
   }
-  const starGeo = new THREE.BufferGeometry()
-  starGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3))
-  const starMat = new THREE.PointsMaterial({
-    color: 0xffffff,
-    size: 0.62,
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+  const material = new THREE.PointsMaterial({
+    color,
+    size,
     sizeAttenuation: true,
     transparent: true,
     opacity: 0,
     depthWrite: false,
     fog: false,
   })
-  const stars = new THREE.Points(starGeo, starMat)
-  stars.visible = false
-  group.add(stars)
+  const points = new THREE.Points(geometry, material)
+  points.visible = false
+  return { points, geometry, material }
+}
 
-  /* 月亮 */
-  const moonMat = new THREE.MeshBasicMaterial({
-    color: 0xf2f0e4,
-    transparent: true,
-    opacity: 0,
-    fog: false,
-    depthWrite: false,
-  })
-  const moon = new THREE.Mesh(new THREE.SphereGeometry(2.4, 18, 14), moonMat)
-  moon.position.set(-34, 30, -44)
-  moon.visible = false
-  group.add(moon)
-  // 月晕
-  const haloMat = new THREE.MeshBasicMaterial({
-    color: 0xbfd0e8,
-    transparent: true,
-    opacity: 0,
-    fog: false,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-  })
-  const halo = new THREE.Mesh(new THREE.CircleGeometry(4.4, 24), haloMat)
-  halo.position.copy(moon.position)
-  halo.visible = false
-  group.add(halo)
+export function createSky() {
+  const group = new THREE.Group()
+  const stars = [
+    starLayer(520, 44, 9871, 0xeaf1ff, 0.34),
+    starLayer(380, 46.2, 4412, 0xc8d6ff, 0.2),
+    starLayer(110, 43.1, 2277, 0xffffff, 0.5),
+  ]
+  stars.forEach((layer) => group.add(layer.points))
 
-  /* 太阳（晴天可见） */
-  const sunMat = new THREE.MeshBasicMaterial({
-    color: 0xfff3c8,
+  const moonGroup = new THREE.Group()
+  const moonMat = new THREE.MeshBasicMaterial({ color: 0xf4f1e2, transparent: true, opacity: 0, depthWrite: false, fog: false })
+  const moonGlowMat = new THREE.MeshBasicMaterial({
+    color: 0xcfe0ff,
     transparent: true,
     opacity: 0,
-    fog: false,
     depthWrite: false,
-  })
-  const sunDisk = new THREE.Mesh(new THREE.SphereGeometry(3.0, 18, 14), sunMat)
-  sunDisk.position.set(40, 46, 26)
-  sunDisk.visible = false
-  group.add(sunDisk)
-  const glareMat = new THREE.MeshBasicMaterial({
-    color: 0xffe9a0,
-    transparent: true,
-    opacity: 0,
     fog: false,
-    depthWrite: false,
-    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending,
   })
-  const glare = new THREE.Mesh(new THREE.CircleGeometry(6.2, 24), glareMat)
-  glare.position.copy(sunDisk.position)
-  glare.visible = false
-  group.add(glare)
+  const moon = new THREE.Mesh(new THREE.SphereGeometry(1.35, 22, 18), moonMat)
+  const moonGlow = new THREE.Mesh(new THREE.SphereGeometry(2.9, 20, 16), moonGlowMat)
+  moonGroup.add(moon, moonGlow)
+  moonGroup.visible = false
+  group.add(moonGroup)
 
-  /**
-   * nf   : 夜间因子 0..1
-   * clear: 是否晴/多云（阴雨雪雾天不该看到太阳）
-   * cam   : 相机，用来让月晕/日晕始终正对镜头
-   */
-  function update(nf, clear, cam, t) {
-    // 星与月
-    const nightA = Math.max(0, (nf - 0.25) / 0.75)
-    stars.visible = nightA > 0.02
-    moon.visible = halo.visible = nightA > 0.02
-    if (stars.visible) {
-      starMat.opacity = nightA * 0.95
-      // 极缓慢转动，夜空有生气
-      group.rotation.y = t * 0.004
-      moonMat.opacity = nightA
-      haloMat.opacity = nightA * 0.22
-      halo.lookAt(cam.position)
+  const sunGroup = new THREE.Group()
+  sunGroup.position.set(-26, 15, 2)
+  const sunMat = new THREE.MeshBasicMaterial({ color: 0xfff4c4, transparent: true, opacity: 0, fog: false })
+  const haloMat = new THREE.MeshBasicMaterial({ color: 0xffd873, transparent: true, opacity: 0, depthWrite: false, fog: false })
+  const sun = new THREE.Mesh(new THREE.SphereGeometry(3.6, 24, 18), sunMat)
+  const halo = new THREE.Mesh(new THREE.SphereGeometry(5.8, 22, 16), haloMat)
+  sunGroup.add(halo, sun)
+  sunGroup.visible = false
+  group.add(sunGroup)
+
+  const forward = new THREE.Vector3()
+  const right = new THREE.Vector3()
+  const up = new THREE.Vector3(0, 1, 0)
+  const clearByKind = { clear: 1, cloudy: 0.4, overcast: 0, fog: 0, rain: 0, snow: 0, thunder: 0 }
+
+  function update(nightFactor, weather, camera, t) {
+    const kind = typeof weather === 'string' ? weather : weather ? 'clear' : 'overcast'
+    const clearness = clearByKind[kind] == null ? 1 : clearByKind[kind]
+    const nf = Math.max(0, Math.min(1, nightFactor)) * clearness
+    const opacities = [
+      nf * (0.62 + 0.38 * Math.sin(t * 1.1)),
+      nf * (0.5 + 0.35 * Math.sin(t * 0.7 + 1.7)),
+      nf * (0.55 + 0.45 * Math.abs(Math.sin(t * 2.3 + 0.6))),
+    ]
+    stars.forEach((layer, i) => {
+      layer.material.opacity = Math.max(0, opacities[i])
+      layer.points.visible = layer.material.opacity > 0.01
+    })
+    moonGroup.visible = nf > 0.01
+    moonMat.opacity = nf
+    moonGlowMat.opacity = nf * 0.28
+    if (moonGroup.visible) {
+      camera.getWorldDirection(forward)
+      right.crossVectors(forward, up).normalize()
+      moonGroup.position.copy(camera.position).addScaledVector(forward, 46).addScaledVector(right, 12).addScaledVector(up, 11)
     }
-    // 日
-    const dayA = Math.max(0, 1 - nf * 1.6) * (clear ? 1 : 0)
-    sunDisk.visible = glare.visible = dayA > 0.02
-    if (sunDisk.visible) {
-      sunMat.opacity = dayA
-      glareMat.opacity = dayA * 0.3
-      glare.lookAt(cam.position)
-    }
+
+    const day = Math.max(0, 1 - nightFactor * 1.6) * (kind === 'clear' ? 1 : 0)
+    sunGroup.visible = day > 0.01
+    sunMat.opacity = day
+    haloMat.opacity = day * 0.3
+    halo.scale.setScalar(1 + Math.sin(t * 0.8) * 0.04)
   }
 
   function dispose() {
-    ;[starGeo, moon.geometry, halo.geometry, sunDisk.geometry, glare.geometry].forEach((g) => {
-      try {
-        g.dispose()
-      } catch (e) {}
+    stars.forEach((layer) => {
+      try { layer.geometry.dispose() } catch (e) {}
+      try { layer.material.dispose() } catch (e) {}
     })
-    ;[starMat, moonMat, haloMat, sunMat, glareMat].forEach((m) => {
-      try {
-        m.dispose()
-      } catch (e) {}
+    ;[moon.geometry, moonGlow.geometry, sun.geometry, halo.geometry].forEach((geometry) => {
+      try { geometry.dispose() } catch (e) {}
+    })
+    ;[moonMat, moonGlowMat, sunMat, haloMat].forEach((material) => {
+      try { material.dispose() } catch (e) {}
     })
   }
 
