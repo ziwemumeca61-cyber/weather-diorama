@@ -381,7 +381,7 @@ export function createScene(canvas, opts) {
       const center = bounds.getCenter(new THREE.Vector3())
       const size = bounds.getSize(new THREE.Vector3())
       const radius = Math.min(5.8, Math.max(1.7, Math.hypot(size.x, size.z) * 0.38 + 0.7))
-      clearZones = [{ x: center.x, z: center.z, r }]
+      clearZones = [{ x: center.x, z: center.z, r: radius }]
       calmZones = [{ x: center.x, z: center.z, r: Math.min(8.5, radius + 3), maxHeight: 2.5 }]
       built.group.traverse((object) => { if (object.isMesh) object.castShadow = true })
       landmark = built.group
