@@ -1,545 +1,439 @@
-// 小程序原生 Three.js 微缩城市场景（第一版：托盘 + 楼群 + 主塔 + 光照 + 自动环绕）。
-// 用 InstancedMesh 控制 draw call；setWeather() 切换天空/雾/背景色调。
-// 这是移植的起点，跑通后再逐步搬入 web 版的地标、粒子特效、昼夜灯光。
+// 微信小程序原生 Three.js 场景。构图和动态表现与 Web 端 scene/ 保持同源。
 import * as THREE from './three.core.js'
-import { generateCity, hashName } from './cityData'
-import { buildLandmark, hasOwnWater } from './landmarks'
-import { createProps, RIVER } from './props'
+import { CITY, generateCity, mulberry32 } from './cityData'
+import { createEnvironment } from './environment'
+import { buildLandmark } from './landmarks'
+import { createProps } from './props'
+import { profileForCity, inLake } from './sceneProfiles'
 import { createSky } from './sky'
 import { makeWindowTexture } from './tileTexture'
+import { createWeatherEffects } from './weatherEffects'
 
-/** 坡屋顶（人字顶）：底面 1×1，屋脊沿 X，高 1。用单位几何配合实例缩放。 */
-function makeGableGeo() {
-  const v = new Float32Array([
-    // 前坡
-    -0.5, 0, 0.5, 0.5, 0, 0.5, 0.5, 1, 0, -0.5, 0, 0.5, 0.5, 1, 0, -0.5, 1, 0,
-    // 后坡
-    0.5, 0, -0.5, -0.5, 0, -0.5, -0.5, 1, 0, 0.5, 0, -0.5, -0.5, 1, 0, 0.5, 1, 0,
-    // 两侧山墙
-    -0.5, 0, 0.5, -0.5, 1, 0, -0.5, 0, -0.5, 0.5, 0, -0.5, 0.5, 1, 0, 0.5, 0, 0.5,
-  ])
-  const g = new THREE.BufferGeometry()
-  g.setAttribute('position', new THREE.BufferAttribute(v, 3))
-  g.computeVertexNormals()
-  return g
+const WEATHER_LOOK = {
+  clear: { sun: 1, grey: 0, darken: 0 },
+  cloudy: { sun: 0.82, grey: 0.15, darken: 0.05 },
+  overcast: { sun: 0.4, grey: 0.5, darken: 0.18 },
+  fog: { sun: 0.5, grey: 0.55, darken: 0.1 },
+  rain: { sun: 0.42, grey: 0.45, darken: 0.28 },
+  snow: { sun: 0.72, grey: 0.35, darken: 0.05 },
+  thunder: { sun: 0.32, grey: 0.4, darken: 0.4 },
 }
-const GABLE_GEO = makeGableGeo()
-// 四坡顶：四棱锥，底面 1×1（半径 √2/2 且转 45° 后正好是单位方形）
-const HIP_GEO = new THREE.ConeGeometry(Math.SQRT2 / 2, 1, 4).rotateY(Math.PI / 4).translate(0, 0.5, 0)
 
-/** 楼身幕墙材质：窗格贴图 + 只有窗户会亮的自发光图 */
-function makeFacadeMat(rows) {
-  const tex = makeWindowTexture(0xffffff, 0xc4d2e2, 0xffd08a)
-  // 横向只铺 1 遍（贴图本身 4 列）→ 一个立面 4 个窗。
-  // 原来 repeat.x=2 配 8 列贴图 = 16 个窗，在 26 单位外糊成一片灰。
-  tex.map.repeat.set(1, rows)
-  tex.emissiveMap.repeat.set(1, rows)
+function makeGableGeometry() {
+  const positions = new Float32Array([
+    -0.5, 0, -0.5, -0.5, 0, 0.5, -0.5, 1, 0,
+    0.5, 0, -0.5, 0.5, 1, 0, 0.5, 0, 0.5,
+    -0.5, 0, -0.5, -0.5, 1, 0, 0.5, 1, 0,
+    -0.5, 0, -0.5, 0.5, 1, 0, 0.5, 0, -0.5,
+    -0.5, 0, 0.5, 0.5, 0, 0.5, 0.5, 1, 0,
+    -0.5, 0, 0.5, 0.5, 1, 0, -0.5, 1, 0,
+  ])
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+  geometry.computeVertexNormals()
+  return geometry
+}
+
+function makeFacadeMaterial(glass) {
+  const texture = glass
+    ? makeWindowTexture(0x9bacbc, 0x7792aa, 0xffcf7a)
+    : makeWindowTexture(0xe1ddd5, 0x9eabb6, 0xffcf7a)
+  texture.map.repeat.set(glass ? 1.4 : 1, glass ? 3.5 : 2.5)
+  texture.emissiveMap.repeat.copy(texture.map.repeat)
   return new THREE.MeshStandardMaterial({
-    map: tex.map,
-    emissive: new THREE.Color(0xffffff),
-    emissiveMap: tex.emissiveMap,
+    map: texture.map,
+    emissive: new THREE.Color(0xffcf7a),
+    emissiveMap: texture.emissiveMap,
     emissiveIntensity: 0,
-    roughness: 0.82,
-    metalness: 0.05,
+    roughness: glass ? 0.22 : 0.8,
+    metalness: glass ? 0.82 : 0.1,
   })
 }
 
-/** 释放材质及其引用的贴图（material.dispose() 不管贴图） */
-function disposeMat(m) {
-  if (!m) return
-  const maps = ['map', 'emissiveMap', 'bumpMap', 'normalMap']
-  for (let i = 0; i < maps.length; i++) {
-    const t = m[maps[i]]
-    if (t && t.dispose) {
-      try {
-        t.dispose()
-      } catch (e) {}
+function disposeTree(root) {
+  if (!root) return
+  const geometries = []
+  const materials = []
+  const textures = []
+  root.traverse((object) => {
+    if (!object.isMesh && !object.isPoints && !object.isLine && !object.isLineSegments) return
+    if (object.geometry && geometries.indexOf(object.geometry) === -1) {
+      geometries.push(object.geometry)
+      try { object.geometry.dispose() } catch (e) {}
     }
-  }
-  try {
-    m.dispose()
-  } catch (e) {}
+    const list = Array.isArray(object.material) ? object.material : [object.material]
+    list.forEach((material) => {
+      if (!material || materials.indexOf(material) !== -1) return
+      materials.push(material)
+      ;['map', 'emissiveMap', 'roughnessMap', 'normalMap', 'alphaMap'].forEach((key) => {
+        const texture = material[key]
+        if (texture && textures.indexOf(texture) === -1) {
+          textures.push(texture)
+          try { texture.dispose() } catch (e) {}
+        }
+      })
+      try { material.dispose() } catch (e) {}
+    })
+  })
 }
 
-const SKY = {
-  clear: 0x8fc0ea,
-  cloudy: 0xb3c0cc,
-  overcast: 0x8a94a0,
-  fog: 0xb6bcc2,
-  rain: 0x71797f,
-  snow: 0xcdd6e0,
-  thunder: 0x565b64,
+function addBuildingMesh(root, geometry, material, list) {
+  if (!list.length) return null
+  const mesh = new THREE.InstancedMesh(geometry, material, list.length)
+  mesh.castShadow = true
+  mesh.receiveShadow = true
+  const matrix = new THREE.Matrix4()
+  const position = new THREE.Vector3()
+  const quaternion = new THREE.Quaternion()
+  const scale = new THREE.Vector3()
+  const color = new THREE.Color()
+  list.forEach((building, i) => {
+    position.set(building.x, building.h / 2, building.z)
+    scale.set(building.w, building.h, building.d)
+    matrix.compose(position, quaternion, scale)
+    mesh.setMatrixAt(i, matrix)
+    mesh.setColorAt(i, color.set(building.color))
+  })
+  mesh.instanceMatrix.needsUpdate = true
+  if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
+  root.add(mesh)
+  return mesh
+}
+
+function buildSkyline(buildings) {
+  const root = new THREE.Group()
+  const box = new THREE.BoxGeometry(1, 1, 1)
+  const glass = buildings.filter((b) => b.core > 0.5)
+  const concrete = buildings.filter((b) => b.core <= 0.5)
+  const glassMat = makeFacadeMaterial(true)
+  const concreteMat = makeFacadeMaterial(false)
+  addBuildingMesh(root, box, glassMat, glass)
+  addBuildingMesh(root, box, concreteMat, concrete)
+
+  const matrix = new THREE.Matrix4()
+  const position = new THREE.Vector3()
+  const quaternion = new THREE.Quaternion()
+  const scale = new THREE.Vector3()
+  const color = new THREE.Color()
+  const roofPalette = [0xb06a4a, 0x9c5b40, 0x8a6f63, 0x6f7075]
+  const roofMat = new THREE.MeshStandardMaterial({ roughness: 0.85, metalness: 0.05 })
+
+  const hip = buildings.filter((b) => b.roof === 'hip')
+  if (hip.length) {
+    const geometry = new THREE.ConeGeometry(0.5, 1, 4)
+    const mesh = new THREE.InstancedMesh(geometry, roofMat, hip.length)
+    mesh.castShadow = true
+    hip.forEach((b, i) => {
+      const capH = 0.2 + Math.min(b.w, b.d) * 0.22
+      position.set(b.x, b.h + capH / 2, b.z)
+      quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 4)
+      scale.set(b.w * 1.08, capH, b.d * 1.08)
+      matrix.compose(position, quaternion, scale)
+      mesh.setMatrixAt(i, matrix)
+      color.set(roofPalette[i % roofPalette.length]).offsetHSL(0, 0, (i % 3) * 0.02 - 0.02)
+      mesh.setColorAt(i, color)
+    })
+    mesh.instanceMatrix.needsUpdate = true
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
+    root.add(mesh)
+  }
+
+  const gable = buildings.filter((b) => b.roof === 'gable')
+  if (gable.length) {
+    const mesh = new THREE.InstancedMesh(makeGableGeometry(), roofMat, gable.length)
+    mesh.castShadow = true
+    gable.forEach((b, i) => {
+      const height = 0.18 + b.d * 0.3
+      position.set(b.x, b.h, b.z)
+      quaternion.identity()
+      scale.set(b.w * 1.08, height, b.d * 1.12)
+      matrix.compose(position, quaternion, scale)
+      mesh.setMatrixAt(i, matrix)
+      color.set(roofPalette[(i + 1) % roofPalette.length]).offsetHSL(0, 0, (i % 3) * 0.02 - 0.02)
+      mesh.setColorAt(i, color)
+    })
+    mesh.instanceMatrix.needsUpdate = true
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
+    root.add(mesh)
+  }
+
+  const crownList = glass.filter((b) => b.h > 5.3 && b.roof === 'flat')
+  if (crownList.length) {
+    const crownMat = new THREE.MeshStandardMaterial({ roughness: 0.3, metalness: 0.7 })
+    const crowns = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.28, 0.5, 1, 6), crownMat, crownList.length)
+    crowns.castShadow = true
+    crownList.forEach((b, i) => {
+      position.set(b.x, b.h + b.w * 0.5, b.z)
+      quaternion.identity()
+      scale.set(b.w * 0.58, b.w, b.d * 0.58)
+      matrix.compose(position, quaternion, scale)
+      crowns.setMatrixAt(i, matrix)
+      crowns.setColorAt(i, color.set(b.color).multiplyScalar(0.9))
+    })
+    crowns.instanceMatrix.needsUpdate = true
+    if (crowns.instanceColor) crowns.instanceColor.needsUpdate = true
+    root.add(crowns)
+  }
+
+  const rooftopData = []
+  const rand = mulberry32(555)
+  buildings.forEach((b) => {
+    if (b.h < 1.6 || b.roof !== 'flat') return
+    const count = 1 + Math.floor(rand() * 2)
+    for (let i = 0; i < count; i++) {
+      const sx = b.w * (0.12 + rand() * 0.18)
+      const sy = 0.12 + rand() * 0.2
+      rooftopData.push({
+        x: b.x + (rand() - 0.5) * b.w * 0.5,
+        y: b.h + sy / 2,
+        z: b.z + (rand() - 0.5) * b.d * 0.5,
+        sx,
+        sy,
+      })
+    }
+  })
+  if (rooftopData.length) {
+    const rooftopMat = new THREE.MeshStandardMaterial({ color: 0x6d7178, roughness: 0.9, metalness: 0.1 })
+    const rooftops = new THREE.InstancedMesh(box, rooftopMat, rooftopData.length)
+    rooftops.castShadow = rooftops.receiveShadow = true
+    rooftopData.forEach((item, i) => {
+      position.set(item.x, item.y, item.z)
+      quaternion.identity()
+      scale.set(item.sx, item.sy, item.sx)
+      matrix.compose(position, quaternion, scale)
+      rooftops.setMatrixAt(i, matrix)
+    })
+    rooftops.instanceMatrix.needsUpdate = true
+    root.add(rooftops)
+  }
+  return { root, materials: [glassMat, concreteMat] }
 }
 
 export function createScene(canvas, opts) {
   const width = opts.width
   const height = opts.height
   const dpr = Math.min(opts.dpr || 2, 2)
-
-  // 小程序 canvas 节点缺少 DOM 事件/style 接口；three 的 WebGLRenderer 构造时会调
-  // canvas.addEventListener('webglcontextlost', …)，不补桩就报 "addEventListener is not a function"。
   if (typeof canvas.addEventListener !== 'function') canvas.addEventListener = () => {}
   if (typeof canvas.removeEventListener !== 'function') canvas.removeEventListener = () => {}
   if (canvas.style === undefined) canvas.style = { width: '', height: '' }
 
-  // 小程序 canvas 只有 WebGL 1.0（不认 webgl2）。显式取 webgl1 上下文喂给渲染器，
-  // 避免 three 去请求不存在的 webgl2 而报 "Error creating WebGL context"。
-  const gl =
-    canvas.getContext('webgl', { antialias: true, alpha: false }) ||
-    canvas.getContext('experimental-webgl', { antialias: true, alpha: false })
+  const gl = canvas.getContext('webgl', { antialias: true, alpha: false }) || canvas.getContext('experimental-webgl', { antialias: true, alpha: false })
+  if (!gl) throw new Error('当前设备无法创建 WebGL 场景')
   const renderer = new THREE.WebGLRenderer({ canvas, context: gl, antialias: true, alpha: false })
-  renderer.setSize(width, height, false)
   renderer.setPixelRatio(dpr)
+  renderer.setSize(width, height, false)
   renderer.shadowMap.enabled = true
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap
+  renderer.toneMapping = THREE.ACESFilmicToneMapping
+  renderer.toneMappingExposure = 1.05
+  if (THREE.SRGBColorSpace) renderer.outputColorSpace = THREE.SRGBColorSpace
 
   const scene = new THREE.Scene()
-  scene.background = new THREE.Color(SKY.clear)
-  scene.fog = new THREE.Fog(SKY.clear, 26, 60)
+  scene.background = new THREE.Color(0xbcd9ec)
+  scene.fog = new THREE.FogExp2(0xbcd9ec, 0.003)
+  const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 200)
+  const cameraTarget = new THREE.Vector3(0, -1, 0)
 
-  const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 200)
-  const camTarget = new THREE.Vector3(0, 2.0, 0)
-
-  // 光照
-  const amb = new THREE.AmbientLight(0xffffff, 0.75)
-  scene.add(amb)
-  const sun = new THREE.DirectionalLight(0xfff2d8, 2.0)
-  sun.position.set(12, 18, 8)
+  const ambient = new THREE.AmbientLight(0xaecbe6, 0.55)
+  const hemisphere = new THREE.HemisphereLight(0xbcd9ec, 0x3a3f47, 0.44)
+  const sun = new THREE.DirectionalLight(0xfff4e2, 2.4)
+  sun.position.set(9, 14, 6)
   sun.castShadow = true
-  // DirectionalLight 的默认阴影相机只有正交 ±5，而城市跨度 ±10，
-  // 不配的话中心以外根本没有阴影，却照样付一整遍渲染的代价。
-  const sc = sun.shadow.camera
-  sc.left = -12
-  sc.right = 12
-  sc.top = 12
-  sc.bottom = -12
-  sc.near = 1
-  sc.far = 60
-  sc.updateProjectionMatrix()
   sun.shadow.mapSize.set(1024, 1024)
-  sun.shadow.bias = -0.0012
-  scene.add(sun)
+  sun.shadow.camera.near = 1
+  sun.shadow.camera.far = 60
+  sun.shadow.camera.left = -16
+  sun.shadow.camera.right = 16
+  sun.shadow.camera.top = 16
+  sun.shadow.camera.bottom = -16
+  sun.shadow.camera.updateProjectionMatrix()
+  sun.shadow.bias = -0.0007
+  scene.add(ambient, hemisphere, sun)
 
-  // 托盘
-  const tray = new THREE.Mesh(
-    new THREE.BoxGeometry(17.5, 0.6, 17.5),
-    new THREE.MeshStandardMaterial({ color: 0xeef3fa, roughness: 0.9 }),
-  )
-  tray.position.y = -0.3
-  tray.receiveShadow = true
-  scene.add(tray)
-
-  // 云托底
-  const cloud = new THREE.Mesh(
-    new THREE.SphereGeometry(9, 24, 16),
-    new THREE.MeshStandardMaterial({ color: 0xf2f6fd, roughness: 1 }),
-  )
-  cloud.scale.set(1.5, 0.5, 1.5)
-  cloud.position.y = -3.2
-  scene.add(cloud)
-
-  // 降水粒子（雨 / 雪），落在城市上空
-  const PCOUNT = 700
-  const AREA = 15
-  const TOP = 24
-  const pPos = new Float32Array(PCOUNT * 3)
-  for (let i = 0; i < PCOUNT; i++) {
-    pPos[i * 3] = (Math.random() - 0.5) * 2 * AREA
-    pPos[i * 3 + 1] = Math.random() * TOP
-    pPos[i * 3 + 2] = (Math.random() - 0.5) * 2 * AREA
-  }
-  const pGeo = new THREE.BufferGeometry()
-  pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3))
-  const pMat = new THREE.PointsMaterial({
-    color: 0xbfd4e6,
-    size: 0.12,
-    transparent: true,
-    opacity: 0.85,
-    depthWrite: false,
-  })
-  const precip = new THREE.Points(pGeo, pMat)
-  precip.visible = false
-  scene.add(precip)
-  let precipMode = null // 'rain' | 'snow' | null
-
-  // 雨滴溅落：在地面和屋顶随机炸开的小水环（兑现「雨滴打在屋顶」）
-  const SPLASH = 40
-  const splashMat = new THREE.MeshBasicMaterial({
-    color: 0xdcebf7,
-    transparent: true,
-    opacity: 0.5,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-  })
-  const splashes = new THREE.InstancedMesh(
-    new THREE.RingGeometry(0.5, 1, 10).rotateX(-Math.PI / 2),
-    splashMat,
-    SPLASH,
-  )
-  splashes.visible = false
-  scene.add(splashes)
-  const drops = []
-  for (let i = 0; i < SPLASH; i++) {
-    drops.push({ x: 0, y: 0, z: 0, age: Math.random(), life: 0.45 + Math.random() * 0.35 })
-  }
-  // 一半落地面、一半落屋顶
-  function reseed(d, i) {
-    const roof = i % 2 === 1 && rooftops.length
-    if (roof) {
-      const b = rooftops[Math.floor(Math.random() * rooftops.length)]
-      d.x = b.x + (Math.random() - 0.5) * b.w
-      d.z = b.z + (Math.random() - 0.5) * b.d
-      d.y = b.h + 0.03
-    } else {
-      d.x = (Math.random() - 0.5) * 15
-      d.z = (Math.random() - 0.5) * 15
-      d.y = 0.04
-    }
-    d.age = 0
-    d.life = 0.42 + Math.random() * 0.36
-  }
-  const sMat = new THREE.Matrix4()
-  const sQ = new THREE.Quaternion()
-  const sS = new THREE.Vector3()
-  const sP = new THREE.Vector3()
-  function stepSplash(dt) {
-    for (let i = 0; i < SPLASH; i++) {
-      const d = drops[i]
-      d.age += dt
-      if (d.age >= d.life) reseed(d, i)
-      const t01 = d.age / d.life
-      // 先扩散后收束，无需逐实例透明度也能读出「溅起又消失」
-      const r = Math.sin(t01 * Math.PI) * 0.26
-      sP.set(d.x, d.y, d.z)
-      sS.set(r, 1, r)
-      sMat.compose(sP, sQ, sS)
-      splashes.setMatrixAt(i, sMat)
-    }
-    splashes.instanceMatrix.needsUpdate = true
-  }
-
-  // 街道雾团：几片贴地的半透明雾体，雾天渐显并缓缓漂移（体积雾近似）
-  const fogBanks = new THREE.Group()
-  const fogMats = []
-  const FOG_OPACITY = []
-  const fogGeo = new THREE.SphereGeometry(1, 14, 10)
-  for (let i = 0; i < 7; i++) {
-    const fm = new THREE.MeshBasicMaterial({
-      color: 0xdfe6ee,
-      transparent: true,
-      opacity: 0,
-      depthWrite: false,
-    })
-    const fmesh = new THREE.Mesh(fogGeo, fm)
-    const a = (i / 7) * Math.PI * 2
-    const rad = 3.5 + Math.random() * 5
-    fmesh.position.set(Math.cos(a) * rad, 0.5 + Math.random() * 0.9, Math.sin(a) * rad)
-    fmesh.scale.set(4.5 + Math.random() * 2.5, 0.8, 4.5 + Math.random() * 2.5)
-    fogBanks.add(fmesh)
-    fogMats.push(fm)
-    FOG_OPACITY.push(0.3 + Math.random() * 0.22)
-  }
-  fogBanks.visible = false
-  scene.add(fogBanks)
-
-  // 星空 / 月亮 / 太阳
   const sky = createSky()
   scene.add(sky.group)
+  const weatherFx = createWeatherEffects(scene)
+  const world = new THREE.Group()
+  const cityRoot = new THREE.Group()
+  world.add(cityRoot)
+  scene.add(world)
 
-  // 楼群（InstancedMesh）
-  const cityGroup = new THREE.Group()
-  scene.add(cityGroup)
-  let buildingMeshes = [] // 楼身（按高度分档）+ 各类屋顶
-  let buildMats = [] // 楼身材质（夜间窗户发光）
-  let buildRoofMat = null
-  let rooftops = [] // 当前楼群数据，雨滴溅落用它挑屋顶落点
-  let landmarkObj = null // 当前城市地标 Group
-  let landmarkGlow = [] // 地标夜间点亮的材质
-  let landmarkSpin = null // 摩天轮等需每帧转动的部件
-  let landmarkAnim = null // 地标专属灯光动画（彩虹流光/呼吸灯/跑马灯）
-  let props = null // 路面/河/行人/车/树/路灯
-  let propsGlow = [] // 路灯材质，夜间点亮
+  let environment = null
+  let props = null
+  let skyline = null
+  let landmark = null
+  let landmarkGlow = []
+  let landmarkSpin = null
+  let landmarkAnimate = null
+  let cityMaterials = []
+  let currentCity = null
+  let currentProfile = null
+  let currentWeather = 'clear'
   let isNight = false
 
-  function applyLandmarkGlow() {
-    for (let i = 0; i < landmarkGlow.length; i++) landmarkGlow[i].emissiveIntensity = cur.landmark
-    // 路灯：白天全灭，入夜渐亮
-    const lamp = Math.max(0, (cur.landmark - 0.15) / 0.75) * 1.5
-    for (let i = 0; i < propsGlow.length; i++) propsGlow[i].emissiveIntensity = lamp
+  const current = {
+    sky: new THREE.Color(0xbcd9ec),
+    sun: new THREE.Color(0xfff4e2),
+    ambient: new THREE.Color(0xaecbe6),
+    sunPosition: new THREE.Vector3(9, 14, 6),
+    sunIntensity: 2.4,
+    ambientIntensity: 0.55,
+    fogDensity: 0.003,
+    night: 0,
+    buildingGlow: 0,
+    landmarkGlow: 0.15,
+  }
+  const target = {
+    sky: new THREE.Color(0xbcd9ec),
+    sun: new THREE.Color(0xfff4e2),
+    ambient: new THREE.Color(0xaecbe6),
+    sunPosition: new THREE.Vector3(9, 14, 6),
+    sunIntensity: 2.4,
+    ambientIntensity: 0.55,
+    fogDensity: 0.003,
+    night: 0,
+    buildingGlow: 0,
+    landmarkGlow: 0.15,
+  }
+  const grey = new THREE.Color(0x9aa2ab)
+  const sunGrey = new THREE.Color(0xcfd6de)
+
+  function refreshLook() {
+    const mod = WEATHER_LOOK[currentWeather] || WEATHER_LOOK.clear
+    if (isNight) {
+      target.sky.set(0x0c1524)
+      target.sun.set(0x546891)
+      target.ambient.set(0x243049)
+      target.sunIntensity = 0.35
+      target.ambientIntensity = 0.4
+      target.sunPosition.set(-8, 12, -6)
+      target.night = 1
+    } else {
+      target.sky.set(0xbcd9ec)
+      target.sun.set(0xfff4e2)
+      target.ambient.set(0xaecbe6)
+      target.sunIntensity = 2.4
+      target.ambientIntensity = 0.55
+      target.sunPosition.set(9, 14, 6)
+      target.night = 0
+    }
+    target.sky.lerp(grey, mod.grey).multiplyScalar(1 - mod.darken)
+    target.sun.lerp(sunGrey, mod.grey * 0.6)
+    target.ambient.lerp(grey, mod.grey * 0.5)
+    target.sunIntensity *= mod.sun
+    target.ambientIntensity *= 1 + mod.grey * 0.4
+    target.fogDensity = currentWeather === 'fog' ? 0.025 : currentWeather === 'rain' || currentWeather === 'thunder' ? 0.0065 : currentWeather === 'snow' ? 0.0045 : 0.003
+    target.buildingGlow = isNight ? 1.15 : 0
+    target.landmarkGlow = isNight ? 0.9 : 0.15
+  }
+
+  function applyGlow() {
+    cityMaterials.forEach((material) => { material.emissiveIntensity = current.buildingGlow })
+    landmarkGlow.forEach((material) => {
+      if (material && material.emissiveIntensity != null) material.emissiveIntensity = current.landmarkGlow
+    })
+  }
+
+  function cleanupCity() {
+    if (props) {
+      cityRoot.remove(props.group)
+      props.dispose()
+      props = null
+    }
+    if (skyline) {
+      cityRoot.remove(skyline.root)
+      disposeTree(skyline.root)
+      skyline = null
+    }
+    if (landmark) {
+      cityRoot.remove(landmark)
+      disposeTree(landmark)
+      landmark = null
+    }
+    if (environment) {
+      world.remove(environment.group)
+      environment.dispose()
+      environment = null
+    }
+    landmarkGlow = []
+    landmarkSpin = null
+    landmarkAnimate = null
+    cityMaterials = []
   }
 
   function buildCity(cityName) {
-    for (let i = 0; i < buildingMeshes.length; i++) {
-      const bm = buildingMeshes[i]
-      cityGroup.remove(bm)
-      // GABLE_GEO / HIP_GEO 是模块级共享几何，所有城市反复复用，
-      // 释放了下一座城市就画不出屋顶——只释放本次 buildCity 内新建的。
-      if (bm.geometry === GABLE_GEO || bm.geometry === HIP_GEO) continue
-      try {
-        bm.geometry.dispose()
-      } catch (e) {}
+    const key = '' + (cityName || '上海')
+    if (currentCity === key && environment) return
+    cleanupCity()
+    currentCity = key
+    currentProfile = profileForCity(key)
+    environment = createEnvironment(currentProfile.water)
+    world.add(environment.group)
+
+    const built = buildLandmark(key)
+    let clearZones = [{ x: CITY.landmark.x, z: CITY.landmark.z, r: 1.7 }]
+    let calmZones = [{ x: CITY.landmark.x, z: CITY.landmark.z, r: 4.6, maxHeight: 2.8 }]
+    if (built && built.group) {
+      // 各城市地标组合已经按 Web 组件的局部坐标排布，不再整体套用楼群核心偏移。
+      built.group.position.set(0, 0, 0)
+      built.group.updateMatrixWorld(true)
+      const bounds = new THREE.Box3().setFromObject(built.group)
+      const center = bounds.getCenter(new THREE.Vector3())
+      const size = bounds.getSize(new THREE.Vector3())
+      const radius = Math.min(5.8, Math.max(1.7, Math.hypot(size.x, size.z) * 0.38 + 0.7))
+      clearZones = [{ x: center.x, z: center.z, r }]
+      calmZones = [{ x: center.x, z: center.z, r: Math.min(8.5, radius + 3), maxHeight: 2.5 }]
+      built.group.traverse((object) => { if (object.isMesh) object.castShadow = true })
+      landmark = built.group
+      landmarkGlow = built.glow || []
+      landmarkSpin = built.spin || null
+      landmarkAnimate = typeof built.animate === 'function' ? built.animate : null
+      cityRoot.add(landmark)
     }
-    // material.dispose() 不会释放它引用的贴图，
-    // 幕墙每档 2 张、切一次城市就泄漏 6 张 DataTexture，必须手动释放。
-    for (let i = 0; i < buildMats.length; i++) disposeMat(buildMats[i])
-    disposeMat(buildRoofMat)
-    buildingMeshes = []
-    buildMats = []
-    buildRoofMat = null
-    if (landmarkObj) {
-      cityGroup.remove(landmarkObj)
-      landmarkObj = null
-      landmarkGlow = []
-      landmarkSpin = null
-      landmarkAnim = null
+    if (currentProfile.water.lake) {
+      const lake = currentProfile.water.lake
+      clearZones.push({ x: lake.x, z: lake.z, r: Math.max(lake.rx, lake.rz) + 0.35 })
     }
-    // 先建地标并量出占地，好在城市中心留出等大的广场。
-    // 否则中心那圈最高的楼（可达 14 单位）会把矮地标（蒙古包、铁桥）整个埋掉。
-    const lm = buildLandmark(cityName)
-    let clearX = 1.6
-    let clearZ = 1.6
-    if (lm) {
-      lm.group.updateMatrixWorld(true)
-      const bb = new THREE.Box3().setFromObject(lm.group)
-      clearX = Math.max(1.6, Math.min(5.5, (bb.max.x - bb.min.x) / 2 + 0.9))
-      clearZ = Math.max(1.6, Math.min(5.5, (bb.max.z - bb.min.z) / 2 + 0.9))
-    }
-    // 配景：路面、河、桥、行人、车、行道树、路灯
-    if (props) {
-      cityGroup.remove(props.group)
-      props.dispose()
-      props = null
-      propsGlow = []
-    }
-    const skipRiver = hasOwnWater(cityName)
-    props = createProps(cityName, { clearX: clearX, clearZ: clearZ, skipRiver: skipRiver })
-    cityGroup.add(props.group)
-    propsGlow = props.glow || []
 
-    const data = generateCity(hashName(cityName || '上海')).filter((b) => {
-      if (Math.abs(b.x) <= clearX && Math.abs(b.z) <= clearZ) return false // 地标广场
-      if (!skipRiver && Math.abs(b.z - RIVER.z) < RIVER.clear) return false // 河道
-      return true
-    })
-    rooftops = data // 供雨滴溅落挑落点
-
-    // 楼身按高度分三档，每档用不同的窗格重复次数，
-    // 否则同一张贴图铺在 1 米和 14 米的楼上，窗户会被拉得又高又扁。
-    // rows = 纵向重复次数，贴图每遍 4 行窗 → 实际窗行数 = rows × 4
-    const BUCKETS = [
-      { max: 3.2, rows: 1 },
-      { max: 7.0, rows: 2 },
-      { max: Infinity, rows: 3.5 },
-    ]
-    const m = new THREE.Matrix4()
-    const q = new THREE.Quaternion()
-    const s = new THREE.Vector3()
-    const p = new THREE.Vector3()
-    const col = new THREE.Color()
-    const c2 = new THREE.Color()
-    const boxGeo = new THREE.BoxGeometry(1, 1, 1)
-
-    BUCKETS.forEach((bk, bi) => {
-      const lo = bi === 0 ? 0 : BUCKETS[bi - 1].max
-      const list = data.filter((b) => b.h > lo && b.h <= bk.max)
-      if (!list.length) return
-      const mat = makeFacadeMat(bk.rows)
-      buildMats.push(mat)
-      const mesh = new THREE.InstancedMesh(boxGeo, mat, list.length)
-      mesh.castShadow = true
-      mesh.receiveShadow = true
-      list.forEach((b, i) => {
-        p.set(b.x, b.h / 2, b.z)
-        s.set(b.w, b.h, b.d)
-        m.compose(p, q, s)
-        mesh.setMatrixAt(i, m)
-        mesh.setColorAt(i, col.set(b.color))
-      })
-      mesh.instanceMatrix.needsUpdate = true
-      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
-      cityGroup.add(mesh)
-      buildingMeshes.push(mesh)
-    })
-
-    // 屋顶造型：坡屋顶 / 四坡顶 / 退台，各自一个 InstancedMesh
-    const roofMat = new THREE.MeshStandardMaterial({ roughness: 0.86, metalness: 0.04 })
-    buildRoofMat = roofMat
-    const ROOFS = [
-      { kind: 'gable', geo: GABLE_GEO },
-      { kind: 'hip', geo: HIP_GEO },
-      { kind: 'setback', geo: boxGeo },
-    ]
-    ROOFS.forEach((r) => {
-      const list = data.filter((b) => b.roof === r.kind)
-      if (!list.length) return
-      const mesh = new THREE.InstancedMesh(r.geo, roofMat, list.length)
-      mesh.castShadow = true
-      list.forEach((b, i) => {
-        if (r.kind === 'setback') {
-          const sh = Math.min(1.5, b.h * 0.16)
-          p.set(b.x, b.h + sh / 2, b.z)
-          s.set(b.w * 0.62, sh, b.d * 0.62)
-        } else {
-          const rh = Math.min(0.85, Math.max(0.3, b.w * 0.55))
-          p.set(b.x, b.h, b.z)
-          s.set(b.w, rh, b.d)
-        }
-        m.compose(p, q, s)
-        mesh.setMatrixAt(i, m)
-        // 坡屋顶压暗成瓦色，退台沿用楼身色
-        c2.set(b.color)
-        if (r.kind !== 'setback') c2.multiplyScalar(0.62)
-        mesh.setColorAt(i, c2)
-      })
-      mesh.instanceMatrix.needsUpdate = true
-      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
-      cityGroup.add(mesh)
-      buildingMeshes.push(mesh)
-    })
-
-    // 城市专属地标（找不到则退回通用主塔）
-    if (lm) {
-      lm.group.position.set(0, 0, 0)
-      lm.group.traverse((o) => {
-        if (o.isMesh) o.castShadow = true
-      })
-      cityGroup.add(lm.group)
-      landmarkObj = lm.group
-      landmarkGlow = lm.glow || []
-      landmarkSpin = lm.spin || null
-      landmarkAnim = typeof lm.animate === 'function' ? lm.animate : null
-    } else {
-      const tower = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.55, 0.7, 9, 6),
-        new THREE.MeshStandardMaterial({ color: 0x5f86ad, roughness: 0.3, metalness: 0.6 }),
-      )
-      tower.position.set(0.4, 4.5, -0.6)
-      tower.castShadow = true
-      cityGroup.add(tower)
-      landmarkObj = tower
-    }
-    applyLandmarkGlow()
-  }
-
-  function applyPrecip(kind) {
-    if (kind === 'rain' || kind === 'thunder') {
-      precipMode = 'rain'
-      precip.visible = true
-      pMat.color.set(0xaebfce)
-      pMat.size = 0.09
-      pMat.opacity = 0.8
-    } else if (kind === 'snow') {
-      precipMode = 'snow'
-      precip.visible = true
-      pMat.color.set(0xffffff)
-      pMat.size = 0.2
-      pMat.opacity = 0.95
-    } else {
-      precipMode = null
-      precip.visible = false
-    }
-    splashes.visible = precipMode === 'rain'
-  }
-
-  // —— 天气 / 昼夜渐变过渡 ——
-  // setWeather、setNight 只设定「目标值」，由帧循环把当前值平滑插值过去，
-  // 切天气不再是瞬间硬切，而是天色、雾、光照一起缓缓变化。
-  let curKind = 'clear'
-  const cur = {
-    sky: new THREE.Color(SKY.clear),
-    sunColor: new THREE.Color(0xfff2d8),
-    fogNear: 26,
-    sun: 2.2,
-    amb: 0.75,
-    build: 0, // 楼宇窗光
-    landmark: 0.15, // 地标自发光
-    bank: 0, // 街道雾团浓度
-  }
-  const tgt = {
-    sky: new THREE.Color(SKY.clear),
-    sunColor: new THREE.Color(0xfff2d8),
-    fogNear: 26,
-    sun: 2.2,
-    amb: 0.75,
-    build: 0,
-    landmark: 0.15,
-    bank: 0,
-  }
-
-  function refreshTargets() {
-    const kind = curKind
-    tgt.fogNear = kind === 'fog' ? 9 : 26
-    tgt.bank = kind === 'fog' ? 1 : 0
-    if (isNight) {
-      // 夜间：深蓝天空 + 暖光楼宇 + 弱冷月光
-      tgt.sky.set(0x0d1730)
-      tgt.sunColor.set(0x9fb4d8)
-      tgt.sun = 0.5
-      tgt.amb = 0.32
-      tgt.build = 0.42
-      tgt.landmark = 0.9
-    } else {
-      tgt.sky.set(SKY[kind] != null ? SKY[kind] : SKY.clear)
-      tgt.sunColor.set(0xfff2d8)
-      tgt.sun = kind === 'clear' ? 2.2 : kind === 'thunder' || kind === 'overcast' ? 0.9 : 1.5
-      tgt.amb = 0.75
-      tgt.build = 0
-      tgt.landmark = 0.15
-    }
-  }
-
-  // 每帧把 cur 拉向 tgt，并写入场景
-  function tickTransition() {
-    const k = 0.06
-    cur.sky.lerp(tgt.sky, k)
-    cur.sunColor.lerp(tgt.sunColor, k)
-    cur.fogNear += (tgt.fogNear - cur.fogNear) * k
-    cur.sun += (tgt.sun - cur.sun) * k
-    cur.amb += (tgt.amb - cur.amb) * k
-    cur.build += (tgt.build - cur.build) * k
-    cur.landmark += (tgt.landmark - cur.landmark) * k
-    cur.bank += (tgt.bank - cur.bank) * k
-
-    scene.background = cur.sky
-    scene.fog.color.copy(cur.sky)
-    scene.fog.near = cur.fogNear
-    sun.color.copy(cur.sunColor)
-    for (let i = 0; i < buildMats.length; i++) buildMats[i].emissiveIntensity = cur.build * 2.2
-    applyLandmarkGlow()
-
-    fogBanks.visible = cur.bank > 0.02
-    if (fogBanks.visible) {
-      for (let i = 0; i < fogMats.length; i++) fogMats[i].opacity = cur.bank * FOG_OPACITY[i]
-      fogBanks.rotation.y += 0.0006 // 雾团缓缓漂移
-    }
+    const buildings = generateCity(
+      currentProfile.seed,
+      clearZones,
+      calmZones,
+      currentProfile.water.cityMaxZ,
+      currentProfile.hueShift,
+    ).filter((b) => !inLake(currentProfile.water, b.x, b.z, 0.35))
+    skyline = buildSkyline(buildings)
+    cityMaterials = skyline.materials
+    cityRoot.add(skyline.root)
+    props = createProps(key, { water: currentProfile.water, clearZones })
+    props.setWeather(currentWeather)
+    cityRoot.add(props.group)
+    environment.setWeather(currentWeather)
+    environment.setNight(current.night)
+    applyGlow()
   }
 
   function setWeather(kind) {
-    curKind = kind
-    applyPrecip(kind)
-    refreshTargets()
+    currentWeather = WEATHER_LOOK[kind] ? kind : 'clear'
+    weatherFx.setWeather(currentWeather)
+    if (environment) environment.setWeather(currentWeather)
+    if (props) props.setWeather(currentWeather)
+    refreshLook()
   }
 
-  function setNight(night) {
-    isNight = !!night
-    try {
-      refreshTargets()
-    } catch (e) {}
+  function setNight(value) {
+    isNight = !!value
+    refreshLook()
   }
 
-  // 相机：自动环绕 + 手势拖拽（横向转角、纵向抬升），松手静置片刻后恢复自动巡航
-  let raf = null
-  let t = 0 // 方位角
-  // 俯角 = atan((elev - target.y) / R)。原来 R=23/elev=9 只有 18.7°，几乎是平视，
-  // 看着像站在街上而不是俯看模型 —— 微缩感需要 30~40°。
-  let elev = 19 // → 约 33°
-  const R = 26
+  let angle = Math.atan2(21, 19)
+  let elevation = 18
+  let radius = 31
   let dragging = false
   let lastX = 0
   let lastY = 0
-  let idleUntil = 0 // 时间戳（ms）之前不自动环绕
-  function now() {
-    return Date.now ? Date.now() : new Date().getTime()
-  }
+  let idleUntil = 0
+  const now = () => (Date.now ? Date.now() : new Date().getTime())
   function onTouchStart(x, y) {
     dragging = true
     lastX = x
@@ -548,89 +442,69 @@ export function createScene(canvas, opts) {
   }
   function onTouchMove(x, y) {
     if (!dragging) return
-    t -= (x - lastX) * 0.008
-    elev = Math.max(9, Math.min(30, elev - (y - lastY) * 0.06))
+    angle -= (x - lastX) * 0.008
+    elevation = Math.max(4, Math.min(30, elevation - (y - lastY) * 0.06))
     lastX = x
     lastY = y
   }
   function onTouchEnd() {
     dragging = false
-    idleUntil = now() + 2600 // 静置 2.6s 后恢复自动环绕
+    idleUntil = now() + 2600
   }
 
-  // 雷电闪光：curKind==='thunder' 时随机触发全场景亮度脉冲
-  let flash = 0 // 0..1 剩余强度
-  let nextBolt = 0
-  const t0 = now() // 地标灯光动画的时间基准（秒），不受拖拽暂停影响
-  let lastSplashT = 0
-
+  let raf = null
+  const started = now()
+  let lastFrame = started
   function frame() {
-    if (!dragging && now() > idleUntil) t += 0.0022
-    camera.position.set(Math.cos(t) * R, elev, Math.sin(t) * R)
-    camera.lookAt(camTarget)
+    const stamp = now()
+    const dt = Math.min(0.05, Math.max(0.001, (stamp - lastFrame) * 0.001))
+    const t = (stamp - started) * 0.001
+    lastFrame = stamp
+    if (!dragging && stamp > idleUntil) angle += dt * 0.042
+    camera.position.set(Math.cos(angle) * radius, elevation, Math.sin(angle) * radius)
+    camera.lookAt(cameraTarget)
 
-    // 摩天轮等地标自转
-    if (landmarkSpin) landmarkSpin.rotation.z += 0.004
+    const damping = 1 - Math.exp(-3 * dt)
+    current.sky.lerp(target.sky, damping)
+    current.sun.lerp(target.sun, damping)
+    current.ambient.lerp(target.ambient, damping)
+    current.sunPosition.lerp(target.sunPosition, damping)
+    current.sunIntensity += (target.sunIntensity - current.sunIntensity) * damping
+    current.ambientIntensity += (target.ambientIntensity - current.ambientIntensity) * damping
+    current.fogDensity += (target.fogDensity - current.fogDensity) * damping
+    current.night += (target.night - current.night) * damping
+    current.buildingGlow += (target.buildingGlow - current.buildingGlow) * damping
+    current.landmarkGlow += (target.landmarkGlow - current.landmarkGlow) * damping
+    scene.background.copy(current.sky)
+    scene.fog.color.copy(current.sky)
+    scene.fog.density = current.fogDensity
+    sun.color.copy(current.sun)
+    sun.position.copy(current.sunPosition)
+    ambient.color.copy(current.ambient)
+    hemisphere.color.copy(current.sky)
+    hemisphere.intensity = current.ambientIntensity * 0.8
+    applyGlow()
 
-    // 天气/昼夜渐变
-    tickTransition()
-
-    // 行人、车流
-    const secs = (now() - t0) * 0.001
-    if (props) props.step(secs)
-
-    // 雨滴溅落
-    if (splashes.visible) stepSplash(Math.min(0.05, secs - lastSplashT || 0.016))
-    lastSplashT = secs
-
-    // 星月与太阳：跟随昼夜因子与当前天气
-    sky.update(
-      Math.max(0, Math.min(1, (cur.landmark - 0.15) / 0.75)),
-      curKind === 'clear' || curKind === 'cloudy',
-      camera,
-      secs,
-    )
-
-    // 地标专属灯光（在 applyLandmarkGlow 之后，可覆盖自发光强度）
-    if (landmarkAnim) {
-      const nf = Math.max(0, Math.min(1, (cur.landmark - 0.15) / 0.75))
-      landmarkAnim((now() - t0) * 0.001, cur.landmark, nf)
+    const flash = weatherFx.step(t, dt)
+    ambient.intensity = current.ambientIntensity + flash * 1.6
+    sun.intensity = current.sunIntensity + flash * 2.2
+    if (environment) {
+      environment.setNight(current.night)
+      environment.step(t, dt)
     }
+    if (props) props.step(t)
+    if (landmarkSpin) landmarkSpin.rotation.z += dt * 0.24
+    if (landmarkAnimate) landmarkAnimate(t, current.landmarkGlow, current.night)
+    sky.update(current.night, currentWeather, camera, t)
 
-    // 雷电闪光：叠加在渐变后的基准亮度之上
-    if (curKind === 'thunder') {
-      const ts = now()
-      if (ts > nextBolt) {
-        flash = 1
-        nextBolt = ts + 2200 + Math.random() * 3800
-      }
-    }
-    flash = flash > 0.001 ? flash * 0.82 : 0
-    amb.intensity = cur.amb + flash * 1.6
-    sun.intensity = cur.sun + flash * 2.2
-
-    // 降水动画
-    if (precipMode) {
-      const speed = precipMode === 'rain' ? 0.55 : 0.13
-      for (let i = 0; i < PCOUNT; i++) {
-        const yi = i * 3 + 1
-        pPos[yi] -= speed
-        if (precipMode === 'snow') {
-          pPos[i * 3] += Math.sin((t * 40 + i) * 0.5) * 0.01
-        }
-        if (pPos[yi] < 0) {
-          pPos[yi] = TOP
-          pPos[i * 3] = (Math.random() - 0.5) * 2 * AREA
-          pPos[i * 3 + 2] = (Math.random() - 0.5) * 2 * AREA
-        }
-      }
-      pGeo.attributes.position.needsUpdate = true
-    }
-
+    world.position.y = Math.sin(t * 0.5) * 0.18
+    world.rotation.z = Math.sin(t * 0.4) * 0.012
+    world.rotation.x = Math.sin(t * 0.33 + 1.1) * 0.01
     renderer.render(scene, camera)
     raf = canvas.requestAnimationFrame(frame)
   }
 
+  refreshLook()
   buildCity(opts.city)
   frame()
 
@@ -643,29 +517,19 @@ export function createScene(canvas, opts) {
     onTouchMove,
     onTouchEnd,
     resize(w, h) {
+      if (!w || !h) return
       camera.aspect = w / h
       camera.updateProjectionMatrix()
       renderer.setSize(w, h, false)
     },
     dispose() {
-      // 小程序环境下 three 内部 cancelAnimationFrame 可能读到 null，
-      // 页面卸载/热重载时会抛错；逐项加保护，避免销毁流程崩溃。
-      try {
-        if (raf && canvas && canvas.cancelAnimationFrame) canvas.cancelAnimationFrame(raf)
-      } catch (e) {}
+      try { if (raf && canvas.cancelAnimationFrame) canvas.cancelAnimationFrame(raf) } catch (e) {}
       raf = null
-      try {
-        renderer.setAnimationLoop(null)
-      } catch (e) {}
-      try {
-        if (props) props.dispose()
-      } catch (e) {}
-      try {
-        sky.dispose()
-      } catch (e) {}
-      try {
-        renderer.dispose()
-      } catch (e) {}
+      try { renderer.setAnimationLoop(null) } catch (e) {}
+      cleanupCity()
+      weatherFx.dispose()
+      sky.dispose()
+      try { renderer.dispose() } catch (e) {}
     },
   }
 }

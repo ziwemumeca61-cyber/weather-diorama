@@ -1,5 +1,5 @@
-// 确定性程序化城市布局（精简版，供小程序原生 Three.js 使用）。
-// 与 web 版同源思路：mulberry32 种子 + 网格生成，保证同名城市天际线稳定。
+// Web 端 cityData.ts 的原生 Three.js 版本。所有布局均由种子生成，切城和重载后保持稳定。
+import * as THREE from './three.core.js'
 
 export function mulberry32(seed) {
   let a = seed >>> 0
@@ -12,86 +12,181 @@ export function mulberry32(seed) {
   }
 }
 
-/** FNV-1a：城市名 → 稳定种子 */
 export function hashName(name) {
   let h = 2166136261 >>> 0
-  const s = name || 'City'
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i)
+  const value = name || 'City'
+  for (let i = 0; i < value.length; i++) {
+    h ^= value.charCodeAt(i)
     h = Math.imul(h, 16777619)
   }
   return (h >>> 0) || 20251225
 }
 
-const PALETTE = ['#c9d3dd', '#b7c2cf', '#d8cdbf', '#a9b6c4', '#9fb0bd', '#8fa0af', '#e6ddd0']
-const CORE = ['#8ea6bd', '#7f97b4', '#9fb8cf', '#aebfce']
+export const CITY = {
+  minX: -9,
+  maxX: 9,
+  minZ: -9,
+  maxZ: 6.6,
+  riverZ: 7.4,
+  trayHalf: 10.5,
+  landmark: { x: -1.5, y: 0, z: -2 },
+}
 
-/**
- * 生成一批楼房 { x, z, w, d, h, color, core }。中心高、边缘低。
- * 返回纯数据，渲染层（scene.js）据此建 InstancedMesh。
- */
-export const GRID = { step: 1.55, min: -7, max: 7 }
-
-// 街道中心线：直接定死成对称的四纵四横，而不是从楼群循环里
-// 「每隔 4 格跳一行」推出来 —— 那样只有 3 条，还会落在 -7（贴着城市边缘）
-// 和 5.4（不对称）这种位置上，根本不成路网。
-const STREET_POS = [-5.25, -1.75, 1.75, 5.25]
-export const STREET_HALF_W = 0.62 // 路面半宽
-const KEEP_CLEAR = 0.82 // 楼房中心离路中线至少这么远
+export const GRID = { step: 1.55, min: CITY.minX, max: CITY.maxX, roadEvery: 4 }
+export const STREET_HALF_W = 0.425
+const X_LINES = [-9, -2.8, 3.4]
+const Z_LINES = [-9, -2.8, 3.4]
 
 export function streetLines() {
-  return { xs: STREET_POS.slice(), zs: STREET_POS.slice() }
+  return { xs: X_LINES.slice(), zs: Z_LINES.slice() }
 }
 
-/** 该点是否压在街道上（楼群据此让路） */
-function onStreet(v) {
-  for (let i = 0; i < STREET_POS.length; i++) {
-    if (Math.abs(v - STREET_POS[i]) < KEEP_CLEAR) return true
-  }
-  return false
-}
+const PALETTE = [
+  '#c9d3dd', '#b7c2cf', '#d8cdbf', '#e3d8c8', '#a9b6c4',
+  '#cbb8a6', '#9fb0bd', '#d5c3b0', '#8fa0af', '#e6ddd0',
+]
+const CORE = ['#8ea6bd', '#7f97b4', '#9fb8cf', '#aebfce', '#c0cad6']
 
-export function generateCity(seed) {
-  const rand = mulberry32(seed)
-  // 屋顶造型用独立随机流：不占用 rand()，已有城市的天际线布局保持不变
-  const rroof = mulberry32((seed ^ 0x9e3779b9) >>> 0)
+export function generateCity(seed, clearZones, calmZones, maxZ, hueShift) {
+  const rand = mulberry32(seed == null ? 20251225 : seed)
   const out = []
-  const step = GRID.step
-  const min = GRID.min,
-    max = GRID.max
+  const clear = clearZones || [{ x: CITY.landmark.x, z: CITY.landmark.z, r: 1.5 }]
+  const calm = calmZones || []
+  const zEnd = maxZ == null ? CITY.maxZ : maxZ
+  const shift = hueShift || 0
+  const hsl = { h: 0, s: 0, l: 0 }
   let ix = 0
-  for (let x = min; x <= max; x += step, ix++) {
+  for (let x = CITY.minX; x <= CITY.maxX; x += GRID.step, ix++) {
     let iz = 0
-    for (let z = min; z <= max; z += step, iz++) {
-      if (onStreet(x) || onStreet(z)) continue // 给街道让路
-      const d2 = Math.hypot(x, z)
-      const coreness = Math.max(0, Math.min(1, 1 - d2 / 9))
-      if (rand() < 0.08) continue
-      let foot = 0.7 + rand() * 0.5
-      const base = 0.7 + rand() * 1.0
-      let h = base + Math.pow(coreness, 1.5) * (2.4 + rand() * 6)
-      if (coreness > 0.5 && rand() < 0.25) {
-        foot *= 0.62
-        h *= 1.4
+    for (let z = CITY.minZ; z <= zEnd; z += GRID.step, iz++) {
+      if (ix % GRID.roadEvery === 0 || iz % GRID.roadEvery === 0) continue
+      const dToCore = Math.hypot(x - CITY.landmark.x, z - CITY.landmark.z)
+      let blocked = false
+      for (let i = 0; i < clear.length; i++) {
+        const zone = clear[i]
+        if (Math.hypot(x - zone.x, z - zone.z) < zone.r) {
+          blocked = true
+          break
+        }
       }
+      if (blocked || rand() < 0.06) continue
+
+      const coreness = THREE.MathUtils.clamp(1 - dToCore / 11, 0, 1)
+      const jitterX = (rand() - 0.5) * 0.5
+      const jitterZ = (rand() - 0.5) * 0.5
+      let footprint = 0.72 + rand() * 0.5
+      const base = 0.7 + rand() * 1
+      let height = base + Math.pow(coreness, 1.5) * (3.6 + rand() * 9)
+      if (coreness > 0.5 && rand() < 0.28) {
+        footprint *= 0.62
+        height *= 1.45
+      }
+      for (let i = 0; i < calm.length; i++) {
+        const zone = calm[i]
+        const d = Math.hypot(x - zone.x, z - zone.z)
+        if (d < zone.r) {
+          const t = THREE.MathUtils.smoothstep(d, zone.r * 0.45, zone.r)
+          height = Math.min(height, zone.maxHeight + (height - zone.maxHeight) * t)
+        }
+      }
+
       const isCore = coreness > 0.55 && rand() < 0.6
-      const pal = isCore ? CORE : PALETTE
-      // 屋顶：矮楼多坡顶（民居感），高楼多退台/平顶（写字楼感）
-      const rk = rroof()
+      const palette = isCore ? CORE : PALETTE
+      const color = new THREE.Color(palette[Math.floor(rand() * palette.length)])
+      if (shift) {
+        color.getHSL(hsl)
+        color.setHSL((hsl.h + shift + 1) % 1, hsl.s, hsl.l)
+      }
       let roof = 'flat'
-      if (h < 3.2) roof = rk < 0.34 ? 'gable' : rk < 0.52 ? 'hip' : 'flat'
-      else if (h > 5.5) roof = rk < 0.3 ? 'setback' : 'flat'
+      const rr = rand()
+      if (height <= 5.5) {
+        if (coreness < 0.42 && height < 2.4) roof = rr < 0.22 ? 'gable' : rr < 0.4 ? 'hip' : 'flat'
+        else roof = rr < 0.12 ? 'hip' : 'flat'
+      }
       out.push({
-        x: x + (rand() - 0.5) * 0.4,
-        z: z + (rand() - 0.5) * 0.4,
-        w: foot,
-        d: foot * (0.85 + rand() * 0.3),
-        h,
-        color: pal[Math.floor(rand() * pal.length)],
+        x: x + jitterX,
+        z: z + jitterZ,
+        w: footprint,
+        d: footprint * (0.85 + rand() * 0.3),
+        h: height,
+        color: color.getHex(),
         core: coreness,
         roof,
       })
     }
   }
   return out
+}
+
+export function generateTrees(seed) {
+  const rand = mulberry32(seed == null ? 77 : seed)
+  const trees = []
+  const zMax = CITY.riverZ - 0.6
+  function push(x, z, scale) {
+    if (Math.hypot(x - CITY.landmark.x, z - CITY.landmark.z) < 2) return
+    trees.push({ x, z, scale, kind: rand() < 0.55 ? 'broad' : 'pine' })
+  }
+  for (let i = 0; i < 70; i++) {
+    push(
+      THREE.MathUtils.lerp(CITY.minX - 0.5, CITY.maxX + 0.5, rand()),
+      THREE.MathUtils.lerp(CITY.minZ - 0.5, zMax, rand()),
+      0.7 + rand() * 0.7,
+    )
+  }
+  const inner = CITY.maxX - 1.5
+  const outer = CITY.trayHalf - 0.5
+  for (let i = 0; i < 55; i++) {
+    const angle = rand() * Math.PI * 2
+    const radius = inner + rand() * (outer - inner)
+    const x = Math.cos(angle) * radius
+    const z = Math.sin(angle) * radius
+    if (z > zMax || x < CITY.minX - 0.8 || x > CITY.maxX + 0.8) continue
+    push(x, z, 0.85 + rand() * 0.9)
+  }
+  return trees
+}
+
+const SKINS = [0xf2c9a0, 0xe8b98a, 0xd69f6e, 0xc8824f]
+const HAIRS = [0x2a1a12, 0x3a2a1a, 0x5a3a22, 0x141414, 0x7a5a3a, 0xb0651f]
+const SHIRTS = [0xe0574f, 0x4f8fe0, 0x5fbf7a, 0xe0a24f, 0xb06fd0, 0xececec, 0x4fbfc0]
+const PANTS = [0x33384a, 0x4a3f2f, 0x2f4a3f, 0x555b66, 0x6b4a2f]
+const UMBRELLAS = [0xe0574f, 0x4f8fe0, 0x333842, 0x5fbf7a, 0xe0a24f, 0xb06fd0]
+
+export function generatePedestrians(seed, count) {
+  const rand = mulberry32(seed == null ? 4242 : seed)
+  const n = count == null ? 22 : count
+  const pick = (arr) => arr[Math.floor(rand() * arr.length)]
+  const people = []
+  for (let i = 0; i < n; i++) {
+    const horizontal = rand() < 0.5
+    const sidewalk = (rand() < 0.5 ? 1 : -1) * 0.5
+    let a
+    let b
+    if (horizontal) {
+      const z = pick(Z_LINES) + sidewalk
+      a = [CITY.minX + 0.6, z]
+      b = [CITY.maxX - 0.6, z]
+    } else {
+      const x = pick(X_LINES) + sidewalk
+      a = [x, CITY.minZ + 0.6]
+      b = [x, CITY.riverZ - 0.7]
+    }
+    people.push({
+      a,
+      b,
+      speed: 0.05 + rand() * 0.06,
+      hasUmbrella: rand() < 0.6,
+      phase: rand() * Math.PI * 2,
+      appearance: {
+        skin: pick(SKINS),
+        hair: pick(HAIRS),
+        shirt: pick(SHIRTS),
+        pants: pick(PANTS),
+        umbrella: pick(UMBRELLAS),
+        hat: rand() < 0.25,
+        hatColor: pick(SHIRTS),
+      },
+    })
+  }
+  return people
 }
