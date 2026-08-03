@@ -3,6 +3,7 @@
     "pages/index/index",
     "pages/about/about"
   ],
+  "lazyCodeLoading": "requiredComponents",
   "window": {
     "navigationStyle": "custom",
     "backgroundColor": "#0b1220",
