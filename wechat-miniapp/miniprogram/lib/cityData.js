@@ -32,18 +32,23 @@ const CORE = ['#8ea6bd', '#7f97b4', '#9fb8cf', '#aebfce']
  */
 export const GRID = { step: 1.55, min: -7, max: 7 }
 
-/**
- * 街道中心线坐标。generateCity 每隔 4 格跳过一行/列当街道，
- * 这里把那些坐标导出来，好让路面、行人、车、路灯都对齐同一套网格。
- */
+// 街道中心线：直接定死成对称的四纵四横，而不是从楼群循环里
+// 「每隔 4 格跳一行」推出来 —— 那样只有 3 条，还会落在 -7（贴着城市边缘）
+// 和 5.4（不对称）这种位置上，根本不成路网。
+const STREET_POS = [-5.25, -1.75, 1.75, 5.25]
+export const STREET_HALF_W = 0.62 // 路面半宽
+const KEEP_CLEAR = 0.82 // 楼房中心离路中线至少这么远
+
 export function streetLines() {
-  const xs = []
-  const zs = []
-  let i = 0
-  for (let x = GRID.min; x <= GRID.max; x += GRID.step, i++) if (i % 4 === 0) xs.push(x)
-  i = 0
-  for (let z = GRID.min; z <= GRID.max; z += GRID.step, i++) if (i % 4 === 0) zs.push(z)
-  return { xs, zs }
+  return { xs: STREET_POS.slice(), zs: STREET_POS.slice() }
+}
+
+/** 该点是否压在街道上（楼群据此让路） */
+function onStreet(v) {
+  for (let i = 0; i < STREET_POS.length; i++) {
+    if (Math.abs(v - STREET_POS[i]) < KEEP_CLEAR) return true
+  }
+  return false
 }
 
 export function generateCity(seed) {
@@ -58,7 +63,7 @@ export function generateCity(seed) {
   for (let x = min; x <= max; x += step, ix++) {
     let iz = 0
     for (let z = min; z <= max; z += step, iz++) {
-      if (ix % 4 === 0 || iz % 4 === 0) continue // 留街道
+      if (onStreet(x) || onStreet(z)) continue // 给街道让路
       const d2 = Math.hypot(x, z)
       const coreness = Math.max(0, Math.min(1, 1 - d2 / 9))
       if (rand() < 0.08) continue

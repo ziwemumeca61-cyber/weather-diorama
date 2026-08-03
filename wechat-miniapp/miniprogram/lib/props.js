@@ -167,15 +167,17 @@ export function createProps(cityName, opts) {
   instanced(lampGeo, lampMat, lampSpots, 1.3)
 
   /* ---------------- 行人（InstancedMesh） ---------------- */
-  const PEOPLE = 26
+  const PEOPLE = 38
   const bodyMat = new THREE.MeshStandardMaterial({ roughness: 0.85 })
   const headMat = new THREE.MeshStandardMaterial({ roughness: 0.8 })
+  // 原来总高约 0.30 单位，相机在 31 单位外只有约 5px，肉眼基本看不见。
+  // 放大到约 0.55（约 9px），是微缩摆件常见的夸张比例。
   const bodies = new THREE.InstancedMesh(
-    new THREE.CylinderGeometry(0.055, 0.075, 0.2, 6),
+    new THREE.CylinderGeometry(0.1, 0.13, 0.36, 6),
     bodyMat,
     PEOPLE,
   )
-  const heads = new THREE.InstancedMesh(new THREE.SphereGeometry(0.052, 7, 6), headMat, PEOPLE)
+  const heads = new THREE.InstancedMesh(new THREE.SphereGeometry(0.095, 8, 6), headMat, PEOPLE)
   group.add(bodies, heads)
 
   const walkers = []
@@ -200,9 +202,9 @@ export function createProps(cityName, opts) {
   if (heads.instanceColor) heads.instanceColor.needsUpdate = true
 
   /* ---------------- 车（InstancedMesh） ---------------- */
-  const CARN = 11
+  const CARN = 14
   const carMat = new THREE.MeshStandardMaterial({ roughness: 0.45, metalness: 0.35 })
-  const cars = new THREE.InstancedMesh(new THREE.BoxGeometry(0.42, 0.17, 0.22), carMat, CARN)
+  const cars = new THREE.InstancedMesh(new THREE.BoxGeometry(0.62, 0.26, 0.32), carMat, CARN)
   group.add(cars)
   const drivers = []
   for (let i = 0; i < CARN; i++) {
@@ -242,12 +244,12 @@ export function createProps(cityName, opts) {
       const x = w.alongX ? w.pos : w.lane
       const z = w.alongX ? w.lane : w.pos
       // 走路的上下起伏
-      const bob = Math.abs(Math.sin(t * 5.5 + w.phase)) * 0.028
+      const bob = Math.abs(Math.sin(t * 5.5 + w.phase)) * 0.04
       q.setFromAxisAngle(up, w.alongX ? (w.dir > 0 ? Math.PI / 2 : -Math.PI / 2) : w.dir > 0 ? 0 : Math.PI)
-      p.set(x, 0.11 + bob, z)
+      p.set(x, 0.2 + bob, z)
       m.compose(p, q, sc)
       bodies.setMatrixAt(i, m)
-      p.set(x, 0.245 + bob, z)
+      p.set(x, 0.46 + bob, z)
       m.compose(p, q, sc)
       heads.setMatrixAt(i, m)
     }
@@ -262,7 +264,7 @@ export function createProps(cityName, opts) {
       const x = c.alongX ? c.pos : c.lane
       const z = c.alongX ? c.lane : c.pos
       q.setFromAxisAngle(up, c.alongX ? 0 : Math.PI / 2)
-      p.set(x, 0.11, z)
+      p.set(x, 0.16, z)
       m.compose(p, q, sc)
       cars.setMatrixAt(i, m)
     }
