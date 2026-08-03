@@ -490,18 +490,18 @@ export function createScene(canvas, opts) {
 
     if (points.length >= 2 && lastTouches.length >= 2) {
       // 双指中心负责旋转/俯仰，捏合距离负责缩放。
-      // 方向按当前真机反馈反转，让模型随手指滑动方向转动。
-      angle -= (center.x - previousCenter.x) * 0.010
+      // 让模型跟随手指水平滑动方向转动。
+      angle += (center.x - previousCenter.x) * 0.010
       polar = Math.max(MIN_POLAR, Math.min(MAX_POLAR, polar + (center.y - previousCenter.y) * 0.008))
       const distance = touchDistance(points)
       if (distance > 1 && lastDistance > 1) {
-        // 两指向内收时拉近，向外张时拉远；采用幂函数放大捏合反馈。
-        const zoom = Math.pow(distance / lastDistance, 1.35)
+        // 两指向外张开时放大，向内收拢时缩小；采用幂函数放大捏合反馈。
+        const zoom = Math.pow(lastDistance / distance, 1.35)
         radius = Math.max(MIN_RADIUS, Math.min(MAX_RADIUS, radius * zoom))
       }
       lastDistance = distance
     } else if (lastTouches.length) {
-      angle -= (points[0].x - lastTouches[0].x) * 0.011
+      angle += (points[0].x - lastTouches[0].x) * 0.011
       polar = Math.max(MIN_POLAR, Math.min(MAX_POLAR, polar + (points[0].y - lastTouches[0].y) * 0.009))
       lastDistance = touchDistance(points)
     }
