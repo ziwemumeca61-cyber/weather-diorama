@@ -2,35 +2,165 @@
 import * as THREE from './three.core.js'
 import { mulberry32 } from './cityData'
 
-function makeCloudLayer(count, seed, inner, outer, y0, y1, opacity) {
+function makeCloudTexture() {
+  const size = 64
+  const data = new Uint8Array(size * size * 4)
+  const center = (size - 1) / 2
+  const radius = size * 0.5
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const dx = x - center
+      const dy = y - center
+      const angle = Math.atan2(dy, dx)
+      const unevenEdge = 1 + Math.sin(angle * 5) * 0.035 + Math.sin(angle * 9 + 1.7) * 0.022
+      const distance = Math.sqrt(dx * dx + dy * dy) / radius / unevenEdge
+      const edge = Math.max(0, Math.min(1, (1 - distance) / 0.42))
+      const smooth = edge * edge * (3 - 2 * edge)
+      const p = (y * size + x) * 4
+      data[p] = data[p + 1] = data[p + 2] = 255
+      data[p + 3] = Math.round(smooth * 255)
+    }
+  }
+  const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat)
+  texture.minFilter = THREE.LinearFilter
+  texture.magFilter = THREE.LinearFilter
+  texture.needsUpdate = true
+  return texture
+}
+
+function setCloudOpacity(layer, opacity) {
+  const value = Math.max(0, opacity)
+  layer.opacity = value
+  layer.bodyMaterial.opacity = value
+  layer.shadowMaterial.opacity = value * 0.52
+  layer.haloMaterial.opacity = value * 0.28
+  layer.group.visible = value > 0.01
+}
+
+function setCloudColor(layer, body, shadow) {
+  layer.bodyMaterial.color.set(body)
+  layer.shadowMaterial.color.set(shadow)
+  layer.haloMaterial.color.set(body)
+}
+
+/**
+ * 每一朵云由 5–8 个受光云团、2–3 个冷色底部阴影和一个柔边轮廓组成。
+ * 云团按簇分布，旋转视角时仍能看到厚度，不再是单个扁球或圆形贴片。
+ */
+function makeCloudLayer(clusterCount, seed, inner, outer, y0, y1, opacity, texture, compact) {
   const group = new THREE.Group()
-  const geometry = new THREE.SphereGeometry(1, 10, 7)
-  const material = new THREE.MeshBasicMaterial({
-    color: 0xffffff,
+  const geometry = new THREE.SphereGeometry(1, 12, 9)
+  const bodyMaterial = new THREE.MeshStandardMaterial({
+    color: 0xf7fbff,
+    roughness: 1,
+    metalness: 0,
     transparent: true,
-    opacity: opacity || 0,
+    opacity: 0,
     depthWrite: false,
     fog: false,
   })
-  const mesh = new THREE.InstancedMesh(geometry, material, count)
+  const shadowMaterial = new THREE.MeshStandardMaterial({
+    color: 0xaeb9c7,
+    roughness: 1,
+    metalness: 0,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    fog: false,
+  })
+  const haloMaterial = new THREE.SpriteMaterial({
+    map: texture,
+    color: 0xf7fbff,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    fog: false,
+  })
   const rand = mulberry32(seed)
-  const m = new THREE.Matrix4()
-  const p = new THREE.Vector3()
-  const q = new THREE.Quaternion()
-  const s = new THREE.Vector3()
-  for (let i = 0; i < count; i++) {
-    const a = rand() * Math.PI * 2
+  const bodies = []
+  const shadows = []
+  const halos = []
+
+  for (let cluster = 0; cluster < clusterCount; cluster++) {
+    const angle = rand() * Math.PI * 2
     const radius = inner + rand() * (outer - inner)
-    const size = 1.3 + rand() * 2.6
-    p.set(Math.cos(a) * radius, y0 + rand() * (y1 - y0), Math.sin(a) * radius)
-    s.set(size * (1.3 + rand() * 0.8), size * (0.35 + rand() * 0.25), size)
-    m.compose(p, q, s)
-    mesh.setMatrixAt(i, m)
+    const baseSize = (compact ? 1.25 : 1.7) + rand() * (compact ? 1.65 : 2.5)
+    const cx = Math.cos(angle) * radius
+    const cy = y0 + rand() * (y1 - y0)
+    const cz = Math.sin(angle) * radius
+    const puffCount = (compact ? 4 : 5) + Math.floor(rand() * 4)
+
+    for (let i = 0; i < puffCount; i++) {
+      const localAngle = rand() * Math.PI * 2
+      const spread = baseSize * (0.12 + rand() * 0.72)
+      const size = baseSize * (0.48 + rand() * 0.48)
+      const crown = i < 2 ? baseSize * (0.3 + rand() * 0.28) : (rand() - 0.5) * baseSize * 0.3
+      bodies.push({
+        x: cx + Math.cos(localAngle) * spread,
+        y: cy + crown,
+        z: cz + Math.sin(localAngle) * spread * 0.62,
+        sx: size * (1.05 + rand() * 0.38),
+        sy: size * (0.72 + rand() * 0.34),
+        sz: size * (0.82 + rand() * 0.3),
+      })
+    }
+
+    const shadowCount = compact ? 2 : 3
+    for (let i = 0; i < shadowCount; i++) {
+      const offset = (i - (shadowCount - 1) / 2) * baseSize * 0.68
+      shadows.push({
+        x: cx + offset,
+        y: cy - baseSize * (0.34 + rand() * 0.12),
+        z: cz + (rand() - 0.5) * baseSize * 0.32,
+        sx: baseSize * (0.85 + rand() * 0.32),
+        sy: baseSize * (0.32 + rand() * 0.12),
+        sz: baseSize * (0.7 + rand() * 0.25),
+      })
+    }
+    halos.push({ x: cx, y: cy + baseSize * 0.08, z: cz, sx: baseSize * 3.35, sy: baseSize * 1.9 })
   }
-  mesh.instanceMatrix.needsUpdate = true
-  mesh.frustumCulled = false
-  group.add(mesh)
-  return { group, mesh, material, geometry }
+
+  const makeInstances = (material, puffs) => {
+    const mesh = new THREE.InstancedMesh(geometry, material, puffs.length)
+    const matrix = new THREE.Matrix4()
+    const position = new THREE.Vector3()
+    const quaternion = new THREE.Quaternion()
+    const scale = new THREE.Vector3()
+    puffs.forEach((puff, i) => {
+      position.set(puff.x, puff.y, puff.z)
+      scale.set(puff.sx, puff.sy, puff.sz)
+      matrix.compose(position, quaternion, scale)
+      mesh.setMatrixAt(i, matrix)
+    })
+    mesh.instanceMatrix.needsUpdate = true
+    mesh.frustumCulled = false
+    group.add(mesh)
+    return mesh
+  }
+
+  const bodyMesh = makeInstances(bodyMaterial, bodies)
+  const shadowMesh = makeInstances(shadowMaterial, shadows)
+  halos.forEach((halo) => {
+    const sprite = new THREE.Sprite(haloMaterial)
+    sprite.position.set(halo.x, halo.y, halo.z)
+    sprite.scale.set(halo.sx, halo.sy, 1)
+    sprite.frustumCulled = false
+    group.add(sprite)
+  })
+
+  const layer = {
+    group,
+    bodyMesh,
+    shadowMesh,
+    bodyMaterial,
+    shadowMaterial,
+    haloMaterial,
+    materials: [bodyMaterial, shadowMaterial, haloMaterial],
+    geometry,
+    opacity: 0,
+  }
+  setCloudOpacity(layer, opacity || 0)
+  return layer
 }
 
 function makeRain(count) {
@@ -178,12 +308,17 @@ function resetLightning(bolt, seed) {
 
 export function createWeatherEffects(scene) {
   const group = new THREE.Group()
+  group.name = 'VolumetricWeatherCloudsV3'
+  if (typeof console !== 'undefined' && console.info) console.info('[scene] cloud renderer: VolumetricWeatherCloudsV3')
   scene.add(group)
-  const ambient = makeCloudLayer(22, 1731, 14, 27, -1, 9, 0.42)
-  const high = makeCloudLayer(30, 2719, 3, 18, 12, 18, 0)
-  const fog = makeCloudLayer(26, 3761, 1, 12, 0.25, 1.7, 0)
-  high.material.color.set(0xdce2e8)
-  fog.material.color.set(0xdfe6ee)
+  const cloudTexture = makeCloudTexture()
+  // 晴天也能明显看到远处的簇状环境云；天气云则压低到高楼上方。
+  const ambient = makeCloudLayer(11, 1731, 15, 28, -1, 8, 0.58, cloudTexture, false)
+  const high = makeCloudLayer(15, 2719, 3, 19, 10.5, 15.5, 0, cloudTexture, false)
+  const fog = makeCloudLayer(10, 3761, 1, 12, 0.3, 1.8, 0, cloudTexture, true)
+  setCloudColor(ambient, 0xf7fbff, 0xb9c6d5)
+  setCloudColor(high, 0xe8edf3, 0x8f9aa8)
+  setCloudColor(fog, 0xe4e9ef, 0xb2bbc5)
   group.add(ambient.group, high.group, fog.group)
 
   const rain = makeRain(1250)
@@ -197,6 +332,7 @@ export function createWeatherEffects(scene) {
   let kind = 'clear'
   let rainTarget = 0
   let snowTarget = 0
+  let ambientTarget = 0.58
   let cloudTarget = 0
   let fogTarget = 0
   let flash = 0
@@ -209,7 +345,12 @@ export function createWeatherEffects(scene) {
     rainTarget = kind === 'rain' || kind === 'thunder' ? 0.82 : 0
     snowTarget = kind === 'snow' ? 0.96 : 0
     fogTarget = kind === 'fog' ? 0.42 : 0
-    cloudTarget = kind === 'cloudy' ? 0.35 : kind === 'overcast' ? 0.62 : kind === 'fog' ? 0.34 : kind === 'snow' ? 0.48 : kind === 'rain' ? 0.68 : kind === 'thunder' ? 0.82 : 0
+    ambientTarget = kind === 'clear' ? 0.58 : kind === 'cloudy' ? 0.68 : kind === 'overcast' ? 0.72 : kind === 'fog' ? 0.48 : kind === 'snow' ? 0.62 : kind === 'rain' ? 0.66 : kind === 'thunder' ? 0.7 : 0.58
+    cloudTarget = kind === 'cloudy' ? 0.52 : kind === 'overcast' ? 0.78 : kind === 'fog' ? 0.38 : kind === 'snow' ? 0.52 : kind === 'rain' ? 0.8 : kind === 'thunder' ? 0.92 : 0
+    const body = kind === 'thunder' ? 0x626b79 : kind === 'rain' ? 0x8993a0 : kind === 'overcast' ? 0xb6bec9 : kind === 'cloudy' ? 0xe7edf4 : kind === 'fog' ? 0xd9dfe6 : 0xf5f9fd
+    const shadow = kind === 'thunder' ? 0x353e4d : kind === 'rain' ? 0x505a67 : kind === 'overcast' ? 0x747e8b : kind === 'cloudy' ? 0x9aa7b6 : kind === 'fog' ? 0xaeb7c1 : 0xb9c6d5
+    setCloudColor(ambient, body, shadow)
+    setCloudColor(high, body, shadow)
   }
 
   const splashMatrix = new THREE.Matrix4()
@@ -239,18 +380,20 @@ export function createWeatherEffects(scene) {
 
   function step(t, dt) {
     const damping = 1 - Math.exp(-3 * dt)
-    high.material.opacity += (cloudTarget - high.material.opacity) * damping
-    fog.material.opacity += (fogTarget - fog.material.opacity) * damping
+    setCloudOpacity(ambient, ambient.opacity + (ambientTarget - ambient.opacity) * damping)
+    setCloudOpacity(high, high.opacity + (cloudTarget - high.opacity) * damping)
+    setCloudOpacity(fog, fog.opacity + (fogTarget - fog.opacity) * damping)
     rain.material.opacity += (rainTarget - rain.material.opacity) * damping
     snow.material.opacity += (snowTarget - snow.material.opacity) * damping
     splashes.material.opacity += (rainTarget * 0.6 - splashes.material.opacity) * damping
-    high.mesh.visible = high.material.opacity > 0.01
-    fog.mesh.visible = fog.material.opacity > 0.01
     rain.mesh.visible = rain.material.opacity > 0.01
     snow.mesh.visible = snow.material.opacity > 0.01
     splashes.mesh.visible = splashes.material.opacity > 0.01
     ambient.group.rotation.y = t * 0.018
+    ambient.group.position.y = Math.sin(t * 0.16) * 0.22
     high.group.rotation.y = -t * 0.012
+    high.group.position.x = Math.sin(t * 0.08) * 0.9
+    high.group.position.y = Math.sin(t * 0.13 + 1.2) * 0.28
     fog.group.rotation.y = t * 0.025
 
     if (rain.mesh.visible) {
@@ -309,9 +452,10 @@ export function createWeatherEffects(scene) {
 
   function dispose() {
     const geometries = [ambient.geometry, high.geometry, fog.geometry, rain.geometry, snow.geometry, splashes.geometry, bolt.geometry]
-    const materials = [ambient.material, high.material, fog.material, rain.material, snow.material, splashes.material, bolt.material]
+    const materials = ambient.materials.concat(high.materials, fog.materials, [rain.material, snow.material, splashes.material, bolt.material])
     geometries.forEach((geometry) => { try { geometry.dispose() } catch (e) {} })
     materials.forEach((material) => { try { material.dispose() } catch (e) {} })
+    try { cloudTexture.dispose() } catch (e) {}
     scene.remove(group)
   }
 
