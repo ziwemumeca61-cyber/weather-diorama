@@ -4,7 +4,7 @@
 import * as THREE from './three.core.js'
 import { generateCity, hashName } from './cityData'
 import { buildLandmark, hasOwnWater } from './landmarks'
-import { createProps } from './props'
+import { createProps, RIVER } from './props'
 import { createSky } from './sky'
 import { makeWindowTexture } from './tileTexture'
 
@@ -121,7 +121,7 @@ export function createScene(canvas, opts) {
 
   // 托盘
   const tray = new THREE.Mesh(
-    new THREE.BoxGeometry(20, 0.6, 20),
+    new THREE.BoxGeometry(17.5, 0.6, 17.5),
     new THREE.MeshStandardMaterial({ color: 0xeef3fa, roughness: 0.9 }),
   )
   tray.position.y = -0.3
@@ -317,7 +317,7 @@ export function createScene(canvas, opts) {
 
     const data = generateCity(hashName(cityName || '上海')).filter((b) => {
       if (Math.abs(b.x) <= clearX && Math.abs(b.z) <= clearZ) return false // 地标广场
-      if (!skipRiver && Math.abs(b.z - 6.0) < 1.75) return false // 河道
+      if (!skipRiver && Math.abs(b.z - RIVER.z) < RIVER.clear) return false // 河道
       return true
     })
     rooftops = data // 供雨滴溅落挑落点
