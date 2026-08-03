@@ -97,7 +97,8 @@ export function resolveWater(spec) {
       riverZ0: z0,
       groundZ1: z0,
       cityMaxZ: Math.min(MAX_BLOCK_Z, z0 - 0.9),
-      boats: (value.boats == null ? true : value.boats) && CITY.trayHalf - z0 > 2.9,
+      // 宽水面统一保留小船；只有窄水面才自动无船，避免配置遗漏让河面变空。
+      boats: CITY.trayHalf - z0 > 2.9,
       bridge: value.bridge == null ? true : value.bridge,
       lake: null,
     }

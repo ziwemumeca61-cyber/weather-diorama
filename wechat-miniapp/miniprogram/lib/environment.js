@@ -94,28 +94,33 @@ function makeFlowTexture() {
   const data = new Uint8Array(size * size * 4)
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      const wave = Math.max(0, Math.sin(y * 0.31 + Math.sin(x * 0.08) * 2.3))
-      const fine = Math.max(0, Math.sin(y * 0.72 - x * 0.035))
-      const crest = Math.pow(wave, 12) * 54 + Math.pow(fine, 18) * 28
+      // Many small, directionally stretched ripples read as flowing water;
+      // broad low-frequency bands made the old surface look like waves.
+      const bend = Math.sin(x * 0.045 + Math.sin(y * 0.12) * 1.4) * 0.9
+      const ripple = Math.max(0, Math.sin(y * 0.82 + bend))
+      const fine = Math.max(0, Math.sin(y * 1.75 + x * 0.018 + bend * 0.5))
+      const shimmer = Math.max(0, Math.sin(x * 0.16 + y * 0.34))
+      const crest = Math.pow(ripple, 10) * 22 + Math.pow(fine, 16) * 10 + Math.pow(shimmer, 22) * 7
       const p = (y * size + x) * 4
-      data[p] = Math.min(255, 63 + crest)
-      data[p + 1] = Math.min(255, 111 + crest)
-      data[p + 2] = Math.min(255, 151 + crest)
+      const base = 42 + Math.sin(y * 0.1 + x * 0.012) * 4
+      data[p] = Math.min(255, base + crest * 0.72)
+      data[p + 1] = Math.min(255, base + 49 + crest)
+      data[p + 2] = Math.min(255, base + 89 + crest * 1.08)
       data[p + 3] = 255
     }
   }
   const rand = mulberry32(4242)
-  for (let i = 0; i < 90; i++) {
+  for (let i = 0; i < 150; i++) {
     const x = Math.floor(rand() * size)
     const y = Math.floor(rand() * size)
-    const len = 4 + Math.floor(rand() * 12)
+    const len = 3 + Math.floor(rand() * 9)
     for (let k = 0; k < len; k++) {
-      const yy = y + Math.round(Math.sin((k / len) * Math.PI) * -2)
+      const yy = y + Math.round(Math.sin((k / len) * Math.PI) * -1)
       if (x + k >= size || yy < 0 || yy >= size) continue
       const p = (yy * size + x + k) * 4
-      data[p] = 235
-      data[p + 1] = 246
-      data[p + 2] = 255
+      data[p] = 150
+      data[p + 1] = 202
+      data[p + 2] = 236
     }
   }
   return dataTexture(data, size, size)
@@ -166,39 +171,79 @@ function makeRoundedTrayGeometry() {
   return geometry
 }
 
-function makeCloudBase(group) {
-  const cloudMat = new THREE.MeshStandardMaterial({
-    color: 0xf2f6fd,
-    roughness: 1,
-    transparent: true,
-    opacity: 0.94,
-    depthWrite: false,
-  })
-  const core = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 12), cloudMat)
-  core.position.y = -1.5
-  core.scale.set(10.8, 0.95, 10.8)
-  group.add(core)
-  const count = 46
-  const puffs = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 10, 7), cloudMat, count)
-  const rand = mulberry32(9127)
-  const matrix = new THREE.Matrix4()
-  const q = new THREE.Quaternion()
-  const p = new THREE.Vector3()
-  const s = new THREE.Vector3()
-  for (let i = 0; i < count; i++) {
-    const a = (i / count) * Math.PI * 2 + rand() * 0.12
-    const radius = 9.2 + rand() * 2.1
-    const size = 1.1 + rand() * 1.25
-    const sy = size * 0.45
-    p.set(Math.cos(a) * radius, -0.55 - sy - rand() * 0.45, Math.sin(a) * radius)
-    s.set(size * (1.1 + rand() * 0.4), sy, size)
-    matrix.compose(p, q, s)
-    puffs.setMatrixAt(i, matrix)
+function makePuffTexture() {
+  const size = 64
+  const data = new Uint8Array(size * size * 4)
+  const center = (size - 1) / 2
+  const radius = size * 0.5
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const distance = Math.hypot(x - center, y - center) / radius
+      const edge = Math.max(0, 1 - distance)
+      const alpha = Math.round(Math.pow(edge, 1.35) * 255)
+      const p = (y * size + x) * 4
+      data[p] = data[p + 1] = data[p + 2] = 255
+      data[p + 3] = alpha
+    }
   }
-  puffs.instanceMatrix.needsUpdate = true
-  puffs.frustumCulled = false
-  group.add(puffs)
-  return cloudMat
+  return dataTexture(data, size, size)
+}
+
+function makeCloudBase(group) {
+  const texture = makePuffTexture()
+  const cloudMat = new THREE.SpriteMaterial({
+    map: texture,
+    color: 0xf2f6fd,
+    transparent: true,
+    opacity: 0.9,
+    depthWrite: false,
+    fog: false,
+  })
+  const shadowMat = new THREE.SpriteMaterial({
+    map: texture,
+    color: 0xaebaca,
+    transparent: true,
+    opacity: 0.18,
+    depthWrite: false,
+    fog: false,
+  })
+  const rand = mulberry32(9127)
+  const slabHalf = CITY.trayHalf + 0.8
+  const addPuff = (material, x, y, z, size, flatten) => {
+    const puff = new THREE.Sprite(material)
+    puff.position.set(x, y, z)
+    puff.scale.set(size * (1.08 + rand() * 0.18), size * flatten, 1)
+    group.add(puff)
+  }
+
+  // A soft top blanket keeps the underside of the diorama rounded instead of flat.
+  const grid = 6
+  for (let ix = 0; ix < grid; ix++) {
+    for (let iz = 0; iz < grid; iz++) {
+      const gx = (ix / (grid - 1) - 0.5) * 2 * slabHalf * 0.92
+      const gz = (iz / (grid - 1) - 0.5) * 2 * slabHalf * 0.92
+      const size = 3.2 + rand() * 2.0
+      addPuff(cloudMat, gx + (rand() - 0.5) * 1.8, -0.55 - size * 0.42 - rand() * 0.3, gz + (rand() - 0.5) * 1.8, size, 0.54)
+    }
+  }
+
+  // Uneven rim billows create the soft silhouette visible around the tray edge.
+  for (let i = 0; i < 16; i++) {
+    const angle = (i / 16) * Math.PI * 2 + rand() * 0.3
+    const radius = slabHalf * (0.9 + rand() * 0.1)
+    const size = 2.7 + rand() * 1.5
+    addPuff(cloudMat, Math.cos(angle) * radius, -0.65 - size * 0.42 - rand() * 0.5, Math.sin(angle) * radius, size, 0.58)
+  }
+
+  // Cooler, lower puffs add depth without turning the whole cloud into a solid blob.
+  for (let i = 0; i < 18; i++) {
+    const angle = rand() * Math.PI * 2
+    const t = rand()
+    const radius = (1 - t * 0.82) * slabHalf * 0.62
+    const size = 1.8 + (1 - t) * 2.0
+    addPuff(shadowMat, Math.cos(angle) * radius, -2.7 - t * 2.1, Math.sin(angle) * radius, size, 0.62)
+  }
+  return { materials: [cloudMat, shadowMat], texture }
 }
 
 function makeWater(group, water, flow, foam) {
@@ -215,7 +260,7 @@ function makeWater(group, water, flow, foam) {
     opacity: 0.95,
   })
   if (water.lake) {
-    flow.repeat.set(3, 3)
+    flow.repeat.set(4, 4)
     const geo = new THREE.CircleGeometry(1, 56)
     geo.rotateX(-Math.PI / 2)
     mesh = new THREE.Mesh(geo, mat)
@@ -223,10 +268,10 @@ function makeWater(group, water, flow, foam) {
     mesh.scale.set(water.lake.rx, 1, water.lake.rz)
     group.add(mesh)
   } else if (water.riverZ0 != null) {
-    flow.repeat.set(6, 2)
+    flow.repeat.set(10, 3)
     const z0 = water.riverZ0
     const z1 = CITY.trayHalf
-    const geo = new THREE.PlaneGeometry(22, z1 - z0, 32, 8)
+    const geo = new THREE.PlaneGeometry(22, z1 - z0, 64, 12)
     geo.rotateX(-Math.PI / 2)
     mesh = new THREE.Mesh(geo, mat)
     mesh.position.set(0, 0.015, (z0 + z1) / 2)
@@ -237,7 +282,7 @@ function makeWater(group, water, flow, foam) {
       map: foam,
       color: 0xffffff,
       transparent: true,
-      opacity: 0.5,
+      opacity: 0.34,
       depthWrite: false,
       roughness: 1,
     })
@@ -251,7 +296,9 @@ function makeWater(group, water, flow, foam) {
 }
 
 function makeBoats(group, water, foam) {
-  if (!water.boats || water.riverZ0 == null) return []
+  const hasRiver = water.riverZ0 != null
+  const hasLake = !!water.lake
+  if ((!water.boats && !hasLake) || (!hasRiver && !hasLake)) return []
   const boats = []
   const hullGeo = new THREE.BoxGeometry(0.6, 0.12, 0.26)
   const prowGeo = new THREE.BoxGeometry(0.19, 0.12, 0.19)
@@ -265,7 +312,8 @@ function makeBoats(group, water, foam) {
   const windowMat = new THREE.MeshStandardMaterial({ color: 0xcfe0ea, metalness: 0.4, roughness: 0.25 })
   const funnelMat = new THREE.MeshStandardMaterial({ color: 0x3a3f47, roughness: 0.6 })
   const wakeMat = new THREE.MeshStandardMaterial({ map: foam, color: 0xffffff, transparent: true, opacity: 0.32, depthWrite: false, roughness: 1 })
-  for (let i = 0; i < 6; i++) {
+  const count = hasRiver ? 6 : 2
+  for (let i = 0; i < count; i++) {
     const boat = new THREE.Group()
     const hullMat = hullMats[i % hullMats.length]
     const hull = new THREE.Mesh(hullGeo, hullMat)
@@ -292,8 +340,9 @@ function makeBoats(group, water, foam) {
     group.add(boat)
     boats.push({
       group: boat,
-      z: water.riverZ0 + 0.7 + (i % 3),
-      speed: 0.09 + (i % 4) * 0.022,
+      lake: water.lake,
+      z: hasRiver ? water.riverZ0 + 0.7 + (i % 3) : null,
+      speed: hasLake ? 0.18 + (i % 2) * 0.035 : 0.09 + (i % 4) * 0.022,
       offset: (i * 0.31) % 1,
       dir: i % 2 === 0 ? 1 : -1,
     })
@@ -366,7 +415,7 @@ export function createEnvironment(water) {
   )
   tray.castShadow = tray.receiveShadow = true
   group.add(tray)
-  const cloudMat = makeCloudBase(group)
+  const clouds = makeCloudBase(group)
 
   const groundTex = makeGroundTexture(water.groundZ1)
   textures.push(groundTex)
@@ -388,7 +437,7 @@ export function createEnvironment(water) {
 
   const flow = makeFlowTexture()
   const foam = makeFoamTexture()
-  textures.push(flow, foam)
+  textures.push(clouds.texture, flow, foam)
   const surface = makeWater(group, water, flow, foam)
   const boats = makeBoats(group, water, foam)
   const extras = makeExtras(group)
@@ -412,10 +461,10 @@ export function createEnvironment(water) {
   }
 
   function step(t, dt) {
-    flow.offset.x -= dt * (water.lake ? 0.014 : 0.06)
-    if (water.lake) flow.offset.y += dt * 0.007
-    foam.offset.x -= dt * 0.035
-    surface.mat.emissiveIntensity = 0.04 + Math.sin(t * 0.8) * 0.02
+    flow.offset.x -= dt * (water.lake ? 0.009 : 0.035)
+    if (water.lake) flow.offset.y += dt * 0.004
+    foam.offset.x -= dt * 0.02
+    surface.mat.emissiveIntensity = 0.035 + Math.sin(t * 0.8) * 0.008
     if (surface.mesh && surface.base) {
       waterFrame++
       const attr = surface.mesh.geometry.attributes.position
@@ -423,16 +472,29 @@ export function createEnvironment(water) {
       for (let i = 0; i < attr.count; i++) {
         const x = base[i * 3]
         const z = base[i * 3 + 2]
-        attr.array[i * 3 + 1] = base[i * 3 + 1] + Math.sin(x + t * 1.2) * 0.02 + Math.sin(z * 1.6 - t * 0.9) * 0.014
+        const current = Math.sin(z * 3.4 - t * 1.05 + Math.sin(x * 0.7) * 0.45) * 0.004
+        const cross = Math.sin(x * 2.8 + z * 1.8 - t * 0.72) * 0.002
+        attr.array[i * 3 + 1] = base[i * 3 + 1] + current + cross
       }
       attr.needsUpdate = true
       if (waterFrame % 6 === 0) surface.mesh.geometry.computeVertexNormals()
     }
     boats.forEach((boat) => {
       const p = (t * boat.speed + boat.offset) % 1
-      const x = -10 + 20 * (boat.dir > 0 ? p : 1 - p)
-      boat.group.position.set(x, 0.05, boat.z)
-      boat.group.rotation.y = boat.dir > 0 ? 0 : Math.PI
+      if (boat.lake) {
+        const angle = t * boat.speed + boat.offset * Math.PI * 2
+        const next = angle + 0.02
+        const x = boat.lake.x + Math.cos(angle) * boat.lake.rx * 0.42
+        const z = boat.lake.z + Math.sin(angle) * boat.lake.rz * 0.42
+        const nx = boat.lake.x + Math.cos(next) * boat.lake.rx * 0.42
+        const nz = boat.lake.z + Math.sin(next) * boat.lake.rz * 0.42
+        boat.group.position.set(x, 0.05, z)
+        boat.group.rotation.y = Math.atan2(nz - z, nx - x)
+      } else {
+        const x = -10 + 20 * (boat.dir > 0 ? p : 1 - p)
+        boat.group.position.set(x, 0.05, boat.z)
+        boat.group.rotation.y = boat.dir > 0 ? 0 : Math.PI
+      }
     })
 
     snowMat.opacity += (snowTarget - snowMat.opacity) * (1 - Math.exp(-2.2 * dt))
@@ -461,14 +523,16 @@ export function createEnvironment(water) {
               : weather === 'snow' ? 0xf8fbff
                 : 0xf6f9fe
     cloudTint.set(tint)
-    cloudMat.color.lerp(cloudTint, 1 - Math.exp(-1.8 * dt))
+    clouds.materials.forEach((material) => {
+      material.color.lerp(cloudTint, 1 - Math.exp(-1.8 * dt))
+    })
   }
 
   function dispose() {
     const geometries = []
     const materials = []
     group.traverse((o) => {
-      if (!o.isMesh && !o.isLineSegments) return
+      if (!o.isMesh && !o.isLineSegments && !o.isSprite) return
       if (o.geometry && geometries.indexOf(o.geometry) === -1) {
         geometries.push(o.geometry)
         try { o.geometry.dispose() } catch (e) {}
