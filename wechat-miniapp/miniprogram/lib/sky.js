@@ -1,7 +1,7 @@
 // 天空元素：夜里的星空穹顶与月亮、晴天的太阳。
 // 全部用 MeshBasicMaterial / PointsMaterial 且关掉 fog，
 // 否则会被场景雾吃掉（它们在 70 单位外，远超雾的 near/far）。
-import * as THREE from './three.module.min.js'
+import * as THREE from './three.core.js'
 
 export function createSky() {
   const group = new THREE.Group()

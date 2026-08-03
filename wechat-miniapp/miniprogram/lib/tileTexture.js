@@ -1,7 +1,7 @@
 // 釉面瓦贴图。Web 版用 document.createElement('canvas') 画，小程序没有 DOM；
 // 这里改用 THREE.DataTexture —— 纯 JS 生成像素数组，不依赖任何 canvas/DOM API，
 // 在小程序的 WebGL 1.0 下是确定可用的（尺寸取 2 的幂，满足 WebGL1 的 REPEAT 要求）。
-import * as THREE from './three.module.min.js'
+import * as THREE from './three.core.js'
 
 const W = 64
 const H = 32

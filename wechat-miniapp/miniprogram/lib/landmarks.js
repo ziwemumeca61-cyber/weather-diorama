@@ -2,7 +2,7 @@
 // 放在城市中心取代通用主塔。每个 builder 返回 { group, glow }：
 // glow 是夜间会点亮的材质数组，交给 scene 统一在昼夜间调节自发光强度。
 // 找不到对应城市时返回 null，scene 退回到通用主塔。
-import * as THREE from './three.module.min.js'
+import * as THREE from './three.core.js'
 import { makeConcaveRoof, makeHipRoof } from './roofKit'
 import { makeTileTexture, makeWindowTexture, darken } from './tileTexture'
 import { mulberry32, hashName } from './cityData'

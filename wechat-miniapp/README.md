@@ -31,7 +31,7 @@ wechat-miniapp/
 3. **部署云函数**：右键 `cloudfunctions/weather` → 「上传并部署（云端安装依赖）」。
 4. 直接**编译**预览：应看到顶部天气卡（默认上海实时天气）+ 底部搜索/定位/手动天气；
    画布里是一座自动环绕的微缩城市。
-   > three 已内置在 `miniprogram/lib/three.module.min.js`，**无需 `npm install` 或「构建 npm」**。
+   > three 已内置在 `miniprogram/lib/three.core.js`，**无需 `npm install` 或「构建 npm」**。
 
 ## 现在能用的
 - ✅ 实时天气（云函数代理，个人主体可用，无需备案域名）
