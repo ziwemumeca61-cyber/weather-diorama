@@ -426,9 +426,15 @@ export function createScene(canvas, opts) {
     refreshLook()
   }
 
+  // 与 Web 端 OrbitControls 对齐：radius 是相机到目标点的真实距离，
+  // polar 是从正上方量起的轨道角，允许越过地平线看到悬浮底盘底部。
   let angle = Math.atan2(21, 19)
-  let elevation = 18
-  let radius = 31
+  let polar = Math.acos(3 / Math.sqrt(19 * 19 + 3 * 3 + 21 * 21))
+  let radius = Math.sqrt(19 * 19 + 3 * 3 + 21 * 21)
+  const MIN_POLAR = 0.15
+  const MAX_POLAR = Math.PI * 0.62
+  const MIN_RADIUS = 8.5
+  const MAX_RADIUS = 82
   let dragging = false
   let userInteracted = false
   let lastTouches = []
@@ -483,17 +489,20 @@ export function createScene(canvas, opts) {
     const previousCenter = lastCenter || center
 
     if (points.length >= 2 && lastTouches.length >= 2) {
-      // 双指中心仍可旋转和俯仰，捏合距离只负责缩放，操作更接近 3D 地图。
-      angle -= (center.x - previousCenter.x) * 0.007
-      elevation = Math.max(5, Math.min(34, elevation - (center.y - previousCenter.y) * 0.05))
+      // 双指中心负责旋转/俯仰，捏合距离负责缩放。
+      // 方向按当前真机反馈反转，让模型随手指滑动方向转动。
+      angle -= (center.x - previousCenter.x) * 0.010
+      polar = Math.max(MIN_POLAR, Math.min(MAX_POLAR, polar + (center.y - previousCenter.y) * 0.008))
       const distance = touchDistance(points)
       if (distance > 1 && lastDistance > 1) {
-        radius = Math.max(16, Math.min(48, radius * lastDistance / distance))
+        // 两指向内收时拉近，向外张时拉远；采用幂函数放大捏合反馈。
+        const zoom = Math.pow(distance / lastDistance, 1.35)
+        radius = Math.max(MIN_RADIUS, Math.min(MAX_RADIUS, radius * zoom))
       }
       lastDistance = distance
     } else if (lastTouches.length) {
-      angle -= (points[0].x - lastTouches[0].x) * 0.008
-      elevation = Math.max(5, Math.min(34, elevation - (points[0].y - lastTouches[0].y) * 0.06))
+      angle -= (points[0].x - lastTouches[0].x) * 0.011
+      polar = Math.max(MIN_POLAR, Math.min(MAX_POLAR, polar + (points[0].y - lastTouches[0].y) * 0.009))
       lastDistance = touchDistance(points)
     }
 
@@ -525,7 +534,11 @@ export function createScene(canvas, opts) {
     const t = (stamp - started) * 0.001
     lastFrame = stamp
     if (!dragging && !userInteracted) angle += dt * 0.042
-    camera.position.set(Math.cos(angle) * radius, elevation, Math.sin(angle) * radius)
+    camera.position.set(
+      cameraTarget.x + Math.sin(polar) * Math.cos(angle) * radius,
+      cameraTarget.y + Math.cos(polar) * radius,
+      cameraTarget.z + Math.sin(polar) * Math.sin(angle) * radius,
+    )
     camera.lookAt(cameraTarget)
 
     const damping = 1 - Math.exp(-3 * dt)

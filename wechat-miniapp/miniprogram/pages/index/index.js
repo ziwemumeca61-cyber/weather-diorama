@@ -197,8 +197,8 @@ Page({
   // 单指旋转 / 双指旋转俯仰和捏合缩放
   canvasTouches(e) {
     return (e && e.touches ? e.touches : []).map((p) => ({
-      x: p.x != null ? p.x : p.clientX,
-      y: p.y != null ? p.y : p.clientY,
+      x: p.x != null ? p.x : (p.clientX != null ? p.clientX : p.pageX),
+      y: p.y != null ? p.y : (p.clientY != null ? p.clientY : p.pageY),
     }))
   },
   onCanvasTouchStart(e) {

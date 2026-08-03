@@ -78,12 +78,14 @@ function makeWeatherClouds(texture) {
   })
   const rand = mulberry32(2719)
   const puffs = []
-  for (let i = 0; i < 26; i++) {
+  // 天气云层覆盖城市上空；增加数量而降低单朵尺寸，让多云/阴雨更有层次。
+  const cloudCount = 44
+  for (let i = 0; i < cloudCount; i++) {
     const puff = {
-      x: (rand() - 0.5) * 34,
-      z: (rand() - 0.5) * 34 + CITY.landmark.z,
-      y: 10 + rand() * 4,
-      scale: 6 + rand() * 6,
+      x: (rand() - 0.5) * 36,
+      z: (rand() - 0.5) * 36 + CITY.landmark.z,
+      y: 9.2 + rand() * 5.2,
+      scale: 5.2 + rand() * 5.8,
       speed: 0.1 + rand() * 0.16,
     }
     puffs.push(puff)
@@ -99,7 +101,8 @@ function makeWeatherClouds(texture) {
 }
 
 function setWeatherClouds(layer, coverage, dark) {
-  layer.activeCount = coverage > 0 ? Math.floor(14 + (26 - 14) * coverage) : 0
+  const total = layer.puffs.length
+  layer.activeCount = coverage > 0 ? Math.min(total, Math.floor(20 + (total - 20) * coverage)) : 0
   layer.targetOpacity = coverage > 0 ? 0.5 + (0.92 - 0.5) * coverage : 0
   layer.material.color.set(dark ? 0x5b626e : coverage > 0.7 ? 0xaeb4bd : 0xf2f5f8)
   layer.group.children.forEach((sprite, i) => { sprite.visible = i < layer.activeCount })
@@ -306,7 +309,7 @@ export function createWeatherEffects(scene) {
   let snowTarget = 0
   let flash = 0
   let boltLife = 0
-  let nextBolt = 1.5
+  let nextBolt = 1.0
   let boltSeed = 4001
 
   function setWeather(value) {
@@ -314,10 +317,10 @@ export function createWeatherEffects(scene) {
     rainTarget = kind === 'rain' || kind === 'thunder' ? 0.82 : 0
     snowTarget = kind === 'snow' ? 0.96 : 0
     fog.targetOpacity = kind === 'fog' ? 0.28 : 0
-    if (kind === 'cloudy') setWeatherClouds(high, 0.45, false)
-    else if (kind === 'overcast') setWeatherClouds(high, 0.85, false)
-    else if (kind === 'rain') setWeatherClouds(high, 0.75, true)
-    else if (kind === 'thunder') setWeatherClouds(high, 0.9, true)
+    if (kind === 'cloudy') setWeatherClouds(high, 0.66, false)
+    else if (kind === 'overcast') setWeatherClouds(high, 0.96, false)
+    else if (kind === 'rain') setWeatherClouds(high, 0.92, true)
+    else if (kind === 'thunder') setWeatherClouds(high, 0.98, true)
     else setWeatherClouds(high, 0, false)
   }
 
@@ -424,7 +427,8 @@ export function createWeatherEffects(scene) {
       bolt.mesh.visible = true
       bolt.material.opacity = 1
       if (bolt.lightPosition) boltLight.position.set(bolt.lightPosition[0], bolt.lightPosition[1], bolt.lightPosition[2])
-      nextBolt = t + 2.2 + (boltSeed % 39) * 0.1
+      // 雷阵雨缩短闪电间隔，保持有随机间歇，避免机械地等很久才闪一次。
+      nextBolt = t + 0.95 + (boltSeed % 22) * 0.07
     }
     boltLife = Math.max(0, boltLife - dt)
     if (boltLife > 0) bolt.material.opacity = Math.min(1, boltLife * 7)

@@ -213,8 +213,8 @@ function makeCloudBase(group) {
     cloudGroup.add(sprite)
   }
 
-  // Web CloudBase 的同款柔边 Sprite；网格从 6×6 降到 5×5，减少底盘下云量。
-  const grid = 5
+  // Web CloudBase 的同款柔边 Sprite；底盘下增加多层疏密错落的云团，避免边缘露空。
+  const grid = 6
   for (let ix = 0; ix < grid; ix++) {
     for (let iz = 0; iz < grid; iz++) {
       const gx = (ix / (grid - 1) - 0.5) * 2 * slabHalf * 0.92
@@ -224,7 +224,7 @@ function makeCloudBase(group) {
     }
   }
 
-  const ring = 10
+  const ring = 14
   for (let i = 0; i < ring; i++) {
     const angle = (i / ring) * Math.PI * 2 + rand() * 0.3
     const radius = slabHalf * (0.9 + rand() * 0.1)
@@ -232,7 +232,7 @@ function makeCloudBase(group) {
     addPuff(Math.cos(angle) * radius, -0.55 - size * 0.42 - 0.3 - rand() * 0.6, Math.sin(angle) * radius, size)
   }
 
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 18; i++) {
     const angle = rand() * Math.PI * 2
     const t = rand()
     const radius = (1 - t * 0.85) * slabHalf * 0.6
