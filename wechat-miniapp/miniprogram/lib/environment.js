@@ -405,9 +405,17 @@ function makeExtras(group) {
 export function createEnvironment(water) {
   const group = new THREE.Group()
   const textures = []
+  const trayMaterial = new THREE.MeshStandardMaterial({
+    color: 0xf4f2ee,
+    roughness: 0.85,
+    metalness: 0,
+    // 夜间给底盘保留很弱的蓝色环境反光，避免阴影面变成纯黑。
+    emissive: new THREE.Color(0x1b2a45),
+    emissiveIntensity: 0,
+  })
   const tray = new THREE.Mesh(
     makeRoundedTrayGeometry(),
-    new THREE.MeshStandardMaterial({ color: 0xf4f2ee, roughness: 0.85, metalness: 0 }),
+    trayMaterial,
   )
   tray.castShadow = tray.receiveShadow = true
   group.add(tray)
@@ -415,9 +423,17 @@ export function createEnvironment(water) {
 
   const groundTex = makeGroundTexture(water.groundZ1)
   textures.push(groundTex)
+  const groundMaterial = new THREE.MeshStandardMaterial({
+    map: groundTex,
+    roughness: 0.9,
+    metalness: 0,
+    // 只在夜间启用，保留道路和地块的轮廓与颜色层次。
+    emissive: new THREE.Color(0x10203a),
+    emissiveIntensity: 0,
+  })
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(GROUND_X1 - GROUND_X0, water.groundZ1 - GROUND_Z0),
-    new THREE.MeshStandardMaterial({ map: groundTex, roughness: 0.9, metalness: 0 }),
+    groundMaterial,
   )
   ground.rotation.x = -Math.PI / 2
   ground.position.set(0, 0.005, (GROUND_Z0 + water.groundZ1) / 2)
@@ -454,6 +470,8 @@ export function createEnvironment(water) {
 
   function setNight(value) {
     nightFactor = Math.max(0, Math.min(1, value))
+    trayMaterial.emissiveIntensity = nightFactor * 0.48
+    groundMaterial.emissiveIntensity = nightFactor * 0.34
   }
 
   function step(t, dt) {
