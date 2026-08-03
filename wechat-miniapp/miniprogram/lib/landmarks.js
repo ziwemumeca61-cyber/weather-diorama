@@ -2285,18 +2285,52 @@ const BUILDERS = {
       { b: gateOfOrient, x: 1.9, z: -1.0 },
       { b: leaningPagoda, x: -2.2, z: 1.4, s: 0.9 },
     ]),
-  深圳: () => modernTower({ color: 0x6f9ec4 }),
-  重庆: () => modernTower({ color: 0x7f93a8 }),
-  成都: () => pagoda({ tiers: 4, body: 0xc7a878, roof: 0x7a5a34 }),
+  // 深圳：平安金融中心 + 京基100 + 地王大厦
+  深圳: () =>
+    set([
+      { b: () => slabTower({ h: 12.0, w: 1.08, color: 0x6f9ec4, taper: 0.24 }), x: 0.4, z: -2.6, s: 0.9 },
+      { b: () => slabTower({ h: 9.2, w: 0.95, color: 0x7f93a8, taper: 0.12 }), x: -2.9, z: -3.6, s: 0.78, ry: -0.3 },
+      { b: () => slabTower({ h: 8.4, w: 0.9, color: 0x9fb8cc, taper: 0.08 }), x: 3.6, z: -3.0, s: 0.72, ry: 0.35 },
+    ]),
+  // 重庆：来福士中心的多塔楼和横向连体结构
+  重庆: () =>
+    set([
+      { b: () => slabTower({ h: 8.8, w: 0.9, color: 0x7f93a8, taper: 0.18 }), x: -2.4, z: -3.2, s: 0.82 },
+      { b: () => slabTower({ h: 8.4, w: 0.9, color: 0x7390aa, taper: 0.16 }), x: -0.8, z: -3.2, s: 0.82 },
+      { b: () => slabTower({ h: 8.1, w: 0.9, color: 0x6f9ec4, taper: 0.14 }), x: 0.8, z: -3.2, s: 0.82 },
+      { b: () => slabTower({ h: 8.5, w: 0.9, color: 0x8aa6bd, taper: 0.12 }), x: 2.4, z: -3.2, s: 0.82 },
+      { b: () => slabTower({ h: 6.4, w: 0.75, color: 0x9fb8cc, taper: 0.08 }), x: -4.0, z: -3.2, s: 0.55 },
+      { b: () => slabTower({ h: 6.6, w: 0.75, color: 0x9fb8cc, taper: 0.08 }), x: 4.0, z: -3.2, s: 0.55 },
+    ]),
+  // 成都：熊猫主题低台 + 天府双塔
+  成都: () =>
+    set([
+      { b: () => pavilion({ tiers: 3, w: 3.1, d: 2.6, tierH: 1.25, body: 0xc7a878, roof: 0x7a5a34, platform: 0.65 }), x: -3.2, z: 0.8, s: 0.72 },
+      { b: () => slabTower({ h: 9.4, w: 0.92, color: 0x7f9fbd, taper: 0.2 }), x: 2.15, z: -3.8, s: 0.78 },
+      { b: () => slabTower({ h: 9.0, w: 0.86, color: 0x9bb5c9, taper: 0.2 }), x: 3.5, z: -3.8, s: 0.68, ry: 0.16 },
+    ]),
   台北: taipei101,
-  哈尔滨: stSophia,
+  哈尔滨: () =>
+    set([
+      { b: stSophia, x: -3.2, z: 0.6, s: 0.9, ry: 0.38 },
+      { b: () => pavilion({ tiers: 3, w: 2.2, d: 1.9, tierH: 1.1, body: 0x9e9b8f, roof: 0x4c6a63, platform: 0.5 }), x: 3.4, z: -3.2, s: 0.7, ry: -0.35 },
+    ]),
   拉萨: potala,
-  香港: bankOfChina,
+  香港: () =>
+    set([
+      { b: bankOfChina, x: 2.6, z: -3.6, s: 0.88 },
+      { b: () => modernTower({ color: 0x7f93a8 }), x: -2.4, z: -4.0, s: 0.72 },
+      { b: () => slabTower({ h: 8.2, w: 0.82, color: 0x9fb8cc, taper: 0.1 }), x: -3.7, z: -2.7, s: 0.52 },
+    ]),
   郑州: erqiTower,
   青岛: zhanqiao,
   昆明: paifang,
   沈阳: dazhengHall,
-  济南: quanbiao,
+  济南: () =>
+    set([
+      { b: quanbiao, x: -3.3, z: 0.8, s: 0.88 },
+      { b: () => pavilion({ tiers: 3, w: 2.7, d: 2.2, tierH: 1.2, body: 0xb58c3a, roof: 0x5f5426, platform: 0.65 }), x: 3.2, z: 0.1, s: 0.8, ry: -0.42 },
+    ]),
   澳门: stPauls,
   呼和浩特: yurts,
   兰州: zhongshanBridge,
@@ -2313,7 +2347,11 @@ const BUILDERS = {
 
   // 山东 15 市
   泰安: mountTai, // 泰山
-  曲阜: dachengHall, // 孔庙大成殿
+  曲阜: () =>
+    set([
+      { b: dachengHall, x: -3.2, z: 0.6, s: 0.9, ry: -0.24 },
+      { b: cityGate, x: 3.2, z: -0.4, s: 0.72, ry: 0.32 },
+    ]), // 大成殿 + 万仞宫墙
   烟台: lighthouse, // 烟台山灯塔
   东营: oilField, // 黄河口油城
   潍坊: kiteCity, // 风筝之都 + 渤海之眼
@@ -2323,7 +2361,12 @@ const BUILDERS = {
   德州: sundialTower, // 日晷太阳能大楼
   滨州: sunTzuFortress, // 孙子兵法城
   菏泽: peonyGarden, // 牡丹之都
-  淄博: () => pavilion({ tiers: 4, w: 3.0, d: 3.0, tierH: 1.4, body: 0xb5643a, roof: 0x3f6b8f, platform: 1.0 }), // 海岱楼
+  淄博: () =>
+    set([
+      { b: () => pavilion({ tiers: 4, w: 3.0, d: 3.0, tierH: 1.4, body: 0xb5643a, roof: 0x3f6b8f, platform: 1.0 }), x: -3.1, z: 0.4, s: 0.82 },
+      { b: () => genDomedCivic(0x5d9fe0, mulberry32(20260803)), x: 3.4, z: -3.6, s: 0.42 },
+      { b: () => cityGate, x: 3.0, z: 1.6, s: 0.38, ry: 0.18 },
+    ]), // 海岱楼 + 琉璃艺术 + 烧烤街区
   济宁: () => pavilion({ tiers: 3, w: 3.6, d: 2.4, tierH: 1.5, body: 0xa8443a, roof: 0x4a4f57, platform: 1.5 }), // 太白楼
   临沂: () => pavilion({ tiers: 4, w: 3.2, d: 2.8, tierH: 1.55, body: 0x9e5b30, roof: 0x5a4a3a, platform: 1.1 }), // 书圣阁
   聊城: () => pavilion({ tiers: 3, w: 3.4, d: 3.4, tierH: 1.5, body: 0xa06848, roof: 0x4a4f57, platform: 1.8 }), // 光岳楼
