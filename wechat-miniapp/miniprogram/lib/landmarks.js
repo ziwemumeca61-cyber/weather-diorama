@@ -2365,7 +2365,7 @@ const BUILDERS = {
     set([
       { b: () => pavilion({ tiers: 4, w: 3.0, d: 3.0, tierH: 1.4, body: 0xb5643a, roof: 0x3f6b8f, platform: 1.0 }), x: -3.1, z: 0.4, s: 0.82 },
       { b: () => genDomedCivic(0x5d9fe0, mulberry32(20260803)), x: 3.4, z: -3.6, s: 0.42 },
-      { b: () => cityGate, x: 3.0, z: 1.6, s: 0.38, ry: 0.18 },
+      { b: cityGate, x: 3.0, z: 1.6, s: 0.38, ry: 0.18 },
     ]), // 海岱楼 + 琉璃艺术 + 烧烤街区
   济宁: () => pavilion({ tiers: 3, w: 3.6, d: 2.4, tierH: 1.5, body: 0xa8443a, roof: 0x4a4f57, platform: 1.5 }), // 太白楼
   临沂: () => pavilion({ tiers: 4, w: 3.2, d: 2.8, tierH: 1.55, body: 0x9e5b30, roof: 0x5a4a3a, platform: 1.1 }), // 书圣阁
