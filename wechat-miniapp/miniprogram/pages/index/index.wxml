@@ -44,7 +44,7 @@
     <view class="row">
       <input
         class="ipt"
-        placeholder="搜索城市，如 上海 / 北京"
+        placeholder="搜索城市，或输入天气问题"
         placeholder-class="ph"
         confirm-type="search"
         value="{{q}}"
@@ -55,6 +55,29 @@
       <view class="btn ghost" bindtap="onLocate">📍</view>
     </view>
 
+    <view class="ai-actions">
+      <view class="ai-action ai-primary" bindtap="onAiAdvice">
+        <text class="ai-icon">✦</text>
+        <view class="ai-action-copy">
+          <text class="ai-action-title">AI管家</text>
+          <text class="ai-action-sub">今天怎么安排</text>
+        </view>
+      </view>
+      <view class="ai-action" bindtap="onAiAsk">
+        <text class="ai-icon">?</text>
+        <view class="ai-action-copy">
+          <text class="ai-action-title">问天气</text>
+          <text class="ai-action-sub">自然语言提问</text>
+        </view>
+      </view>
+      <view class="ai-action" bindtap="onAiShare">
+        <text class="ai-icon">↗</text>
+        <view class="ai-action-copy">
+          <text class="ai-action-title">AI文案</text>
+          <text class="ai-action-sub">一键生成分享</text>
+        </view>
+      </view>
+    </view>
     <scroll-view class="chips" scroll-x enable-flex>
       <view
         wx:for="{{kinds}}"
@@ -65,6 +88,30 @@
       >{{labels[item]}}</view>
     </scroll-view>
 
+    <view class="ai-card" wx:if="{{aiVisible}}">
+      <view class="ai-card-head">
+        <view class="ai-card-heading">
+          <text class="ai-eyebrow">AI WEATHER</text>
+          <text class="ai-card-title">{{aiTitle}}</text>
+        </view>
+        <text class="ai-close" bindtap="onAiClose">×</text>
+      </view>
+      <text class="ai-card-text">{{aiText}}</text>
+      <view class="ai-points" wx:if="{{aiPoints.length}}">
+        <view class="ai-point" wx:for="{{aiPoints}}" wx:key="*this">
+          <text class="ai-point-dot">•</text>
+          <text class="ai-point-text">{{item}}</text>
+        </view>
+      </view>
+      <view class="ai-tags" wx:if="{{aiTags.length}}">
+        <text class="ai-score" wx:if="{{aiScoreLabel}}">{{aiScoreLabel}}</text>
+        <text class="ai-tag" wx:for="{{aiTags}}" wx:key="*this">{{item}}</text>
+      </view>
+      <view class="ai-card-foot">
+        <text class="ai-source">{{aiSourceLabel}}</text>
+        <view class="ai-copy" bindtap="onCopyAi">复制结果</view>
+      </view>
+    </view>
     <view class="hint" wx:if="{{loading}}">加载中…</view>
     <view class="errbar" wx:elif="{{errMsg}}">
       <text class="err-t">{{errMsg}}</text>
