@@ -4,6 +4,8 @@ import { nearestCity } from '../../lib/cityCoords'
 
 let sceneApi = null
 const LAST_CITY = 'lastCity'
+const AI_PROVIDER = 'hunyuan-exp'
+const AI_MODEL = 'hunyuan-2.0-instruct-20251111'
 
 Page({
   data: {
@@ -216,7 +218,44 @@ Page({
     }
   },
 
-  // 云函数未部署或暂时不可用时，仍给出一份本地建议，保证预览可用
+  aiPrompt(action, question) {
+    const mode = action === 'ask'
+      ? '回答用户关于当前天气的自然语言问题'
+      : (action === 'share' ? '生成一条自然、简短、有画面感的天气分享文案' : '给出贴合当前天气的个人出行和生活建议')
+    return [
+      '你是一个克制、实用的中文天气助手。',
+      '当前天气数据：' + JSON.stringify(this.aiWeatherContext()),
+      '任务：' + mode + '。',
+      question ? '用户问题：' + question : '',
+      '只返回合法 JSON，不要 Markdown，不要代码块。',
+      '必须包含 title、points、tags、score、shareText。',
+      'advice 模式额外返回 summary；ask 模式额外返回 answer；share 模式额外返回 text。',
+      'points 最多3条，tags 最多3个，score 是20到98的整数。',
+    ].filter(Boolean).join('\n')
+  },
+
+  aiModel() {
+    if (!wx.cloud || !wx.cloud.extend || !wx.cloud.extend.AI || !wx.cloud.extend.AI.createModel) {
+      throw new Error('CloudBase AI 不可用，请将小程序基础库升级到 3.7.1 以上')
+    }
+    // 小程序成长计划专用分组，额度从云开发 AI 资源包扣除，不需要 API Key
+    return wx.cloud.extend.AI.createModel(AI_PROVIDER)
+  },
+
+  parseAIResult(value) {
+    if (!value) throw new Error('AI返回为空')
+    let text = String(value).trim()
+    const fence = String.fromCharCode(96, 96, 96)
+    if (text.indexOf(fence) === 0) {
+      text = text.replace(new RegExp('^' + fence + '(?:json)?', 'i'), '').replace(new RegExp(fence + '$'), '').trim()
+    }
+    const first = text.indexOf('{')
+    const last = text.lastIndexOf('}')
+    if (first >= 0 && last > first) text = text.slice(first, last + 1)
+    return JSON.parse(text)
+  },
+
+  // 云端 AI 不可用时继续给出本地建议，保证审核和预览阶段不白屏
   localAI(action, question) {
     const condition = this.data.kindLabel || '未知天气'
     const temp = Number(this.data.temp)
@@ -295,20 +334,27 @@ Page({
       aiTags: [],
       aiScoreLabel: '',
       aiSource: '',
-      aiSourceLabel: '连接中…',
+      aiSourceLabel: '连接成长计划…',
       aiShareText: '',
     })
-    wx.cloud.callFunction({
-      name: 'aiWeather',
-      data: {
-        action,
-        question: question || '',
-        weather: this.aiWeatherContext(),
-      },
-    }).then((r) => {
-      this.renderAI((r && r.result) || {})
+    Promise.resolve().then(() => {
+      const model = this.aiModel()
+      return model.generateText({
+        model: AI_MODEL,
+        messages: [
+          { role: 'system', content: '你输出稳定、简洁、适合微信小程序展示的中文天气建议。' },
+          { role: 'user', content: this.aiPrompt(action, question) },
+        ],
+      })
+    }).then((res) => {
+      const content = res && res.choices && res.choices[0] && res.choices[0].message
+        ? res.choices[0].message.content
+        : (res && res.output_text ? res.output_text : '')
+      const result = this.parseAIResult(content)
+      result.source = 'ai'
+      this.renderAI(result)
     }).catch((e) => {
-      console.error('[cloud] aiWeather failed', e)
+      console.error('[cloudbase-ai] request failed', e)
       this.renderAI(this.localAI(action, question))
     })
   },
