@@ -249,7 +249,41 @@ function makeCloudBase(group) {
     const size = 2.1 + rand() * 1.7
     addPuff(Math.cos(angle) * radius, -1.65 - rand() * 1.45, Math.sin(angle) * radius, size)
   }
-  return { group: cloudGroup, materials: [material], texture }
+
+  // 城市上空的天气云层：多云、阴、雨时才逐渐显现，晴天保持通透。
+  const skyCloudGroup = new THREE.Group()
+  group.add(skyCloudGroup)
+  const skyMaterial = new THREE.SpriteMaterial({
+    map: texture,
+    color: 0xe6ebf2,
+    transparent: true,
+    opacity: 0.02,
+    depthWrite: false,
+  })
+  const skyRand = mulberry32(9137)
+  const addSkyPuff = (x, y, z, size) => {
+    const sprite = new THREE.Sprite(skyMaterial)
+    sprite.position.set(x, y, z)
+    sprite.scale.set(size, size * (0.72 + skyRand() * 0.28), 1)
+    sprite.frustumCulled = false
+    skyCloudGroup.add(sprite)
+  }
+  // 多个错开的云团覆盖城市上空，避免只在底盘边缘看到云。
+  for (let cluster = 0; cluster < 11; cluster++) {
+    const cx = (skyRand() - 0.5) * slabHalf * 1.45
+    const cz = (skyRand() - 0.5) * slabHalf * 1.45
+    const cy = 7.2 + skyRand() * 4.1
+    const puffs = 4 + Math.floor(skyRand() * 3)
+    for (let i = 0; i < puffs; i++) {
+      addSkyPuff(
+        cx + (skyRand() - 0.5) * 3.4,
+        cy + (skyRand() - 0.5) * 1.2,
+        cz + (skyRand() - 0.5) * 3.4,
+        2.0 + skyRand() * 2.4,
+      )
+    }
+  }
+  return { group: cloudGroup, skyGroup: skyCloudGroup, skyMaterial, materials: [material, skyMaterial], texture }
 }
 
 function makeWater(group, water, flow, foam) {
@@ -468,6 +502,7 @@ export function createEnvironment(water) {
   let nightFactor = 0
   let rainbowLeft = 0
   let previousWeather = 'clear'
+  let skyCloudTarget = 0
   let waterFrame = 0
   const cloudTint = new THREE.Color(0xf2f6fd)
 
@@ -475,6 +510,12 @@ export function createEnvironment(water) {
     previousWeather = weather
     weather = kind || 'clear'
     snowTarget = weather === 'snow' ? 0.92 : 0
+    skyCloudTarget = weather === 'cloudy' ? 0.42
+      : weather === 'overcast' ? 0.62
+        : weather === 'rain' ? 0.72
+          : weather === 'thunder' ? 0.8
+            : weather === 'fog' ? 0.5
+              : 0
     if ((previousWeather === 'rain' || previousWeather === 'thunder') && (weather === 'clear' || weather === 'cloudy')) rainbowLeft = 25
   }
 
@@ -550,6 +591,8 @@ export function createEnvironment(water) {
     clouds.materials.forEach((material) => {
       material.color.lerp(cloudTint, 1 - Math.exp(-1.8 * dt))
     })
+    skyMaterial.opacity += (skyCloudTarget - skyMaterial.opacity) * (1 - Math.exp(-2.4 * dt))
+    skyCloudGroup.visible = skyMaterial.opacity > 0.012
   }
 
   function dispose() {
