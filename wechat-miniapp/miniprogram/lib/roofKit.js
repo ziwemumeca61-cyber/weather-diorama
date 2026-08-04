@@ -16,9 +16,9 @@ export function makeConcaveRoof(eaveR, height, peakR, seg) {
     pts.push(new THREE.Vector2(r, y))
   }
   pts.push(new THREE.Vector2(eaveR * 1.07, height * 0.1)) // 飞檐翘唇
-  // 默认 28 段：小屋檐上与 Web 版的 48 段肉眼无差，但三角面少约 4 成，照顾低端机。
-  // 更小的檐（如并联双塔）可传更低的 seg 进一步减面。
-  return new THREE.LatheGeometry(pts, seg || 28)
+  // Web 版使用 48 段；移动端保留 36 段作为平衡，檐口轮廓会比旧版更圆润。
+  // 需要更精细的主地标可显式传入 48。
+  return new THREE.LatheGeometry(pts, seg || 36)
 }
 
 /** 庑殿顶（矩形四坡）：屋面下凹、四角起翘。原点在檐口，正脊在 y=h。 */
@@ -31,8 +31,9 @@ export function makeHipRoof(w, d, h, ridgeRatio, kick) {
   const positions = []
   const uvs = []
   const indices = []
-  const S = 14
-  const T = 8
+  // 提高屋面采样密度，避免主地标屋顶出现明显折线。
+  const S = 20
+  const T = 11
   let base = 0
   const lerp = (a, b, t) => a + (b - a) * t
   const sag = (t) => Math.pow(1 - t, 1.55)
