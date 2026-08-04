@@ -374,7 +374,8 @@ export function createScene(canvas, opts) {
     target.ambient.lerp(grey, mod.grey * 0.5)
     target.sunIntensity *= mod.sun
     target.ambientIntensity *= 1 + mod.grey * 0.4
-    target.fogDensity = currentWeather === 'fog' ? 0.025 : currentWeather === 'rain' || currentWeather === 'thunder' ? 0.0065 : currentWeather === 'snow' ? 0.0045 : 0.003
+    // 雾天提高体积雾浓度，拉开近景与远景的层次；雨天保持较低浓度避免糊屏。
+    target.fogDensity = currentWeather === 'fog' ? 0.055 : currentWeather === 'rain' || currentWeather === 'thunder' ? 0.0065 : currentWeather === 'snow' ? 0.0045 : 0.003
     target.buildingGlow = isNight ? 1.15 : 0
     target.landmarkGlow = isNight ? 0.9 : 0.15
   }
