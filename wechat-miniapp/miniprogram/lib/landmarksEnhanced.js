@@ -291,7 +291,7 @@ function templeOfHeaven() {
   const g = new THREE.Group()
   const glowList = []
   const body = glow(0x9e3d2d, 0xffaa62)
-  const roof = tile(0x2b5794, 0x7aa6c9 ? 7 : 7, 2, { metalness: 0.28 })
+  const roof = tile(0x2b5794, 7, 2, { metalness: 0.28 })
   glowList.push(body)
   add(g, new THREE.CylinderGeometry(1.9, 2.05, 0.48, 24), std(0xd4c8b5, { roughness: 0.82 }), 0, 0.24, 0)
   ;[1.55, 1.18, 0.82].forEach((r, i) => {
