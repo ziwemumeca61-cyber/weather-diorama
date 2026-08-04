@@ -290,7 +290,17 @@ export function createScene(canvas, opts) {
   sun.shadow.camera.bottom = -16
   sun.shadow.camera.updateProjectionMatrix()
   sun.shadow.bias = -0.0007
-  scene.add(ambient, hemisphere, sun)
+  sun.shadow.normalBias = 0.018
+  sun.shadow.radius = 2.6
+  // Web 端 Environment 中的蓝色侧光、暖色轮廓光和底部反射光的原生近似。
+  // 这些灯不投射阴影，只负责让阴天建筑仍有真实的体积明暗。
+  const blueFill = new THREE.DirectionalLight(0xcfe0ff, 0.22)
+  blueFill.position.set(-12, 8, -6)
+  const warmFill = new THREE.DirectionalLight(0xffe6c0, 0.14)
+  warmFill.position.set(0, 10, -12)
+  const groundFill = new THREE.DirectionalLight(0x9eb6d6, 0.08)
+  groundFill.position.set(0, -6, 0)
+  scene.add(ambient, hemisphere, sun, blueFill, warmFill, groundFill)
 
   const sky = createSky()
   scene.add(sky.group)
@@ -597,10 +607,20 @@ export function createScene(canvas, opts) {
     scene.background.copy(current.sky)
     scene.fog.color.copy(current.sky)
     scene.fog.density = current.fogDensity
+    // 环境光随天气和昼夜变化，保持阴雨天柔和、夜间不发灰发白。
+    const weatherLight = WEATHER_LOOK[currentWeather] || WEATHER_LOOK.clear
+    const nightLight = 1 - current.night * 0.72
+    blueFill.intensity = Math.max(0.025, current.ambientIntensity * (0.32 + weatherLight.grey * 0.22) * nightLight)
+    warmFill.intensity = Math.max(0.018, current.sunIntensity * 0.075 * nightLight)
+    groundFill.intensity = Math.max(0.012, current.ambientIntensity * 0.14 * nightLight)
+    if (scene.environmentIntensity != null) {
+      scene.environmentIntensity = 0.65 * (0.78 + weatherLight.grey * 0.22) * nightLight
+    }
     sun.color.copy(current.sun)
     sun.position.copy(current.sunPosition)
     ambient.color.copy(current.ambient)
     hemisphere.color.copy(current.sky)
+    hemisphere.groundColor.set(current.night > 0.5 ? 0x111827 : 0x3a3f47)
     hemisphere.intensity = current.ambientIntensity * 0.8
     applyGlow()
 
