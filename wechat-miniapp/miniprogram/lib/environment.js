@@ -516,6 +516,8 @@ export function createEnvironment(water) {
           : weather === 'thunder' ? 0.8
             : weather === 'fog' ? 0.5
               : 0
+    // 晴天完全隐藏城市上空云层，保留底盘下方云托。
+    if (weather === 'clear') skyCloudTarget = 0
     if ((previousWeather === 'rain' || previousWeather === 'thunder') && (weather === 'clear' || weather === 'cloudy')) rainbowLeft = 25
   }
 
@@ -582,7 +584,7 @@ export function createEnvironment(water) {
 
     const tint = weather === 'thunder' ? 0x838b96
       : weather === 'rain' ? 0x9ca3ad
-        : weather === 'overcast' ? 0xc4cad3
+        : weather === 'overcast' ? 0x858d9a
           : weather === 'fog' ? 0xd4d9e0
             : weather === 'cloudy' ? 0xedf1f8
               : weather === 'snow' ? 0xf8fbff
