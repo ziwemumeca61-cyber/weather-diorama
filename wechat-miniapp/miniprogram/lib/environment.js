@@ -591,8 +591,8 @@ export function createEnvironment(water) {
     clouds.materials.forEach((material) => {
       material.color.lerp(cloudTint, 1 - Math.exp(-1.8 * dt))
     })
-    skyMaterial.opacity += (skyCloudTarget - skyMaterial.opacity) * (1 - Math.exp(-2.4 * dt))
-    skyCloudGroup.visible = skyMaterial.opacity > 0.012
+    clouds.skyMaterial.opacity += (skyCloudTarget - clouds.skyMaterial.opacity) * (1 - Math.exp(-2.4 * dt))
+    clouds.skyGroup.visible = clouds.skyMaterial.opacity > 0.012
   }
 
   function dispose() {
