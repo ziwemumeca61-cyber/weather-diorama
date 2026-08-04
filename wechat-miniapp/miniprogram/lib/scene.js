@@ -34,6 +34,45 @@ function makeGableGeometry() {
   return geometry
 }
 
+
+function makeReflectionEnvironment() {
+  // Web 端 Environment 的轻量原生替代：用一张渐变环境贴图给玻璃幕墙提供蓝天、
+  // 云层和白色建筑光带的反射高光。使用 DataTexture，不依赖外部图片资源。
+  const width = 64
+  const height = 32
+  const data = new Uint8Array(width * height * 4)
+  const clamp = (value) => Math.max(0, Math.min(255, Math.round(value)))
+  for (let y = 0; y < height; y++) {
+    const v = y / (height - 1)
+    const sky = v < 0.58
+      ? [64 + v * 245, 108 + v * 190, 158 + v * 150]
+      : [206 - (v - 0.58) * 320, 230 - (v - 0.58) * 330, 244 - (v - 0.58) * 300]
+    for (let x = 0; x < width; x++) {
+      const u = x / width
+      const cardA = Math.exp(-Math.pow((u - 0.16) / 0.028, 2))
+      const cardB = Math.exp(-Math.pow((u - 0.52) / 0.042, 2))
+      const cardC = Math.exp(-Math.pow((u - 0.82) / 0.026, 2))
+      const cards = (cardA * 1.0 + cardB * 0.72 + cardC * 0.9) * (0.35 + (1 - v) * 0.65)
+      const index = (y * width + x) * 4
+      data[index] = clamp(sky[0] + cards * 48)
+      data[index + 1] = clamp(sky[1] + cards * 52)
+      data[index + 2] = clamp(sky[2] + cards * 60)
+      data[index + 3] = 255
+    }
+  }
+  const texture = new THREE.DataTexture(
+    data,
+    width,
+    height,
+    THREE.RGBAFormat,
+    THREE.UnsignedByteType,
+  )
+  if (THREE.SRGBColorSpace) texture.colorSpace = THREE.SRGBColorSpace
+  if (THREE.EquirectangularReflectionMapping) texture.mapping = THREE.EquirectangularReflectionMapping
+  texture.needsUpdate = true
+  return texture
+}
+
 function makeFacadeMaterial(glass) {
   const texture = glass
     ? makeWindowTexture(0x9bacbc, 0x7792aa, 0xffcf7a)
@@ -47,6 +86,7 @@ function makeFacadeMaterial(glass) {
     emissiveIntensity: 0,
     roughness: glass ? 0.22 : 0.8,
     metalness: glass ? 0.82 : 0.1,
+    envMapIntensity: glass ? 1.8 : 0.55,
   })
 }
 
@@ -229,6 +269,8 @@ export function createScene(canvas, opts) {
   if (THREE.SRGBColorSpace) renderer.outputColorSpace = THREE.SRGBColorSpace
 
   const scene = new THREE.Scene()
+  const reflectionEnvironment = makeReflectionEnvironment()
+  scene.environment = reflectionEnvironment
   scene.background = new THREE.Color(0xbcd9ec)
   scene.fog = new THREE.FogExp2(0xbcd9ec, 0.003)
   const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 200)
@@ -606,6 +648,7 @@ export function createScene(canvas, opts) {
       cleanupCity()
       weatherFx.dispose()
       sky.dispose()
+      try { reflectionEnvironment.dispose() } catch (e) {}
       try { renderer.dispose() } catch (e) {}
     },
   }
