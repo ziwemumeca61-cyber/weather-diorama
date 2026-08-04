@@ -6,6 +6,7 @@ import * as THREE from './three.core.js'
 import { makeConcaveRoof, makeHipRoof } from './roofKit'
 import { makeTileTexture, makeWindowTexture, darken } from './tileTexture'
 import { mulberry32, hashName } from './cityData'
+import { buildEnhancedLandmark } from './landmarksEnhanced'
 
 function std(color, opts) {
   return new THREE.MeshStandardMaterial(
@@ -2393,6 +2394,11 @@ export function hasOwnWater(name) {
 // 程序化地标（4 种原型 × 8 种配色 × 随机朝向），让每座陌生城市各不相同。
 export function buildLandmark(name) {
   const key = ('' + (name || '')).replace(/[市区县省]/g, '').trim()
+  // 优先使用与 Web 端同构的增强地标组合；旧 builder 作为兼容兜底。
+  try {
+    const enhanced = buildEnhancedLandmark(name)
+    if (enhanced && enhanced.group) return enhanced
+  } catch (e) {}
   // 长键优先，避免「南京」被「南宁」之类的短键误伤（当前无此冲突，作为防御）
   const keys = Object.keys(BUILDERS).sort((a, b) => b.length - a.length)
   for (let i = 0; i < keys.length; i++) {
