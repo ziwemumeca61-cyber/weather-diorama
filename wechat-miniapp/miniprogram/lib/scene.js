@@ -165,9 +165,13 @@ function buildSkyline(buildings) {
     const mesh = new THREE.InstancedMesh(geometry, material, items.length)
     mesh.castShadow = shadow !== false
     mesh.receiveShadow = true
+    const euler = new THREE.Euler()
     items.forEach((item, i) => {
       position.set(item.x, item.y, item.z)
-      quaternion.identity()
+      if (item.rx || item.ry || item.rz) {
+        euler.set(item.rx || 0, item.ry || 0, item.rz || 0)
+        quaternion.setFromEuler(euler)
+      } else quaternion.identity()
       scale.set(item.sx, item.sy, item.sz)
       matrix.compose(position, quaternion, scale)
       mesh.setMatrixAt(i, matrix)
@@ -227,6 +231,7 @@ function buildSkyline(buildings) {
   const concreteFins = []
   const officeBelts = []
   const residentialBelts = []
+  const glassSheens = []
   buildings.forEach((b) => {
     const isGlass = b.core > 0.5
     if (b.h > 2.15) {
@@ -251,6 +256,19 @@ function buildSkyline(buildings) {
           sx: b.w * 0.46, sy: secondH, sz: b.d * 0.46,
         })
       }
+    }
+
+    if (isGlass && b.h > 2.6) {
+      const sheenH = Math.max(1.7, b.h * 0.7)
+      const sheenW = Math.max(0.1, b.w * 0.22)
+      const sheenD = Math.max(0.1, b.d * 0.22)
+      // 四个立面各有一条略微倾斜的天空反射高光，真机不支持环境贴图时仍清晰可见。
+      glassSheens.push(
+        { x: b.x - b.w * 0.16, y: b.h * 0.58, z: b.z + b.d * 0.508, sx: sheenW, sy: sheenH, sz: 0.018, rz: -0.16 },
+        { x: b.x + b.w * 0.17, y: b.h * 0.6, z: b.z - b.d * 0.508, sx: sheenW, sy: sheenH * 0.86, sz: 0.018, rz: 0.14 },
+        { x: b.x + b.w * 0.508, y: b.h * 0.56, z: b.z - b.d * 0.14, sx: 0.018, sy: sheenH * 0.9, sz: sheenD, rx: 0.14 },
+        { x: b.x - b.w * 0.508, y: b.h * 0.61, z: b.z + b.d * 0.16, sx: 0.018, sy: sheenH * 0.78, sz: sheenD, rx: -0.12 },
+      )
     }
 
     if (b.h > 2.5 && (b.style === 'office' || b.style === 'tower')) {
@@ -286,6 +304,14 @@ function buildSkyline(buildings) {
   const concreteFrameMat = new THREE.MeshStandardMaterial({ color: 0x75808b, roughness: 0.52, metalness: 0.28 })
   const officeBeltMat = new THREE.MeshStandardMaterial({ color: 0x506473, roughness: 0.32, metalness: 0.62, envMapIntensity: 1.1 })
   const balconyMat = new THREE.MeshStandardMaterial({ color: 0xa9b0b4, roughness: 0.58, metalness: 0.24 })
+  const glassSheenMat = new THREE.MeshBasicMaterial({
+    color: 0xd9f4ff,
+    transparent: true,
+    opacity: 0.46,
+    depthWrite: false,
+    fog: false,
+    blending: THREE.AdditiveBlending,
+  })
   addDetailMesh(box, podiumMat, podiums)
   addDetailMesh(box, glassMat, glassTiers)
   addDetailMesh(box, concreteMat, concreteTiers)
@@ -293,6 +319,7 @@ function buildSkyline(buildings) {
   addDetailMesh(box, concreteFrameMat, concreteFins, false)
   addDetailMesh(box, officeBeltMat, officeBelts, false)
   addDetailMesh(box, balconyMat, residentialBelts, false)
+  addDetailMesh(box, glassSheenMat, glassSheens, false)
 
   const crownList = glass.filter((b) => b.h > 5.3 && b.roof === 'flat')
   if (crownList.length) {
@@ -343,7 +370,7 @@ function buildSkyline(buildings) {
     rooftops.instanceMatrix.needsUpdate = true
     root.add(rooftops)
   }
-  return { root, materials: [glassMat, concreteMat] }
+  return { root, materials: [glassMat, concreteMat], reflectionMaterials: [glassSheenMat] }
 }
 
 export function createScene(canvas, opts) {
@@ -416,6 +443,7 @@ export function createScene(canvas, opts) {
   let landmarkSpin = null
   let landmarkAnimate = null
   let cityMaterials = []
+  let reflectionMaterials = []
   let currentCity = null
   let currentProfile = null
   let currentWeather = 'clear'
@@ -480,6 +508,8 @@ export function createScene(canvas, opts) {
 
   function applyGlow() {
     cityMaterials.forEach((material) => { material.emissiveIntensity = current.buildingGlow })
+    // 高光带只在白天存在，夜里自然淡出，避免窗面像自发光贴纸。
+    reflectionMaterials.forEach((material) => { material.opacity = 0.46 * (1 - current.night * 0.94) })
     landmarkGlow.forEach((material) => {
       if (material && material.emissiveIntensity != null) material.emissiveIntensity = current.landmarkGlow
     })
@@ -510,6 +540,7 @@ export function createScene(canvas, opts) {
     landmarkSpin = null
     landmarkAnimate = null
     cityMaterials = []
+    reflectionMaterials = []
   }
 
   function buildCity(cityName) {
@@ -555,6 +586,7 @@ export function createScene(canvas, opts) {
     ).filter((b) => !inLake(currentProfile.water, b.x, b.z, 0.35))
     skyline = buildSkyline(buildings)
     cityMaterials = skyline.materials
+    reflectionMaterials = skyline.reflectionMaterials || []
     cityRoot.add(skyline.root)
     props = createProps(key, { water: currentProfile.water, clearZones })
     props.setWeather(currentWeather)
