@@ -158,6 +158,25 @@ function buildSkyline(buildings) {
   const roofPalette = [0xb06a4a, 0x9c5b40, 0x8a6f63, 0x6f7075]
   const roofMat = new THREE.MeshStandardMaterial({ roughness: 0.85, metalness: 0.05 })
 
+  function addDetailMesh(geometry, material, items, shadow) {
+    if (!items.length) return null
+    const mesh = new THREE.InstancedMesh(geometry, material, items.length)
+    mesh.castShadow = shadow !== false
+    mesh.receiveShadow = true
+    items.forEach((item, i) => {
+      position.set(item.x, item.y, item.z)
+      quaternion.identity()
+      scale.set(item.sx, item.sy, item.sz)
+      matrix.compose(position, quaternion, scale)
+      mesh.setMatrixAt(i, matrix)
+      if (item.color != null) mesh.setColorAt(i, color.set(item.color))
+    })
+    mesh.instanceMatrix.needsUpdate = true
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
+    root.add(mesh)
+    return mesh
+  }
+
   const hip = buildings.filter((b) => b.roof === 'hip')
   if (hip.length) {
     const geometry = new THREE.ConeGeometry(0.5, 1, 4)
@@ -197,6 +216,82 @@ function buildSkyline(buildings) {
     root.add(mesh)
   }
 
+  // 裙房、退台、幕墙竖梃和阳台腰线共同形成可辨识的建筑尺度，
+  // 不再让建筑只是一排带贴图的方盒子。
+  const podiums = []
+  const glassTiers = []
+  const concreteTiers = []
+  const glassFins = []
+  const concreteFins = []
+  const officeBelts = []
+  const residentialBelts = []
+  buildings.forEach((b) => {
+    const isGlass = b.core > 0.5
+    if (b.h > 2.15) {
+      const podiumH = Math.min(0.62, Math.max(0.28, b.h * 0.12))
+      podiums.push({
+        x: b.x, y: podiumH / 2, z: b.z,
+        sx: b.w * 1.17, sy: podiumH, sz: b.d * 1.17,
+      })
+    }
+
+    if (b.roof === 'setback') {
+      const firstH = Math.max(0.68, b.h * 0.16)
+      const secondH = b.h > 10 ? Math.max(0.45, b.h * 0.09) : 0
+      const first = {
+        x: b.x, y: b.h + firstH / 2, z: b.z,
+        sx: b.w * 0.72, sy: firstH, sz: b.d * 0.72,
+      }
+      ;(isGlass ? glassTiers : concreteTiers).push(first)
+      if (secondH) {
+        ;(isGlass ? glassTiers : concreteTiers).push({
+          x: b.x, y: b.h + firstH + secondH / 2, z: b.z,
+          sx: b.w * 0.46, sy: secondH, sz: b.d * 0.46,
+        })
+      }
+    }
+
+    if (b.h > 2.5 && (b.style === 'office' || b.style === 'tower')) {
+      const finH = Math.max(1.4, b.h - 0.16)
+      const finW = Math.min(0.055, b.w * 0.08)
+      const finD = Math.min(0.055, b.d * 0.08)
+      const fins = isGlass ? glassFins : concreteFins
+      fins.push(
+        { x: b.x - b.w * 0.505, y: finH / 2, z: b.z, sx: finW, sy: finH, sz: b.d * 1.025 },
+        { x: b.x + b.w * 0.505, y: finH / 2, z: b.z, sx: finW, sy: finH, sz: b.d * 1.025 },
+        { x: b.x, y: finH / 2, z: b.z - b.d * 0.505, sx: b.w * 1.025, sy: finH, sz: finD },
+        { x: b.x, y: finH / 2, z: b.z + b.d * 0.505, sx: b.w * 1.025, sy: finH, sz: finD },
+      )
+      const levels = Math.min(4, Math.max(1, Math.floor(b.h / 2.9)))
+      for (let level = 1; level <= levels; level++) {
+        officeBelts.push({
+          x: b.x, y: (b.h * level) / (levels + 1), z: b.z,
+          sx: b.w * 1.045, sy: 0.04, sz: b.d * 1.045,
+        })
+      }
+    } else if (b.h > 2.1 && b.style === 'residential' && b.roof === 'flat') {
+      const levels = Math.min(3, Math.max(1, Math.floor(b.h / 2.1)))
+      for (let level = 1; level <= levels; level++) {
+        residentialBelts.push({
+          x: b.x, y: (b.h * level) / (levels + 1), z: b.z,
+          sx: b.w * 1.09, sy: 0.055, sz: b.d * 1.09,
+        })
+      }
+    }
+  })
+  const podiumMat = new THREE.MeshStandardMaterial({ color: 0x6f7984, roughness: 0.65, metalness: 0.18 })
+  const glassFrameMat = new THREE.MeshStandardMaterial({ color: 0xc5d6e5, roughness: 0.24, metalness: 0.78, envMapIntensity: 1.25 })
+  const concreteFrameMat = new THREE.MeshStandardMaterial({ color: 0x75808b, roughness: 0.52, metalness: 0.28 })
+  const officeBeltMat = new THREE.MeshStandardMaterial({ color: 0x506473, roughness: 0.32, metalness: 0.62, envMapIntensity: 1.1 })
+  const balconyMat = new THREE.MeshStandardMaterial({ color: 0xa9b0b4, roughness: 0.58, metalness: 0.24 })
+  addDetailMesh(box, podiumMat, podiums)
+  addDetailMesh(box, glassMat, glassTiers)
+  addDetailMesh(box, concreteMat, concreteTiers)
+  addDetailMesh(box, glassFrameMat, glassFins, false)
+  addDetailMesh(box, concreteFrameMat, concreteFins, false)
+  addDetailMesh(box, officeBeltMat, officeBelts, false)
+  addDetailMesh(box, balconyMat, residentialBelts, false)
+
   const crownList = glass.filter((b) => b.h > 5.3 && b.roof === 'flat')
   if (crownList.length) {
     const crownMat = new THREE.MeshStandardMaterial({ roughness: 0.3, metalness: 0.7 })
@@ -218,7 +313,7 @@ function buildSkyline(buildings) {
   const rooftopData = []
   const rand = mulberry32(555)
   buildings.forEach((b) => {
-    if (b.h < 1.6 || b.roof !== 'flat') return
+    if (b.h < 1.6 || (b.roof !== 'flat' && b.roof !== 'setback')) return
     const count = 1 + Math.floor(rand() * 2)
     for (let i = 0; i < count; i++) {
       const sx = b.w * (0.12 + rand() * 0.18)
@@ -460,6 +555,7 @@ export function createScene(canvas, opts) {
     cityRoot.add(skyline.root)
     props = createProps(key, { water: currentProfile.water, clearZones })
     props.setWeather(currentWeather)
+    props.setNight(current.night)
     cityRoot.add(props.group)
     environment.setWeather(currentWeather)
     environment.setNight(current.night)
@@ -632,7 +728,10 @@ export function createScene(canvas, opts) {
       environment.setNight(current.night)
       environment.step(t, dt)
     }
-    if (props) props.step(t)
+    if (props) {
+      props.setNight(current.night)
+      props.step(t)
+    }
     if (landmarkSpin) landmarkSpin.rotation.z += dt * 0.24
     if (landmarkAnimate) landmarkAnimate(t, current.landmarkGlow, current.night)
     sky.update(current.night, currentWeather, camera, t)
