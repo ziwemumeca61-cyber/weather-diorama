@@ -359,19 +359,11 @@ Page({
     })
   },
 
-  onAiAdvice() {
-    this.requestAI('advice')
-  },
-  onAiAsk() {
+  onAiAssistant() {
+    // 一个入口覆盖三件事：空输入给今日建议；输入问题就直接问天气；
+    // 所有结果都会附带可复制的分享文案，避免把同一能力拆成三个按钮。
     const question = (this.data.q || '').trim()
-    if (!question) {
-      wx.showToast({ title: '先在搜索框输入问题', icon: 'none' })
-      return
-    }
-    this.requestAI('ask', question)
-  },
-  onAiShare() {
-    this.requestAI('share')
+    this.requestAI(question ? 'ask' : 'advice', question)
   },
   onAiClose() {
     this.setData({ aiVisible: false, aiBusy: false })
