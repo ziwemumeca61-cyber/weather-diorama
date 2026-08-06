@@ -30,6 +30,77 @@ function starLayer(count, radius, seed, color, size) {
   return { points, geometry, material }
 }
 
+
+function makeDaySkyObjects() {
+  const group = new THREE.Group()
+  const geometries = []
+  const materials = []
+  const addMaterial = (color) => {
+    const material = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0, depthWrite: false, fog: false })
+    materials.push(material)
+    return material
+  }
+  const addGeometry = (geometry) => {
+    geometries.push(geometry)
+    return geometry
+  }
+
+  const balloon = new THREE.Group()
+  const balloonMat = addMaterial(0xf08b44)
+  const stripeMat = addMaterial(0xf7deb3)
+  const basketMat = addMaterial(0x704a2f)
+  const envelope = new THREE.Mesh(addGeometry(new THREE.SphereGeometry(1.05, 16, 12)), balloonMat)
+  envelope.scale.set(0.86, 1.24, 0.86)
+  const stripe = new THREE.Mesh(addGeometry(new THREE.SphereGeometry(1.07, 16, 12)), stripeMat)
+  stripe.scale.set(0.88, 0.24, 0.88)
+  const basket = new THREE.Mesh(addGeometry(new THREE.BoxGeometry(0.42, 0.22, 0.35)), basketMat)
+  basket.position.y = -1.42
+  balloon.add(envelope, stripe, basket)
+  ;[-1, 1].forEach((side) => {
+    const rope = new THREE.Mesh(addGeometry(new THREE.CylinderGeometry(0.012, 0.012, 0.62, 5)), basketMat)
+    rope.position.set(side * 0.34, -0.9, 0)
+    rope.rotation.z = side * 0.28
+    balloon.add(rope)
+  })
+  balloon.scale.setScalar(1.12)
+  group.add(balloon)
+
+  const airship = new THREE.Group()
+  const blimpMat = addMaterial(0xd9e9ef)
+  const bandMat = addMaterial(0x4f86b7)
+  const cabinMat = addMaterial(0x3a4a59)
+  const hull = new THREE.Mesh(addGeometry(new THREE.SphereGeometry(1, 18, 12)), blimpMat)
+  hull.scale.set(2.3, 0.7, 0.82)
+  const band = new THREE.Mesh(addGeometry(new THREE.BoxGeometry(0.14, 1.08, 1.7)), bandMat)
+  const cabin = new THREE.Mesh(addGeometry(new THREE.BoxGeometry(0.8, 0.2, 0.34)), cabinMat)
+  cabin.position.y = -0.72
+  const tail = new THREE.Mesh(addGeometry(new THREE.BoxGeometry(0.55, 0.46, 0.06)), bandMat)
+  tail.position.set(-2.18, 0.18, 0)
+  airship.add(hull, band, cabin, tail)
+  airship.scale.setScalar(0.9)
+  group.add(airship)
+
+  const birds = []
+  const birdMat = new THREE.LineBasicMaterial({ color: 0x2e455b, transparent: true, opacity: 0, depthWrite: false, fog: false })
+  materials.push(birdMat)
+  for (let i = 0; i < 7; i++) {
+    const wing = 0.2 + (i % 3) * 0.045
+    const geo = addGeometry(new THREE.BufferGeometry())
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([
+      -wing, 0, 0, 0, -wing * 0.34, 0,
+      0, -wing * 0.34, 0, wing, 0, 0,
+    ]), 3))
+    const bird = new THREE.LineSegments(geo, birdMat)
+    bird.userData.phase = i * 0.87
+    bird.userData.offsetX = (i - 3) * 0.9
+    bird.userData.offsetY = (i % 2) * 0.36
+    group.add(bird)
+    birds.push(bird)
+  }
+  group.visible = false
+  return { group, balloon, airship, birds, materials, geometries }
+}
+
 export function createSky() {
   const group = new THREE.Group()
   const stars = [
@@ -65,6 +136,9 @@ export function createSky() {
   sunGroup.visible = false
   group.add(sunGroup)
 
+  const dayObjects = makeDaySkyObjects()
+  group.add(dayObjects.group)
+
   const forward = new THREE.Vector3()
   const right = new THREE.Vector3()
   const up = new THREE.Vector3(0, 1, 0)
@@ -97,6 +171,25 @@ export function createSky() {
     sunMat.opacity = day
     haloMat.opacity = day * 0.3
     halo.scale.setScalar(1 + Math.sin(t * 0.8) * 0.04)
+
+    // 晴天专属远景：热气球、飞艇和鸟群固定在镜头远方，不会遮挡城市主体。
+    dayObjects.group.visible = day > 0.01
+    dayObjects.materials.forEach((material) => { material.opacity = day })
+    if (dayObjects.group.visible) {
+      camera.getWorldDirection(forward)
+      right.crossVectors(forward, up).normalize()
+      const base = camera.position.clone().addScaledVector(forward, 39)
+      dayObjects.balloon.position.copy(base).addScaledVector(right, -11).addScaledVector(up, 7.5 + Math.sin(t * 0.62) * 1.05)
+      dayObjects.balloon.rotation.y = t * 0.1
+      dayObjects.airship.position.copy(base).addScaledVector(right, 10.8).addScaledVector(up, 8.2 + Math.sin(t * 0.28) * 0.42)
+      dayObjects.airship.rotation.y = -0.24 + Math.sin(t * 0.16) * 0.08
+      dayObjects.birds.forEach((bird) => {
+        bird.position.copy(base)
+          .addScaledVector(right, bird.userData.offsetX + Math.sin(t * 0.34 + bird.userData.phase) * 0.8)
+          .addScaledVector(up, 4.2 + bird.userData.offsetY + Math.cos(t * 0.55 + bird.userData.phase) * 0.35)
+        bird.rotation.z = Math.sin(t * 6 + bird.userData.phase) * 0.2
+      })
+    }
   }
 
   function dispose() {
@@ -108,6 +201,12 @@ export function createSky() {
       try { geometry.dispose() } catch (e) {}
     })
     ;[moonMat, moonGlowMat, sunMat, haloMat].forEach((material) => {
+      try { material.dispose() } catch (e) {}
+    })
+    dayObjects.geometries.forEach((geometry) => {
+      try { geometry.dispose() } catch (e) {}
+    })
+    dayObjects.materials.forEach((material) => {
       try { material.dispose() } catch (e) {}
     })
   }
