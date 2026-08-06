@@ -2244,6 +2244,38 @@ function leaningPagoda() {
 }
 
 // 城市名（中文，Open-Meteo language=zh 返回）→ builder
+
+// 烟台专属补景：蓬莱阁的多层海边阁楼，以及张裕酒文化的红砖酒庄。
+function penglaiPavilion() {
+  return pavilion({ tiers: 4, w: 3.25, d: 2.45, tierH: 1.05, body: 0xc5a56e, roof: 0x3f5e71, platform: 0.82 })
+}
+
+function zhangyuChateau() {
+  const group = new THREE.Group()
+  const brick = std(0xa5553c, { roughness: 0.86 })
+  const stone = std(0xd2c0a6, { roughness: 0.78 })
+  const roof = std(0x4d5f6d, { roughness: 0.7, metalness: 0.12 })
+  const dark = std(0x392d2a, { roughness: 0.92 })
+  const main = new THREE.Mesh(new THREE.BoxGeometry(2.65, 1.35, 1.38), brick)
+  main.position.y = 0.86
+  const side = new THREE.Mesh(new THREE.BoxGeometry(1.05, 1.06, 1.2), stone)
+  side.position.set(1.55, 0.7, 0)
+  const roofMain = new THREE.Mesh(new THREE.ConeGeometry(1.18, 0.72, 4), roof)
+  roofMain.position.set(-0.1, 1.88, 0)
+  roofMain.rotation.y = Math.PI * 0.25
+  const roofSide = new THREE.Mesh(new THREE.ConeGeometry(0.66, 0.52, 4), roof)
+  roofSide.position.set(1.55, 1.48, 0)
+  roofSide.rotation.y = Math.PI * 0.25
+  const door = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.72, 0.025), dark)
+  door.position.set(-0.28, 0.42, 0.7)
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.42, 10), dark)
+  barrel.position.set(0.7, 0.3, 0.82)
+  barrel.rotation.z = Math.PI * 0.5
+  group.add(main, side, roofMain, roofSide, door, barrel)
+  group.traverse((object) => { if (object.isMesh) object.castShadow = object.receiveShadow = true })
+  return { group, glow: [] }
+}
+
 const BUILDERS = {
   上海: () =>
     set([
@@ -2354,7 +2386,12 @@ const BUILDERS = {
       { b: dachengHall, x: -3.2, z: 0.6, s: 0.9, ry: -0.24 },
       { b: cityGate, x: 3.2, z: -0.4, s: 0.72, ry: 0.32 },
     ]), // 大成殿 + 万仞宫墙
-  烟台: lighthouse, // 烟台山灯塔
+  烟台: () =>
+    set([
+      { b: lighthouse, x: -3.15, z: 1.15, s: 0.82 }, // 烟台山灯塔
+      { b: penglaiPavilion, x: 0.1, z: 1.35, s: 0.72, ry: -0.22 }, // 蓬莱阁
+      { b: zhangyuChateau, x: 3.0, z: -1.55, s: 0.76, ry: 0.2 }, // 张裕酒文化博物馆
+    ]),
   东营: oilField, // 黄河口油城
   潍坊: kiteCity, // 风筝之都 + 渤海之眼
   威海: gateOfHappiness, // 幸福门
@@ -2414,13 +2451,23 @@ function ensureLandmarkSet(key, result) {
   return result
 }
 
+// 这些城市在旧库中已有可辨识的专属地标组合，优先使用，避免被通用玻璃塔替代。
+const LEGACY_FIRST_CITIES = [
+  '上海', '广州', '北京', '天津', '杭州', '武汉', '南京', '重庆', '成都', '西安', '苏州',
+  '深圳', '哈尔滨', '香港', '台北', '郑州', '青岛', '济南', '烟台', '威海', '日照', '曲阜',
+  '泰安', '兰州', '海口', '南昌', '长沙', '福州', '澳门',
+]
+
 export function buildLandmark(name) {
   const key = ('' + (name || '')).replace(/[市区县省]/g, '').trim()
-  // 优先使用与 Web 端同构的增强地标组合；旧 builder 作为兼容兜底。
-  try {
-    const enhanced = buildEnhancedLandmark(name)
-    if (enhanced && enhanced.group) return ensureLandmarkSet(key, enhanced)
-  } catch (e) {}
+  const preferLegacy = LEGACY_FIRST_CITIES.indexOf(key) >= 0
+  // 对没有旧版专属组合的城市，继续使用增强地标；重点城市反过来优先用具体旧模型。
+  if (!preferLegacy) {
+    try {
+      const enhanced = buildEnhancedLandmark(name)
+      if (enhanced && enhanced.group) return ensureLandmarkSet(key, enhanced)
+    } catch (e) {}
+  }
   // 长键优先，避免「南京」被「南宁」之类的短键误伤（当前无此冲突，作为防御）
   const keys = Object.keys(BUILDERS).sort((a, b) => b.length - a.length)
   for (let i = 0; i < keys.length; i++) {
@@ -2433,6 +2480,8 @@ export function buildLandmark(name) {
     }
   }
   try {
+    const enhanced = buildEnhancedLandmark(name)
+    if (enhanced && enhanced.group) return ensureLandmarkSet(key, enhanced)
     return ensureLandmarkSet(key, proceduralLandmark(name))
   } catch (e) {
     return null
