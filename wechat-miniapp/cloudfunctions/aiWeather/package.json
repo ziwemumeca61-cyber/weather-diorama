@@ -1,0 +1,9 @@
+{
+  "name": "ai-weather",
+  "version": "1.0.0",
+  "description": "3D微缩城市天气 · 成长计划天气助手",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "3.0.5-beta.1"
+  }
+}
