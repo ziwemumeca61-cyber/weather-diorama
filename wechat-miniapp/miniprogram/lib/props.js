@@ -164,6 +164,41 @@ export function createProps(cityName, opts) {
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
   })
 
+  /* ---------------- 街灯与滨水步道：把楼群从孤立模型变成可感知尺度的街区 ---------------- */
+  const lampPoints = []
+  const streetX = [-8.1, -5.85, -2.15, 0.55, 3.95, 6.65]
+  const streetZ = [-8.1, -5.85, -2.15, 0.55, 3.95]
+  streetX.forEach((x, ix) => {
+    streetZ.forEach((z, iz) => {
+      const lx = x + (iz % 2 ? 0.18 : -0.18)
+      const lz = z + (ix % 2 ? 0.18 : -0.18)
+      if (!clearOfLandmark(lx, lz) || inLake(water, lx, lz)) return
+      if (water.riverZ0 != null && lz > water.riverZ0 - 0.38) return
+      lampPoints.push({ x: lx, z: lz, variant: (ix + iz) % 3 })
+    })
+  })
+  const lampPostMat = material(0x303b45, { roughness: 0.42, metalness: 0.7 })
+  const lampGlowMat = material(0xffd69a, { roughness: 0.3, emissive: 0xffb85e, emissiveIntensity: 0.1 })
+  const lampPosts = instanced(group, new THREE.CylinderGeometry(0.018, 0.026, 0.7, 8), lampPostMat, lampPoints.length, true)
+  const lampArms = instanced(group, new THREE.BoxGeometry(1, 1, 1), lampPostMat, lampPoints.length, false)
+  const lampHeads = instanced(group, new THREE.SphereGeometry(0.075, 8, 6), lampGlowMat, lampPoints.length, false)
+  lampPoints.forEach((lamp, i) => {
+    position.set(lamp.x, 0.35, lamp.z)
+    scale.set(1, 1, 1)
+    matrix.compose(position, quaternion.identity(), scale)
+    lampPosts.setMatrixAt(i, matrix)
+    position.set(lamp.x + (lamp.variant === 0 ? 0.08 : -0.08), 0.66, lamp.z)
+    scale.set(0.18, 0.025, 0.025)
+    matrix.compose(position, quaternion.identity(), scale)
+    lampArms.setMatrixAt(i, matrix)
+    position.set(lamp.x + (lamp.variant === 0 ? 0.16 : -0.16), 0.64, lamp.z)
+    scale.set(1, 1, 1)
+    matrix.compose(position, quaternion.identity(), scale)
+    lampHeads.setMatrixAt(i, matrix)
+  })
+  ;[lampPosts, lampArms, lampHeads].forEach((mesh) => { mesh.instanceMatrix.needsUpdate = true })
+  glow.push(lampGlowMat)
+
   /* ---------------- 车辆：七条 Web 车道，车身、玻璃、车顶和四轮 ---------------- */
   const lanes = CAR_LANES.filter((d) => !pathCrossesLake(water, d[0], d[1], d[2], d[3])).map((d, i) => ({
     ax: d[0], az: d[1], bx: d[2], bz: d[3],
@@ -264,6 +299,11 @@ export function createProps(cityName, opts) {
     const rainy = weather === 'rain' || weather === 'thunder'
     umbrellas.visible = rainy
     umbrellaPoles.visible = rainy
+  }
+
+  function setNight(value) {
+    // 昼夜切换使用实体灯具发光，而不是把整片街区强行提亮。
+    lampGlowMat.emissiveIntensity = 0.08 + Math.max(0, Math.min(1, value || 0)) * 2.35
   }
 
   function step(t) {
@@ -371,5 +411,6 @@ export function createProps(cityName, opts) {
 
   setWeather('clear')
   step(0)
-  return { group, glow, step, setWeather, dispose }
+  setNight(0)
+  return { group, glow, step, setWeather, setNight, dispose }
 }
