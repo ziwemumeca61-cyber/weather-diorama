@@ -188,6 +188,26 @@
   background: linear-gradient(135deg, #315fae, #477ed0);
   border-color: transparent;
 }
+.ai-assistant {
+  padding: 18rpx 18rpx;
+}
+.ai-assistant .ai-action-copy {
+  margin-left: 14rpx;
+}
+.ai-assistant .ai-action-title {
+  font-size: 28rpx;
+}
+.ai-assistant .ai-action-sub {
+  font-size: 20rpx;
+}
+.ai-action-arrow {
+  margin-left: auto;
+  padding: 0 4rpx 0 18rpx;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 42rpx;
+  font-weight: 200;
+  line-height: 40rpx;
+}
 .ai-icon {
   flex: none;
   width: 40rpx;
