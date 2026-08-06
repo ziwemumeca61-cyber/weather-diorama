@@ -66,6 +66,7 @@ function pack(items) {
     ;(part.glow || []).forEach((m) => glowList.push(m))
     if (part.animate) animate = part.animate
   })
+  group.userData.landmarkCount = items.length
   return { group, glow: glowList, animate }
 }
 
@@ -78,9 +79,9 @@ function glassMaterial(frame, pane, lit, rx, ry) {
     emissive: new THREE.Color(0xffd58d),
     emissiveMap: texture.emissiveMap,
     emissiveIntensity: 0.025,
-    roughness: 0.24,
-    metalness: 0.72,
-    envMapIntensity: 1.65,
+    roughness: 0.09,
+    metalness: 0.62,
+    envMapIntensity: 3.05,
   })
 }
 
@@ -527,6 +528,29 @@ function cityBuilders() {
 }
 
 const BUILDERS = cityBuilders()
+const TOURIST_CITIES = ['北京', '上海', '杭州', '苏州', '西安', '成都', '重庆', '青岛', '烟台', '威海', '哈尔滨', '香港', '澳门', '台北']
+
+function supplementCitySights(key, result) {
+  if (!result || !result.group) return result
+  const target = TOURIST_CITIES.indexOf(key) >= 0 ? 3 : 2
+  const current = result.group.userData.landmarkCount || 1
+  if (current >= target) return result
+  const positions = [[-3.7, 2.55], [3.55, -2.65], [-3.45, -2.8]]
+  result.glow = result.glow || []
+  for (let i = current; i < target; i++) {
+    // 次要景点采用小尺度的观景亭或跨水步桥，主地标仍由城市专属造型承担。
+    const part = i % 2
+      ? bridgeLandmark({ w: 4.6, d: 0.58, steel: 0xcbd8e2, light: 0xa7d5f4 })
+      : centralPavilion({ tiers: 3, body: 0xb99062, roof: 0x445d70 })
+    const at = positions[(i - current) % positions.length]
+    part.group.position.set(at[0], 0, at[1])
+    part.group.scale.setScalar(i % 2 ? 0.5 : 0.44)
+    result.group.add(part.group)
+    ;(part.glow || []).forEach((material) => result.glow.push(material))
+  }
+  result.group.userData.landmarkCount = target
+  return result
+}
 
 export function buildEnhancedLandmark(name) {
   const key = ('' + (name || '')).replace(/[市区县省]/g, '').trim()
@@ -534,7 +558,7 @@ export function buildEnhancedLandmark(name) {
   for (let i = 0; i < keys.length; i++) {
     if (key.indexOf(keys[i]) !== -1) {
       try {
-        return BUILDERS[keys[i]]()
+        return supplementCitySights(keys[i], BUILDERS[keys[i]]())
       } catch (e) {
         return null
       }
