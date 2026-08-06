@@ -4,8 +4,6 @@ import { nearestCity } from '../../lib/cityCoords'
 
 let sceneApi = null
 const LAST_CITY = 'lastCity'
-const AI_PROVIDER = 'hunyuan-exp'
-const AI_MODEL = 'hunyuan-2.0-instruct-20251111'
 
 Page({
   data: {
@@ -23,16 +21,6 @@ Page({
     loading: true,
     errMsg: '',
     glFailed: false,
-    aiBusy: false,
-    aiVisible: false,
-    aiTitle: '',
-    aiText: '',
-    aiPoints: [],
-    aiTags: [],
-    aiScoreLabel: '',
-    aiSource: '',
-    aiSourceLabel: '',
-    aiShareText: '',
   },
 
   onLoad(options) {
@@ -103,16 +91,6 @@ Page({
       forecast: buildForecast(d.daily),
       loading: false,
       errMsg: '',
-      aiBusy: false,
-      aiVisible: false,
-      aiTitle: '',
-      aiText: '',
-      aiPoints: [],
-      aiTags: [],
-      aiScoreLabel: '',
-      aiSource: '',
-      aiSourceLabel: '',
-      aiShareText: '',
     })
     if (name) wx.setStorage({ key: LAST_CITY, data: name })
     if (sceneApi) {
@@ -202,181 +180,6 @@ Page({
   },
 
 
-  aiWeatherContext() {
-    return {
-      city: this.data.place,
-      temperature: this.data.temp,
-      condition: this.data.kindLabel || '未知天气',
-      isDay: !this.data.night,
-      date: this.data.dateLabel,
-      forecast: (this.data.forecast || []).map((item) => ({
-        label: item.label,
-        hi: item.hi,
-        lo: item.lo,
-        condition: item.emoji,
-      })),
-    }
-  },
-
-  aiPrompt(action, question) {
-    const mode = action === 'ask'
-      ? '回答用户关于当前天气的自然语言问题'
-      : (action === 'share' ? '生成一条自然、简短、有画面感的天气分享文案' : '给出贴合当前天气的个人出行和生活建议')
-    return [
-      '你是一个克制、实用的中文天气助手。',
-      '当前天气数据：' + JSON.stringify(this.aiWeatherContext()),
-      '任务：' + mode + '。',
-      question ? '用户问题：' + question : '',
-      '只返回合法 JSON，不要 Markdown，不要代码块。',
-      '必须包含 title、points、tags、score、shareText。',
-      'advice 模式额外返回 summary；ask 模式额外返回 answer；share 模式额外返回 text。',
-      'points 最多3条，tags 最多3个，score 是20到98的整数。',
-    ].filter(Boolean).join('\n')
-  },
-
-  aiModel() {
-    if (!wx.cloud || !wx.cloud.extend || !wx.cloud.extend.AI || !wx.cloud.extend.AI.createModel) {
-      throw new Error('CloudBase AI 不可用，请将小程序基础库升级到 3.7.1 以上')
-    }
-    // 小程序成长计划专用分组，额度从云开发 AI 资源包扣除，不需要 API Key
-    return wx.cloud.extend.AI.createModel(AI_PROVIDER)
-  },
-
-  parseAIResult(value) {
-    if (!value) throw new Error('AI返回为空')
-    let text = String(value).trim()
-    const fence = String.fromCharCode(96, 96, 96)
-    if (text.indexOf(fence) === 0) {
-      text = text.replace(new RegExp('^' + fence + '(?:json)?', 'i'), '').replace(new RegExp(fence + '$'), '').trim()
-    }
-    const first = text.indexOf('{')
-    const last = text.lastIndexOf('}')
-    if (first >= 0 && last > first) text = text.slice(first, last + 1)
-    return JSON.parse(text)
-  },
-
-  // 云端 AI 不可用时继续给出本地建议，保证审核和预览阶段不白屏
-  localAI(action, question) {
-    const condition = this.data.kindLabel || '未知天气'
-    const temp = Number(this.data.temp)
-    const isRain = condition.indexOf('雨') >= 0 || condition.indexOf('雷') >= 0
-    const isHot = !Number.isNaN(temp) && temp >= 30
-    const isCold = !Number.isNaN(temp) && temp <= 12
-    const point = isRain
-      ? '出门带伞，优先选择有遮挡的路线'
-      : isHot
-        ? '注意防晒和补水，户外活动尽量避开午后'
-        : isCold
-          ? '建议增加一层保暖衣物，早晚体感会更凉'
-          : '适合安排通勤或短途户外活动'
-    const points = [point]
-    if ((this.data.forecast || []).length > 1) points.push('查看未来几天温度变化，再安排长时间行程')
-    const tags = [condition]
-    if (isRain) tags.push('带伞')
-    if (isHot) tags.push('防晒')
-    if (isCold) tags.push('保暖')
-    const score = Math.max(20, Math.min(98, 82 - (isRain ? 24 : 0) - (isHot || isCold ? 8 : 0)))
-    const shareText = this.data.place + ' · ' + condition + ' · ' + this.data.temp + '°。' + point + '。'
-    if (action === 'share') {
-      return { source: 'local', title: '今日天气文案', text: shareText, shareText, points, tags, score }
-    }
-    if (action === 'ask') {
-      const answer = question
-        ? '按当前天气看，' + (isRain ? '出门需要带伞' : '可以安排出门') + '。' + point + '。'
-        : '当前是' + condition + '，' + point + '。'
-      return { source: 'local', title: '天气助手回答', answer, shareText: answer, points, tags, score }
-    }
-    return {
-      source: 'local',
-      title: '今天的出行建议',
-      summary: this.data.place + '当前' + condition + '，适合做轻量安排。',
-      shareText,
-      points,
-      tags,
-      score,
-    }
-  },
-
-  renderAI(result) {
-    const d = result || {}
-    const text = d.answer || d.summary || d.text || ''
-    if (!text) throw new Error('AI返回为空')
-    const scoreLabel = d.score == null || d.score === '' ? '' : String(d.score) + '/100'
-    const source = d.source || 'rules'
-    this.setData({
-      aiBusy: false,
-      aiVisible: true,
-      aiTitle: d.title || '天气建议',
-      aiText: text,
-      aiPoints: Array.isArray(d.points) ? d.points : [],
-      aiTags: Array.isArray(d.tags) ? d.tags : [],
-      aiScoreLabel: scoreLabel,
-      aiSource: source,
-      aiSourceLabel: source === 'ai' ? 'AI生成' : (source === 'rules' ? '智能规则建议' : '本地规则建议'),
-      aiShareText: d.shareText || d.text || d.answer || d.summary || text,
-    })
-  },
-
-  requestAI(action, question) {
-    if (this.data.loading || !this.data.place || this.data.place === '—') {
-      wx.showToast({ title: '天气加载完成后再试', icon: 'none' })
-      return
-    }
-    const title = action === 'ask'
-      ? '正在理解你的问题…'
-      : (action === 'share' ? '正在生成分享文案…' : '正在整理今日建议…')
-    this.setData({
-      aiBusy: true,
-      aiVisible: true,
-      aiTitle: title,
-      aiText: '正在根据当前天气分析…',
-      aiPoints: [],
-      aiTags: [],
-      aiScoreLabel: '',
-      aiSource: '',
-      aiSourceLabel: '连接成长计划…',
-      aiShareText: '',
-    })
-    Promise.resolve().then(() => {
-      const model = this.aiModel()
-      return model.generateText({
-        model: AI_MODEL,
-        messages: [
-          { role: 'system', content: '你输出稳定、简洁、适合微信小程序展示的中文天气建议。' },
-          { role: 'user', content: this.aiPrompt(action, question) },
-        ],
-      })
-    }).then((res) => {
-      const content = res && res.choices && res.choices[0] && res.choices[0].message
-        ? res.choices[0].message.content
-        : (res && res.output_text ? res.output_text : '')
-      const result = this.parseAIResult(content)
-      result.source = 'ai'
-      this.renderAI(result)
-    }).catch((e) => {
-      console.error('[cloudbase-ai] request failed', e)
-      this.renderAI(this.localAI(action, question))
-    })
-  },
-
-  onAiAssistant() {
-    // 一个入口覆盖三件事：空输入给今日建议；输入问题就直接问天气；
-    // 所有结果都会附带可复制的分享文案，避免把同一能力拆成三个按钮。
-    const question = (this.data.q || '').trim()
-    this.requestAI(question ? 'ask' : 'advice', question)
-  },
-  onAiClose() {
-    this.setData({ aiVisible: false, aiBusy: false })
-  },
-  onCopyAi() {
-    const text = this.data.aiShareText || this.data.aiText
-    if (!text) return
-    wx.setClipboardData({
-      data: text,
-      success: () => wx.showToast({ title: '已复制', icon: 'success' }),
-    })
-  },
-
   // 手动切换天气特效（演示 / 不联网）
   onChip(e) {
     const k = e.currentTarget.dataset.k
@@ -417,8 +220,6 @@ Page({
   shareTitle() {
     const d = this.data
     const c = this.shareCity()
-    const ai = (d.aiShareText || '').trim()
-    if (ai) return ai.length > 60 ? ai.slice(0, 57) + '...' : ai
     if (!c) return '3D微缩城市天气'
     return `${c} ${d.temp}° ${d.kindLabel} — 来看看你的城市长啥样`
   },
