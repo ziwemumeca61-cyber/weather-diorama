@@ -13,10 +13,10 @@
   width: 100%;
 }
 
-/* 昼夜切换按钮：浮在画布右上角的磨砂圆钮 */
+/* 昼夜切换按钮：避开微信右上角原生胶囊，固定在画布右侧安全区下方 */
 .daynight {
   position: absolute;
-  top: calc(24rpx + env(safe-area-inset-top));
+  top: calc(168rpx + env(safe-area-inset-top));
   right: 30rpx;
   width: 76rpx;
   height: 76rpx;
