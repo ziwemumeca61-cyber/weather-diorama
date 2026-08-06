@@ -1918,6 +1918,7 @@ function set(parts) {
     if (r.spin) spin = r.spin
     if (typeof r.animate === 'function') anims.push(r.animate)
   })
+  g.userData.landmarkCount = parts.length
   const out = { group: g, glow: glow, spin: spin }
   if (anims.length) {
     out.animate = (t, base, nf) => {
@@ -2392,26 +2393,47 @@ export function hasOwnWater(name) {
 // 去掉「市/区/县」等后缀，做包含匹配，提升命中率。
 // 没有专属造型的城市不再退回同一根通用主塔，而是按城市名哈希生成一座
 // 程序化地标（4 种原型 × 8 种配色 × 随机朝向），让每座陌生城市各不相同。
+const TOURIST_CITY_KEYS = ['北京', '上海', '杭州', '苏州', '西安', '成都', '重庆', '青岛', '烟台', '威海', '哈尔滨', '香港', '澳门', '台北']
+
+function ensureLandmarkSet(key, result) {
+  if (!result || !result.group) return result
+  const target = TOURIST_CITY_KEYS.indexOf(key) >= 0 ? 3 : 2
+  const count = result.group.userData.landmarkCount || 1
+  if (count >= target) return result
+  result.glow = result.glow || []
+  const positions = [[-3.75, 2.7], [3.55, -2.7], [-3.5, -2.6]]
+  for (let i = count; i < target; i++) {
+    const extra = proceduralLandmark(key + '_sight_' + i)
+    const at = positions[(i - count) % positions.length]
+    extra.group.position.set(at[0], 0, at[1])
+    extra.group.scale.setScalar(0.34 + (i % 2) * 0.07)
+    result.group.add(extra.group)
+    ;(extra.glow || []).forEach((material) => result.glow.push(material))
+  }
+  result.group.userData.landmarkCount = target
+  return result
+}
+
 export function buildLandmark(name) {
   const key = ('' + (name || '')).replace(/[市区县省]/g, '').trim()
   // 优先使用与 Web 端同构的增强地标组合；旧 builder 作为兼容兜底。
   try {
     const enhanced = buildEnhancedLandmark(name)
-    if (enhanced && enhanced.group) return enhanced
+    if (enhanced && enhanced.group) return ensureLandmarkSet(key, enhanced)
   } catch (e) {}
   // 长键优先，避免「南京」被「南宁」之类的短键误伤（当前无此冲突，作为防御）
   const keys = Object.keys(BUILDERS).sort((a, b) => b.length - a.length)
   for (let i = 0; i < keys.length; i++) {
     if (key.indexOf(keys[i]) !== -1) {
       try {
-        return BUILDERS[keys[i]]()
+        return ensureLandmarkSet(keys[i], BUILDERS[keys[i]]())
       } catch (e) {
         break
       }
     }
   }
   try {
-    return proceduralLandmark(name)
+    return ensureLandmarkSet(key, proceduralLandmark(name))
   } catch (e) {
     return null
   }
