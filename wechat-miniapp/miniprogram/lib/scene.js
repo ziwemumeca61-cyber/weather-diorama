@@ -75,18 +75,20 @@ function makeReflectionEnvironment() {
 
 function makeFacadeMaterial(glass) {
   const texture = glass
-    ? makeWindowTexture(0x9bacbc, 0x7792aa, 0xffcf7a)
+    ? makeWindowTexture(0xbfd7e6, 0x5d93ba, 0xffcf7a)
     : makeWindowTexture(0xe1ddd5, 0x9eabb6, 0xffcf7a)
-  texture.map.repeat.set(glass ? 1.4 : 1, glass ? 3.5 : 2.5)
+  texture.map.repeat.set(glass ? 1.65 : 1, glass ? 4.2 : 2.5)
   texture.emissiveMap.repeat.copy(texture.map.repeat)
   return new THREE.MeshStandardMaterial({
+    color: glass ? 0xd9f2ff : 0xffffff,
     map: texture.map,
     emissive: new THREE.Color(0xffcf7a),
     emissiveMap: texture.emissiveMap,
     emissiveIntensity: 0,
-    roughness: glass ? 0.22 : 0.8,
-    metalness: glass ? 0.82 : 0.1,
-    envMapIntensity: glass ? 1.8 : 0.55,
+    // 较低粗糙度和更强环境反射让窗面能读出天空高光，而非一片灰蓝贴图。
+    roughness: glass ? 0.075 : 0.8,
+    metalness: glass ? 0.62 : 0.1,
+    envMapIntensity: glass ? 3.15 : 0.55,
   })
 }
 
@@ -360,7 +362,7 @@ export function createScene(canvas, opts) {
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
   renderer.toneMapping = THREE.ACESFilmicToneMapping
-  renderer.toneMappingExposure = 1.05
+  renderer.toneMappingExposure = 1.13
   if (THREE.SRGBColorSpace) renderer.outputColorSpace = THREE.SRGBColorSpace
 
   const scene = new THREE.Scene()
@@ -371,10 +373,11 @@ export function createScene(canvas, opts) {
   const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 200)
   const cameraTarget = new THREE.Vector3(0, -1, 0)
 
-  const ambient = new THREE.AmbientLight(0xaecbe6, 0.55)
-  const hemisphere = new THREE.HemisphereLight(0xbcd9ec, 0x3a3f47, 0.44)
-  const sun = new THREE.DirectionalLight(0xfff4e2, 2.4)
-  sun.position.set(9, 14, 6)
+  const ambient = new THREE.AmbientLight(0xaecbe6, 0.58)
+  const hemisphere = new THREE.HemisphereLight(0xbcd9ec, 0x3a3f47, 0.46)
+  // 晴天采用更强的定向日照：幕墙会有高光，建筑和树木也有清晰但柔和的投影。
+  const sun = new THREE.DirectionalLight(0xfff7e7, 3.65)
+  sun.position.set(11, 17, 8)
   sun.castShadow = true
   sun.shadow.mapSize.set(1024, 1024)
   sun.shadow.camera.near = 1
@@ -389,11 +392,11 @@ export function createScene(canvas, opts) {
   sun.shadow.radius = 2.6
   // Web 端 Environment 中的蓝色侧光、暖色轮廓光和底部反射光的原生近似。
   // 这些灯不投射阴影，只负责让阴天建筑仍有真实的体积明暗。
-  const blueFill = new THREE.DirectionalLight(0xcfe0ff, 0.22)
+  const blueFill = new THREE.DirectionalLight(0xcfe7ff, 0.28)
   blueFill.position.set(-12, 8, -6)
-  const warmFill = new THREE.DirectionalLight(0xffe6c0, 0.14)
-  warmFill.position.set(0, 10, -12)
-  const groundFill = new THREE.DirectionalLight(0x9eb6d6, 0.08)
+  const warmFill = new THREE.DirectionalLight(0xffe4b7, 0.22)
+  warmFill.position.set(-2, 11, -12)
+  const groundFill = new THREE.DirectionalLight(0x9eb6d6, 0.1)
   groundFill.position.set(0, -6, 0)
   scene.add(ambient, hemisphere, sun, blueFill, warmFill, groundFill)
 
@@ -423,8 +426,8 @@ export function createScene(canvas, opts) {
     sun: new THREE.Color(0xfff4e2),
     ambient: new THREE.Color(0xaecbe6),
     sunPosition: new THREE.Vector3(9, 14, 6),
-    sunIntensity: 2.4,
-    ambientIntensity: 0.55,
+    sunIntensity: 3.65,
+    ambientIntensity: 0.58,
     fogDensity: 0.003,
     night: 0,
     buildingGlow: 0,
@@ -457,11 +460,11 @@ export function createScene(canvas, opts) {
       target.night = 1
     } else {
       target.sky.set(0xbcd9ec)
-      target.sun.set(0xfff4e2)
+      target.sun.set(0xfff7e7)
       target.ambient.set(0xaecbe6)
-      target.sunIntensity = 2.4
-      target.ambientIntensity = 0.55
-      target.sunPosition.set(9, 14, 6)
+      target.sunIntensity = 3.65
+      target.ambientIntensity = 0.58
+      target.sunPosition.set(11, 17, 8)
       target.night = 0
     }
     target.sky.lerp(grey, mod.grey).multiplyScalar(1 - mod.darken)
