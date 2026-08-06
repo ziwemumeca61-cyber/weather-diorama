@@ -10,3 +10,7 @@ export const WEATHER_CREDIT = {
   license: 'CC-BY 4.0',
   url: 'https://open-meteo.com',
 }
+
+// AI 助手先默认关闭：审核版只展示天气和 3D 城市；审核通过后改为 true，
+// 重新上传小程序并部署 aiWeather 云函数即可开启成长计划额度。
+export const AI_ASSISTANT_ENABLED = false
