@@ -41,6 +41,46 @@
       </view>
     </scroll-view>
 
+    <!-- AI 先做成审核安全的可开关模块：默认关闭，开启后只有用户主动点击才调用额度。 -->
+    <view class="ai-entry" wx:if="{{aiEnabled}}">
+      <view class="ai-entry-copy">
+        <text class="ai-entry-icon">☁️</text>
+        <view class="ai-entry-text">
+          <text class="ai-entry-title">AI天气助手</text>
+          <text class="ai-entry-sub">看天气、问出行、生成分享文案，一个入口解决</text>
+        </view>
+      </view>
+      <view class="ai-entry-btn" bindtap="onAiToggle">{{aiOpen ? '收起' : '打开'}}</view>
+    </view>
+
+    <view class="ai-panel" wx:if="{{aiEnabled && aiOpen}}">
+      <view class="ai-panel-head">
+        <text class="ai-panel-title">今天想问什么？</text>
+        <text class="ai-panel-note">只在你点击提问时调用</text>
+      </view>
+      <view class="ai-prompts">
+        <view class="ai-prompt" wx:for="{{aiPrompts}}" wx:key="*this" data-q="{{item}}" bindtap="onAiPrompt">{{item}}</view>
+      </view>
+      <view class="ai-ask-row">
+        <input
+          class="ai-input"
+          placeholder="例如：周末适合去海边吗？"
+          placeholder-class="ph"
+          maxlength="200"
+          value="{{aiQuestion}}"
+          bindinput="onAiInput"
+          bindconfirm="onAiAsk"
+        />
+        <view class="ai-ask-btn" bindtap="onAiAsk">{{aiLoading ? '分析中' : '提问'}}</view>
+      </view>
+      <view class="ai-result" wx:if="{{aiLoading || aiText}}">
+        <text class="ai-result-text">{{aiLoading ? '正在结合当前天气分析…' : aiText}}</text>
+        <text class="ai-cache" wx:if="{{aiCacheHint}}">{{aiCacheHint}}</text>
+        <view class="ai-copy" wx:if="{{aiText}}" bindtap="onAiCopy">复制结果</view>
+      </view>
+      <text class="ai-disclaimer">AI 建议仅作日常参考，雷雨、大风等情况以官方预警为准。</text>
+    </view>
+
     <view class="row">
       <input
         class="ipt"
