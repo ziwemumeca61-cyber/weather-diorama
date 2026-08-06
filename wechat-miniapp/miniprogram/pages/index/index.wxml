@@ -56,26 +56,13 @@
     </view>
 
     <view class="ai-actions">
-      <view class="ai-action ai-primary" bindtap="onAiAdvice">
+      <view class="ai-action ai-primary ai-assistant" bindtap="onAiAssistant">
         <text class="ai-icon">✦</text>
         <view class="ai-action-copy">
-          <text class="ai-action-title">AI管家</text>
-          <text class="ai-action-sub">今天怎么安排</text>
+          <text class="ai-action-title">AI天气助手</text>
+          <text class="ai-action-sub">建议 · 问答 · 分享文案</text>
         </view>
-      </view>
-      <view class="ai-action" bindtap="onAiAsk">
-        <text class="ai-icon">?</text>
-        <view class="ai-action-copy">
-          <text class="ai-action-title">问天气</text>
-          <text class="ai-action-sub">自然语言提问</text>
-        </view>
-      </view>
-      <view class="ai-action" bindtap="onAiShare">
-        <text class="ai-icon">↗</text>
-        <view class="ai-action-copy">
-          <text class="ai-action-title">AI文案</text>
-          <text class="ai-action-sub">一键生成分享</text>
-        </view>
+        <text class="ai-action-arrow">›</text>
       </view>
     </view>
     <scroll-view class="chips" scroll-x enable-flex>
