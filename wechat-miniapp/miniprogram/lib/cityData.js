@@ -99,9 +99,14 @@ export function generateCity(seed, clearZones, calmZones, maxZ, hueShift) {
       }
       let roof = 'flat'
       const rr = rand()
+      let style = isCore ? 'office' : 'residential'
+      if (height > 7.2 || (coreness > 0.58 && footprint < 0.88)) style = 'tower'
       if (height <= 5.5) {
         if (coreness < 0.42 && height < 2.4) roof = rr < 0.22 ? 'gable' : rr < 0.4 ? 'hip' : 'flat'
         else roof = rr < 0.12 ? 'hip' : 'flat'
+      } else if (style === 'tower' && rr < 0.72) {
+        // 与 Web 版 City 的高层退台同源：让核心区天际线有可读的高低层次。
+        roof = 'setback'
       }
       out.push({
         x: x + jitterX,
@@ -112,6 +117,7 @@ export function generateCity(seed, clearZones, calmZones, maxZ, hueShift) {
         color: color.getHex(),
         core: coreness,
         roof,
+        style,
       })
     }
   }
