@@ -227,39 +227,51 @@ function makeSplashes(count) {
 }
 
 function makeLightning() {
-  const maxSegments = 48
+  const maxSegments = 84
   const positions = new Float32Array(maxSegments * 6)
   const geometry = new THREE.BufferGeometry()
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-  const material = new THREE.LineBasicMaterial({ color: 0xf6f2ff, transparent: true, opacity: 0, depthWrite: false, fog: false })
+  const material = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, fog: false })
+  const glowMaterial = new THREE.LineBasicMaterial({
+    color: 0x83bfff,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    fog: false,
+    blending: THREE.AdditiveBlending,
+  })
   const mesh = new THREE.LineSegments(geometry, material)
+  const glowMesh = new THREE.LineSegments(geometry, glowMaterial)
   mesh.visible = false
+  glowMesh.visible = false
   mesh.frustumCulled = false
-  return { mesh, geometry, material, positions, maxSegments }
+  glowMesh.frustumCulled = false
+  return { mesh, glowMesh, geometry, material, glowMaterial, positions, maxSegments }
 }
 
 function resetLightning(bolt, seed) {
   const rand = mulberry32(seed)
   const points = []
-  let x = -4 + rand() * 8
-  let y = 22
-  let z = -5 + rand() * 9
+  let x = -5 + rand() * 10
+  let y = 24
+  let z = -6 + rand() * 12
   points.push([x, y, z])
-  for (let i = 1; i < 17; i++) {
-    x += (rand() - 0.5) * 1.3
-    y = 22 - (i / 16) * 19.5
-    z += (rand() - 0.5) * 0.75
+  // 主电弧一直劈到城区近地面，增加折点密度后不会像一根笔直白线。
+  for (let i = 1; i < 23; i++) {
+    x += (rand() - 0.5) * 1.55
+    y = 24 - (i / 22) * 23.5
+    z += (rand() - 0.5) * 0.95
     points.push([x, y, z])
   }
   const segments = []
   for (let i = 0; i < points.length - 1; i++) segments.push([points[i], points[i + 1]])
-  ;[6, 10].forEach((start, branchIndex) => {
+  ;[6, 12, 17].forEach((start, branchIndex) => {
     let prev = points[start]
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 8; i++) {
       const next = [
-        prev[0] + (branchIndex ? -1 : 1) * (0.45 + rand() * 0.55),
-        prev[1] - 0.65 - rand() * 0.6,
-        prev[2] + (rand() - 0.5) * 0.7,
+        prev[0] + (branchIndex === 1 ? -1 : 1) * (0.48 + rand() * 0.72),
+        prev[1] - 0.62 - rand() * 0.72,
+        prev[2] + (rand() - 0.5) * 0.9,
       ]
       segments.push([prev, next])
       prev = next
@@ -300,16 +312,29 @@ export function createWeatherEffects(scene) {
   const snow = makeSnow(1350)
   const splashes = makeSplashes(52)
   const bolt = makeLightning()
-  group.add(rain.mesh, snow.mesh, splashes.mesh, bolt.mesh)
-  const boltLight = new THREE.PointLight(0xdde8ff, 0, 38, 2)
+  const thunderGlowMat = new THREE.SpriteMaterial({
+    map: weatherTexture,
+    color: 0xdcecff,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    fog: false,
+    blending: THREE.AdditiveBlending,
+  })
+  const thunderGlow = new THREE.Sprite(thunderGlowMat)
+  thunderGlow.scale.set(25, 15, 1)
+  thunderGlow.visible = false
+  group.add(rain.mesh, snow.mesh, splashes.mesh, thunderGlow, bolt.glowMesh, bolt.mesh)
+  const boltLight = new THREE.PointLight(0xdde8ff, 0, 46, 2)
   group.add(boltLight)
 
   let kind = 'clear'
   let rainTarget = 0
   let snowTarget = 0
   let flash = 0
+  let cloudFlash = 0
   let boltLife = 0
-  let nextBolt = 1.0
+  let nextBolt = 0.7
   let boltSeed = 4001
 
   function setWeather(value) {
@@ -328,6 +353,7 @@ export function createWeatherEffects(scene) {
   const splashP = new THREE.Vector3()
   const splashQ = new THREE.Quaternion()
   const splashS = new THREE.Vector3()
+  const stormCloudFlashColor = new THREE.Color(0xeaf4ff)
   function updateSplashes(dt) {
     for (let i = 0; i < splashes.drops.length; i++) {
       const drop = splashes.drops[i]
@@ -420,27 +446,45 @@ export function createWeatherEffects(scene) {
     }
 
     if (kind === 'thunder' && t > nextBolt) {
-      flash = 1
-      boltLife = 0.22
+      flash = 1.45
+      cloudFlash = 1
+      boltLife = 0.34
       boltSeed += 97
       resetLightning(bolt, boltSeed)
       bolt.mesh.visible = true
+      bolt.glowMesh.visible = true
       bolt.material.opacity = 1
-      if (bolt.lightPosition) boltLight.position.set(bolt.lightPosition[0], bolt.lightPosition[1], bolt.lightPosition[2])
-      // 雷阵雨缩短闪电间隔，保持有随机间歇，避免机械地等很久才闪一次。
-      nextBolt = t + 0.95 + (boltSeed % 22) * 0.07
+      bolt.glowMaterial.opacity = 0.9
+      if (bolt.lightPosition) {
+        boltLight.position.set(bolt.lightPosition[0], bolt.lightPosition[1], bolt.lightPosition[2])
+        thunderGlow.position.set(bolt.lightPosition[0], 14.5, bolt.lightPosition[2])
+      }
+      thunderGlow.visible = true
+      // 主闪后很快再回闪一次，模拟真实雷云内的多次放电。
+      nextBolt = t + 0.56 + (boltSeed % 17) * 0.055
     }
     boltLife = Math.max(0, boltLife - dt)
-    if (boltLife > 0) bolt.material.opacity = Math.min(1, boltLife * 7)
-    else bolt.mesh.visible = false
-    flash = flash > 0.001 ? flash * Math.pow(0.00001, dt) : 0
-    boltLight.intensity = flash * 12
+    const pulse = boltLife > 0 ? (boltLife > 0.19 ? 1 : 0.42 + Math.sin(boltLife * 48) * 0.3) : 0
+    if (boltLife > 0) {
+      bolt.material.opacity = Math.min(1, pulse)
+      bolt.glowMaterial.opacity = Math.min(0.95, pulse * 0.85)
+    } else {
+      bolt.mesh.visible = false
+      bolt.glowMesh.visible = false
+    }
+    cloudFlash = cloudFlash > 0.001 ? cloudFlash * Math.pow(0.000003, dt) : 0
+    thunderGlowMat.opacity = cloudFlash * 0.82
+    thunderGlow.visible = thunderGlowMat.opacity > 0.01
+    // 云层被雷光照亮，而不是只有一根线在黑背景里闪。
+    if (kind === 'thunder') high.material.color.set(0x5b626e).lerp(stormCloudFlashColor, cloudFlash * 0.88)
+    flash = flash > 0.001 ? flash * Math.pow(0.000002, dt) : 0
+    boltLight.intensity = cloudFlash * 24
     return flash
   }
 
   function dispose() {
     const geometries = [rain.geometry, snow.geometry, splashes.geometry, bolt.geometry]
-    const materials = [ambient.material, high.material, fog.material, rain.material, snow.material, splashes.material, bolt.material]
+    const materials = [ambient.material, high.material, fog.material, rain.material, snow.material, splashes.material, bolt.material, bolt.glowMaterial, thunderGlowMat]
     geometries.forEach((geometry) => { try { geometry.dispose() } catch (e) {} })
     materials.forEach((material) => { try { material.dispose() } catch (e) {} })
     ;[ambientTexture, weatherTexture, fogTexture].forEach((texture) => { try { texture.dispose() } catch (e) {} })
