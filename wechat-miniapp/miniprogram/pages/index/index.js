@@ -1,6 +1,7 @@
 import { createScene } from '../../lib/scene'
 import { KIND_LABEL, KIND_EMOJI, KINDS, localTime, buildForecast } from '../../lib/weatherCode'
 import { nearestCity } from '../../lib/cityCoords'
+import { AI_ASSISTANT_ENABLED } from '../../lib/meta'
 
 let sceneApi = null
 const LAST_CITY = 'lastCity'
@@ -21,6 +22,14 @@ Page({
     loading: true,
     errMsg: '',
     glFailed: false,
+    aiEnabled: AI_ASSISTANT_ENABLED,
+    aiOpen: false,
+    aiQuestion: '',
+    aiText: '',
+    aiLoading: false,
+    aiSource: '',
+    aiCacheHint: '',
+    aiPrompts: ['今天适合出门吗？', '要不要带伞？', '今天适合户外活动吗？', '帮我写一句天气分享'],
   },
 
   onLoad(options) {
@@ -106,7 +115,7 @@ Page({
 
   callWeather(payload) {
     this._lastPayload = payload // 供「重试」用
-    this.setData({ loading: true, errMsg: '' })
+    this.setData({ loading: true, errMsg: '', aiText: '', aiSource: '', aiCacheHint: '' })
     wx.cloud
       .callFunction({ name: 'weather', data: payload })
       .then((r) => {
@@ -180,10 +189,161 @@ Page({
   },
 
 
+  onAiToggle() {
+    if (!this.data.aiEnabled) return
+    this.setData({ aiOpen: !this.data.aiOpen })
+  },
+
+  onAiInput(e) {
+    this.setData({ aiQuestion: e.detail.value || '' })
+  },
+
+  onAiPrompt(e) {
+    const question = e.currentTarget.dataset.q || ''
+    this.setData({ aiQuestion: question, aiOpen: true })
+    this.askAi(question)
+  },
+
+  onAiAsk() {
+    this.askAi(this.data.aiQuestion)
+  },
+
+  aiCacheKey(question) {
+    const d = this.data
+    const forecast = (d.forecast || [])
+      .map((item) => `${item.label}:${item.hi}/${item.lo}/${item.emoji}`)
+      .join(',')
+    const signature = [d.place, d.dateLabel, d.temp, d.curKind, forecast, question].join('|')
+    return `aiWeather:v1:${encodeURIComponent(signature).slice(0, 180)}`
+  },
+
+  aiWeatherPayload() {
+    const d = this.data
+    return {
+      city: d.place,
+      dateLabel: d.dateLabel,
+      temperature: d.temp,
+      kind: d.curKind,
+      kindLabel: d.kindLabel,
+      isDay: !d.night,
+      forecast: (d.forecast || []).slice(0, 7).map((item) => ({
+        label: item.label,
+        emoji: item.emoji,
+        hi: item.hi,
+        lo: item.lo,
+      })),
+    }
+  },
+
+  localAiFallback(question) {
+    const d = this.data
+    const temp = Number(d.temp)
+    const degree = Number.isFinite(temp) ? `${temp}°` : '当前温度'
+    const kind = d.kindLabel || '当前天气'
+    const asksUmbrella = /伞|雨|淋/.test(question || '')
+    const asksOutdoor = /出门|户外|跑步|运动|遛娃|拍照|旅游|海边/.test(question || '')
+    let judgement = `${kind}，当前约 ${degree}。`
+    let suggestion = '按个人体感穿着，出门前再看一眼实时天气。'
+    let warning = '天气建议仅作日常参考，恶劣天气以官方预警为准。'
+
+    if (d.curKind === 'thunder') {
+      judgement += ' 不建议把户外活动排在今天。'
+      suggestion = '尽量减少户外停留，准备雨具，远离高处、树下和空旷地带。'
+      warning = '雷雨时优先进入安全建筑内，不要在户外逗留。'
+    } else if (d.curKind === 'rain') {
+      judgement += ' 出门需要考虑降雨影响。'
+      suggestion = '建议带伞并穿防滑鞋，通勤预留一些时间。'
+      warning = '路面湿滑，驾车和骑行请降低速度。'
+    } else if (d.curKind === 'snow') {
+      judgement += ' 体感偏冷，路面可能湿滑。'
+      suggestion = '注意保暖，穿防滑鞋，户外活动不要安排得太久。'
+      warning = '关注道路结冰和交通变化。'
+    } else if (d.curKind === 'fog') {
+      judgement += ' 能见度可能较低。'
+      suggestion = '驾车或骑行请开灯、降速，户外活动尽量选择近距离路线。'
+      warning = '出行前关注能见度和道路提示。'
+    } else if (d.curKind === 'clear' && (!Number.isFinite(temp) || temp >= 8)) {
+      judgement += ' 整体适合安排日常出行。'
+      suggestion = '适合通勤、散步和短时户外活动，注意补水和防晒。'
+      warning = '如果长时间户外，记得防晒并观察体感变化。'
+    }
+
+    if (asksUmbrella && d.curKind !== 'rain' && d.curKind !== 'thunder') {
+      suggestion = '当前没有明显降雨提示，短时出门可不带伞；远行前再看一次预报。'
+    }
+    if (asksOutdoor && (d.curKind === 'clear' || d.curKind === 'cloudy')) {
+      suggestion = '适合安排短时户外活动，选择有遮阴或方便撤离的路线。'
+    }
+
+    const share = `${d.place || '今天'}：${kind}，约 ${degree}。${suggestion}`
+    return `【天气判断】${judgement}\n【建议】${suggestion}\n【提醒】${warning}\n【分享文案】${share}`
+  },
+
+  askAi(question) {
+    if (!this.data.aiEnabled || this.data.aiLoading) return
+    if (!this.data.place || this.data.place === '—' || this.data.loading) {
+      wx.showToast({ title: '天气加载完成后再问我', icon: 'none' })
+      return
+    }
+
+    const q = String(question || '').trim().slice(0, 200) || '根据当前天气给我今天的出行建议'
+    const cacheKey = this.aiCacheKey(q)
+    const cached = wx.getStorageSync(cacheKey)
+    if (cached && cached.text && cached.expiresAt > Date.now()) {
+      this.setData({
+        aiOpen: true,
+        aiQuestion: q,
+        aiText: cached.text,
+        aiSource: 'cache',
+        aiCacheHint: '已读取今日缓存，本次未消耗 AI 额度',
+      })
+      return
+    }
+
+    this.setData({ aiOpen: true, aiQuestion: q, aiLoading: true, aiText: '', aiCacheHint: '' })
+    wx.cloud
+      .callFunction({
+        name: 'aiWeather',
+        data: { question: q, weather: this.aiWeatherPayload() },
+      })
+      .then((r) => {
+        const result = (r && r.result) || {}
+        if (!result.ok || !result.text) throw new Error(result.error || 'AI 暂时不可用')
+        const text = String(result.text).trim()
+        wx.setStorage({
+          key: cacheKey,
+          data: { text, expiresAt: Date.now() + 24 * 60 * 60 * 1000 },
+        })
+        this.setData({
+          aiText: text,
+          aiSource: result.source || 'ai',
+          aiCacheHint: result.source === 'rule' ? '本次使用本地规则，未消耗 AI 额度' : '已根据当前天气生成',
+        })
+      })
+      .catch((e) => {
+        console.error('[cloud] aiWeather failed', e)
+        const text = this.localAiFallback(q)
+        this.setData({
+          aiText: text,
+          aiSource: 'rule',
+          aiCacheHint: 'AI 暂时不可用，已切换本地规则，未消耗额度',
+        })
+      })
+      .then(() => this.setData({ aiLoading: false }))
+  },
+
+  onAiCopy() {
+    if (!this.data.aiText) return
+    wx.setClipboardData({
+      data: this.data.aiText,
+      success: () => wx.showToast({ title: '内容已复制', icon: 'none' }),
+    })
+  },
+
   // 手动切换天气特效（演示 / 不联网）
   onChip(e) {
     const k = e.currentTarget.dataset.k
-    this.setData({ curKind: k, kindLabel: KIND_LABEL[k], emoji: KIND_EMOJI[k] })
+    this.setData({ curKind: k, kindLabel: KIND_LABEL[k], emoji: KIND_EMOJI[k], aiText: '', aiCacheHint: '' })
     if (sceneApi) sceneApi.setWeather(k)
   },
 
