@@ -69,17 +69,20 @@ export function generateCity(seed, clearZones, calmZones, maxZ, hueShift) {
           break
         }
       }
-      if (blocked || rand() < 0.06) continue
+      if (blocked || rand() < 0.015) continue
 
       const coreness = THREE.MathUtils.clamp(1 - dToCore / 11, 0, 1)
       const jitterX = (rand() - 0.5) * 0.5
       const jitterZ = (rand() - 0.5) * 0.5
       let footprint = 0.72 + rand() * 0.5
-      const base = 0.7 + rand() * 1
-      let height = base + Math.pow(coreness, 1.5) * (3.6 + rand() * 9)
-      if (coreness > 0.5 && rand() < 0.28) {
-        footprint *= 0.62
-        height *= 1.45
+      // 一部分地块拆成主楼 + 附楼，补足城区密度而不挤占道路。
+      const splitLot = footprint > 0.88 && rand() < 0.38
+      if (splitLot) footprint *= 0.72
+      const base = 0.74 + rand() * 1.18
+      let height = base + Math.pow(coreness, 1.46) * (5.05 + rand() * 11.4)
+      if (coreness > 0.48 && rand() < 0.34) {
+        footprint *= 0.6
+        height *= 1.58
       }
       for (let i = 0; i < calm.length; i++) {
         const zone = calm[i]
@@ -90,35 +93,59 @@ export function generateCity(seed, clearZones, calmZones, maxZ, hueShift) {
         }
       }
 
-      const isCore = coreness > 0.55 && rand() < 0.6
+      const isCore = coreness > 0.5 && rand() < 0.66
       const palette = isCore ? CORE : PALETTE
       const color = new THREE.Color(palette[Math.floor(rand() * palette.length)])
       if (shift) {
         color.getHSL(hsl)
         color.setHSL((hsl.h + shift + 1) % 1, hsl.s, hsl.l)
       }
+      const depth = footprint * (0.85 + rand() * 0.3)
       let roof = 'flat'
       const rr = rand()
       let style = isCore ? 'office' : 'residential'
-      if (height > 7.2 || (coreness > 0.58 && footprint < 0.88)) style = 'tower'
+      if (height > 7.0 || (coreness > 0.56 && footprint < 0.88)) style = 'tower'
       if (height <= 5.5) {
         if (coreness < 0.42 && height < 2.4) roof = rr < 0.22 ? 'gable' : rr < 0.4 ? 'hip' : 'flat'
         else roof = rr < 0.12 ? 'hip' : 'flat'
-      } else if (style === 'tower' && rr < 0.72) {
+      } else if (style === 'tower' && rr < 0.76) {
         // 与 Web 版 City 的高层退台同源：让核心区天际线有可读的高低层次。
         roof = 'setback'
       }
+      const px = x + jitterX
+      const pz = z + jitterZ
       out.push({
-        x: x + jitterX,
-        z: z + jitterZ,
+        x: px,
+        z: pz,
         w: footprint,
-        d: footprint * (0.85 + rand() * 0.3),
+        d: depth,
         h: height,
         color: color.getHex(),
         core: coreness,
         roof,
         style,
       })
+      if (splitLot) {
+        const alongX = rand() < 0.5
+        const annexW = alongX ? footprint * (0.48 + rand() * 0.1) : footprint * (0.82 + rand() * 0.1)
+        const annexD = alongX ? depth * (0.78 + rand() * 0.1) : depth * (0.48 + rand() * 0.1)
+        const annexH = Math.max(0.86, height * (0.32 + rand() * 0.28))
+        const side = rand() < 0.5 ? -1 : 1
+        const annexX = px + (alongX ? side * (footprint * 0.54 + annexW * 0.55 + 0.04) : 0)
+        const annexZ = pz + (!alongX ? side * (depth * 0.54 + annexD * 0.55 + 0.04) : 0)
+        const annexColor = color.clone().offsetHSL(0, -0.02, side * 0.035)
+        out.push({
+          x: annexX,
+          z: annexZ,
+          w: annexW,
+          d: annexD,
+          h: annexH,
+          color: annexColor.getHex(),
+          core: Math.max(0, coreness - 0.18),
+          roof: annexH < 2.1 && coreness < 0.45 ? (rand() < 0.45 ? 'hip' : 'gable') : 'flat',
+          style: annexH > 4.4 ? 'office' : 'residential',
+        })
+      }
     }
   }
   return out
