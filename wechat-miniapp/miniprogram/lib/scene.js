@@ -75,20 +75,24 @@ function makeReflectionEnvironment() {
 
 function makeFacadeMaterial(glass) {
   const texture = glass
-    ? makeWindowTexture(0xbfd7e6, 0x5d93ba, 0xffcf7a)
-    : makeWindowTexture(0xe1ddd5, 0x9eabb6, 0xffcf7a)
-  texture.map.repeat.set(glass ? 1.65 : 1, glass ? 4.2 : 2.5)
+    ? makeWindowTexture(0xd3dbe4, 0x9fb6cc, 0xffcf7a)
+    : makeWindowTexture(0xded6c8, 0xb9b3a4, 0xffcf7a)
+  // Web 版每个箱体使用完整的一张 6×14 幕墙贴图；新贴图已经有足够
+  // 的楼层和窗格，不能再按旧 4×4 贴图重复，否则远景会糊成条纹。
+  texture.map.repeat.set(1, 1)
   texture.emissiveMap.repeat.copy(texture.map.repeat)
+  texture.roughnessMap.repeat.copy(texture.map.repeat)
   return new THREE.MeshStandardMaterial({
     color: glass ? 0xd9f2ff : 0xffffff,
     map: texture.map,
     emissive: new THREE.Color(0xffcf7a),
     emissiveMap: texture.emissiveMap,
+    roughnessMap: texture.roughnessMap,
     emissiveIntensity: 0,
-    // 较低粗糙度和更强环境反射让窗面能读出天空高光，而非一片灰蓝贴图。
-    roughness: glass ? 0.075 : 0.8,
-    metalness: glass ? 0.62 : 0.1,
-    envMapIntensity: glass ? 3.15 : 0.55,
+    // 保留远程版本的真实环境反射，同时让粗糙度贴图控制玻璃窗格与框架。
+    roughness: glass ? 0.22 : 0.8,
+    metalness: glass ? 0.85 : 0.1,
+    envMapIntensity: glass ? 1.8 : 0.55,
   })
 }
 
@@ -398,7 +402,9 @@ export function createScene(canvas, opts) {
   scene.background = new THREE.Color(0xbcd9ec)
   scene.fog = new THREE.FogExp2(0xbcd9ec, 0.003)
   const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 200)
-  const cameraTarget = new THREE.Vector3(0, -1, 0)
+  // 下方固定天气面板会占用视觉重量；把观察目标抬高约 0.45 个世界单位，
+  // 城市模型在画布中整体下移一点，缩放和旋转中心保持不变。
+  const cameraTarget = new THREE.Vector3(0, -0.55, 0)
 
   const ambient = new THREE.AmbientLight(0xaecbe6, 0.58)
   const hemisphere = new THREE.HemisphereLight(0xbcd9ec, 0x3a3f47, 0.46)

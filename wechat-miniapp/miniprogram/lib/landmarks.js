@@ -1681,19 +1681,22 @@ function shade(hex, amt) {
   return c.getHex()
 }
 
-/** 幕墙材质：窗格贴图 + 只有窗户会亮的自发光图 */
+/** 幕墙材质：细窗格 + 只有窗户会亮的自发光图 + 玻璃粗糙度 */
 function curtainWall(accent, repX, repY) {
   const tex = makeWindowTexture(shade(accent, 0.06), shade(accent, -0.14), 0xffd9a0)
   tex.map.repeat.set(repX, repY)
   tex.emissiveMap.repeat.set(repX, repY)
+  tex.roughnessMap.repeat.set(repX, repY)
   return new THREE.MeshStandardMaterial({
     color: 0xffffff,
     map: tex.map,
     emissive: new THREE.Color(0xffffff),
     emissiveMap: tex.emissiveMap,
+    roughnessMap: tex.roughnessMap,
     emissiveIntensity: 0.15,
-    metalness: 0.55,
-    roughness: 0.35,
+    metalness: 0.7,
+    roughness: 0.25,
+    envMapIntensity: 1.5,
   })
 }
 

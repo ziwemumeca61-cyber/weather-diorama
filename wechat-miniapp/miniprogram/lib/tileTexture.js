@@ -15,15 +15,19 @@ export function darken(hex, f) {
 }
 
 /**
- * 幕墙窗格贴图。返回 { map, emissiveMap }：
- * map 是框+玻璃的固有色；emissiveMap 只有窗格发亮、框为黑，
- * 这样夜里调 emissiveIntensity 时只有窗户点亮，不会整栋楼发光。
+ * 幕墙材质贴图。按 Web 版 facades.ts 的 6×14 窗格布局生成：
+ * map 是带幕墙分格和天空斜向高光的固有色，emissiveMap 只让部分窗户夜间亮起，
+ * roughnessMap 让玻璃面比结构框更平滑。小程序没有 DOM，仍然用 DataTexture，
+ * 但分辨率和材质通道与 Web 版保持同一套视觉逻辑。
  */
 export function makeWindowTexture(frameHex, paneHex, litHex) {
-  const S = 64
-  const CELL = 16 // 每遍 4×4 个窗；8px 时是 8×8，远看糊成一片
-  const map = new Uint8Array(S * S * 4)
-  const emi = new Uint8Array(S * S * 4)
+  const W = 128
+  const H = 256
+  const COLS = 6
+  const ROWS = 14
+  const map = new Uint8Array(W * H * 4)
+  const emi = new Uint8Array(W * H * 4)
+  const rough = new Uint8Array(W * H * 4)
   const fr = (frameHex >> 16) & 255
   const fg = (frameHex >> 8) & 255
   const fb = frameHex & 255
@@ -33,37 +37,85 @@ export function makeWindowTexture(frameHex, paneHex, litHex) {
   const lr = (litHex >> 16) & 255
   const lg = (litHex >> 8) & 255
   const lb = litHex & 255
-  for (let y = 0; y < S; y++) {
-    for (let x = 0; x < S; x++) {
-      const cx = x % CELL
-      const cy = y % CELL
-      const inPane = cx >= 2 && cx <= CELL - 3 && cy >= 2 && cy <= CELL - 5
-      const i = (y * S + x) * 4
-      map[i] = inPane ? pr : fr
-      map[i + 1] = inPane ? pg : fg
-      map[i + 2] = inPane ? pb : fb
+
+  const padX = W * 0.06
+  const padY = H * 0.04
+  const cw = (W - padX * 2) / COLS
+  const rh = (H - padY * 2) / ROWS
+  const clampByte = (v) => Math.max(0, Math.min(255, Math.round(v)))
+  const mix = (a, b, t) => a + (b - a) * t
+
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4
+      map[i] = fr
+      map[i + 1] = fg
+      map[i + 2] = fb
       map[i + 3] = 255
-      // 每格用坐标哈希决定亮不亮，制造「有的房间开灯」的参差感
-      const h = (((x / CELL) | 0) * 73856093) ^ (((y / CELL) | 0) * 19349663)
-      const on = inPane && (h >>> 4) % 5 !== 0
-      emi[i] = on ? lr : 0
-      emi[i + 1] = on ? lg : 0
-      emi[i + 2] = on ? lb : 0
-      emi[i + 3] = 255
+      rough[i] = rough[i + 1] = rough[i + 2] = 220
+      rough[i + 3] = 255
     }
   }
-  const mk = (arr) => {
-    const t = new THREE.DataTexture(arr, S, S)
+
+  for (let row = 0; row < ROWS; row++) {
+    for (let col = 0; col < COLS; col++) {
+      const x0 = Math.round(padX + col * cw)
+      const y0 = Math.round(padY + row * rh)
+      const x1 = Math.round(padX + (col + 1) * cw)
+      const y1 = Math.round(padY + (row + 1) * rh)
+      const px0 = Math.round(x0 + cw * 0.12)
+      const px1 = Math.round(x1 - cw * 0.12)
+      const py0 = Math.round(y0 + rh * 0.14)
+      const py1 = Math.round(y0 + rh * 0.80)
+      // 固定哈希，切城、重绘和真机重启后每栋楼的亮灯分布都稳定。
+      const hash = (((col + 11) * 73856093) ^ ((row + 17) * 19349663) ^ frameHex) >>> 0
+      const on = hash % 10 > 3
+
+      for (let y = y0; y < y1; y++) {
+        for (let x = x0; x < x1; x++) {
+          const i = (y * W + x) * 4
+          const inPane = x >= px0 && x < px1 && y >= py0 && y < py1
+          if (inPane) {
+            // 玻璃面保留轻微纵向色差；亮斜线模拟 Web 版的天空反光。
+            const u = (x - px0) / Math.max(1, px1 - px0)
+            const v = (y - py0) / Math.max(1, py1 - py0)
+            const reflection = Math.abs(u - (0.08 + v * 0.58)) < 0.055 ? 0.42 : 0
+            map[i] = clampByte(mix(pr, 244, reflection))
+            map[i + 1] = clampByte(mix(pg, 250, reflection))
+            map[i + 2] = clampByte(mix(pb, 255, reflection))
+            rough[i] = rough[i + 1] = rough[i + 2] = 42
+            if (on) {
+              emi[i] = lr
+              emi[i + 1] = lg
+              emi[i + 2] = lb
+            }
+          } else {
+            map[i] = fr
+            map[i + 1] = fg
+            map[i + 2] = fb
+            rough[i] = rough[i + 1] = rough[i + 2] = 210
+          }
+          map[i + 3] = 255
+          emi[i + 3] = 255
+          rough[i + 3] = 255
+        }
+      }
+    }
+  }
+
+  const mk = (arr, srgb) => {
+    const t = new THREE.DataTexture(arr, W, H)
     t.wrapS = THREE.RepeatWrapping
     t.wrapT = THREE.RepeatWrapping
     t.magFilter = THREE.LinearFilter
     t.minFilter = THREE.LinearMipmapLinearFilter
     t.generateMipmaps = true
-    if (THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace
+    if (THREE.SRGBColorSpace && srgb) t.colorSpace = THREE.SRGBColorSpace
+    if (THREE.NoColorSpace && !srgb) t.colorSpace = THREE.NoColorSpace
     t.needsUpdate = true
     return t
   }
-  return { map: mk(map), emissiveMap: mk(emi) }
+  return { map: mk(map, true), emissiveMap: mk(emi, true), roughnessMap: mk(rough, false) }
 }
 
 /**

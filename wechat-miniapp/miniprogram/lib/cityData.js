@@ -76,13 +76,13 @@ export function generateCity(seed, clearZones, calmZones, maxZ, hueShift) {
       const jitterZ = (rand() - 0.5) * 0.5
       let footprint = 0.72 + rand() * 0.5
       // 一部分地块拆成主楼 + 附楼，补足城区密度而不挤占道路。
-      const splitLot = footprint > 0.88 && rand() < 0.38
+      const splitLot = footprint > 0.84 && rand() < 0.44
       if (splitLot) footprint *= 0.72
-      const base = 0.74 + rand() * 1.18
-      let height = base + Math.pow(coreness, 1.46) * (5.05 + rand() * 11.4)
-      if (coreness > 0.48 && rand() < 0.34) {
+      const base = 0.82 + rand() * 1.2
+      let height = base + Math.pow(coreness, 1.46) * (5.25 + rand() * 11.8)
+      if (coreness > 0.48 && rand() < 0.36) {
         footprint *= 0.6
-        height *= 1.58
+        height *= 1.62
       }
       for (let i = 0; i < calm.length; i++) {
         const zone = calm[i]
