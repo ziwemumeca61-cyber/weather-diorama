@@ -1,0 +1,9 @@
+{
+  "name": "mood-sticker",
+  "version": "1.0.0",
+  "description": "云上幻象天气 · AI 心情贴生成",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "4.0.2"
+  }
+}

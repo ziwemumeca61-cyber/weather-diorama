@@ -21,6 +21,7 @@ wechat-miniapp/
   cloudfunctions/
     weather/               # 云函数：代理 Open-Meteo（绕开域名备案）
     aiWeather/             # 云函数：成长计划天气助手（默认关闭）
+    moodSticker/           # 云函数：AI 情绪氛围图（默认关闭）
 ```
 
 ## 首次跑起来（约 10 分钟）
@@ -64,12 +65,20 @@ AI 助手默认关闭，当前审核版不会显示 AI 入口。审核通过后�
 
 1. 确认云开发环境已报名「小程序成长计划」，并启用 `cloudbase` 分组的 `hy3` 模型。
 2. 右键 `cloudfunctions/aiWeather` → 「上传并部署（云端安装依赖）」。
-3. 把 `miniprogram/lib/meta.js` 中的 `AI_ASSISTANT_ENABLED` 改为 `true`。
-4. 重新编译、真机预览，再上传新版本。
+3. 右键 `cloudfunctions/moodSticker` → 「上传并部署（云端安装依赖）」，并在云开发控制台把函数超时调为 **180 秒**。
+4. 把 `miniprogram/lib/meta.js` 中的 `AI_ASSISTANT_ENABLED` 改为 `true`。
+5. 重新编译、真机预览，再上传新版本。
 
 AI 只在用户主动点击提问时调用；同一城市、当天的相同问题会在本地缓存 24 小时，云函数还有实例缓存和每个用户 10 分钟最多 5 次的限制。调用失败时自动退回本地规则，不影响天气查询。
 
 当前接入使用云函数中的 `wx-server-sdk`、`cloud.ai().createModel('cloudbase')` 和 `hy3`，不需要填写外部 API Key。
+
+### 天气心情贴
+
+- **我的照片**：用户从相册选择或拍照后，小程序只在本机叠加城市、温度、天气和心情，不会上传原图。
+- **AI 心情贴**：用户主动点击后，由 `moodSticker` 调用成长计划的 `HY-Image-3.0-Plus-4090-Tob-v1.0` 生成无文字氛围背景；小程序再在本机叠加准确天气。单用户 10 分钟最多 2 次，相同请求在函数实例中缓存 24 小时。
+- **发表公众号**：生成贴图后先「保存图片」和「复制图文」，再使用官方 `official-account-publish` 组件进入用户自己的公众号发布器，从相册选择图片并粘贴文案。小程序不能替用户自动向公众号上传或发表内容。
+- 该组件要求基础库 **3.9.3+**；`project.config.json` 已同步设置为 3.9.3。发布前还需在微信开发者工具用真机确认当前账号具备该组件资格。
 
 ## 现在能用的
 - ✅ 实时天气（云函数代理，个人主体可用，无需备案域名）
@@ -110,4 +119,3 @@ export const WEATHER_CREDIT = {
 // AI 助手先默认关闭：审核版只展示天气和 3D 城市；审核通过后改为 true，
 // 重新上传小程序并部署 aiWeather 云函数即可开启成长计划额度。
 export const AI_ASSISTANT_ENABLED = false
-

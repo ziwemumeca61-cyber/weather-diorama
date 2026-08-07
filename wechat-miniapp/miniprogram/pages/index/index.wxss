@@ -13,6 +13,17 @@
   width: 100%;
 }
 
+/* 2D 合成画布在屏幕外保留节点；所有图片合成均在本地执行。 */
+.mood-canvas {
+  position: fixed;
+  left: -2000rpx;
+  top: -2000rpx;
+  width: 2rpx;
+  height: 2rpx;
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* 昼夜切换按钮：避开微信右上角原生胶囊，固定在画布右侧安全区下方 */
 .daynight {
   position: absolute;
@@ -109,6 +120,236 @@
   font-size: 22rpx;
   color: #7c88a0;
   margin-top: 2rpx;
+}
+
+/* 首页入口不直接展示复杂编辑，点击后以独立制作层呈现。 */
+.mood-entry {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin: 2rpx 0 20rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 24rpx;
+  background: linear-gradient(135deg, rgba(217, 113, 126, 0.28), rgba(80, 81, 151, 0.42));
+  border: 2rpx solid rgba(255, 190, 197, 0.2);
+}
+.mood-entry-copy {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  min-width: 0;
+}
+.mood-entry-icon {
+  margin-right: 14rpx;
+  font-size: 38rpx;
+}
+.mood-entry-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.mood-entry-title {
+  color: #ffffff;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+.mood-entry-sub {
+  margin-top: 5rpx;
+  color: #d5c5d7;
+  font-size: 21rpx;
+  white-space: nowrap;
+}
+.mood-entry-btn {
+  flex: none;
+  padding: 12rpx 22rpx;
+  border-radius: 999rpx;
+  color: #ffffff;
+  font-size: 23rpx;
+  background: linear-gradient(135deg, #de6e74, #a265bd);
+  box-shadow: 0 5rpx 15rpx rgba(193, 90, 128, 0.26);
+}
+
+.mood-mask {
+  position: fixed;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(3, 8, 19, 0.66);
+}
+.mood-sheet {
+  box-sizing: border-box;
+  width: 100%;
+  height: 92vh;
+  padding: 32rpx 30rpx calc(30rpx + env(safe-area-inset-bottom));
+  border-radius: 38rpx 38rpx 0 0;
+  background: linear-gradient(180deg, #202b49 0%, #10182a 100%);
+  box-shadow: 0 -20rpx 60rpx rgba(0, 0, 0, 0.45);
+}
+.mood-sheet-head {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.mood-sheet-title {
+  display: block;
+  color: #ffffff;
+  font-size: 36rpx;
+  font-weight: 700;
+}
+.mood-sheet-sub {
+  display: block;
+  margin-top: 8rpx;
+  color: #9eafca;
+  font-size: 23rpx;
+}
+.mood-close {
+  width: 56rpx;
+  height: 56rpx;
+  line-height: 52rpx;
+  text-align: center;
+  color: #ced7e8;
+  font-size: 48rpx;
+  font-weight: 200;
+}
+.mood-tabs {
+  display: flex;
+  flex-direction: row;
+  margin-top: 26rpx;
+  padding: 6rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 255, 255, 0.06);
+}
+.mood-tab {
+  flex: 1;
+  padding: 16rpx 0;
+  border-radius: 15rpx;
+  text-align: center;
+  color: #a9b5cc;
+  font-size: 26rpx;
+}
+.mood-tab-on {
+  color: #ffffff;
+  font-weight: 600;
+  background: rgba(224, 121, 137, 0.38);
+}
+.mood-options {
+  width: 100%;
+  margin-top: 22rpx;
+  white-space: nowrap;
+}
+.mood-option {
+  display: inline-block;
+  margin-right: 12rpx;
+  padding: 13rpx 18rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.1);
+  border-radius: 999rpx;
+  color: #c8d1e1;
+  font-size: 23rpx;
+  background: rgba(255, 255, 255, 0.05);
+}
+.mood-option-on {
+  border-color: rgba(255, 194, 203, 0.52);
+  color: #fff0f1;
+  background: rgba(218, 105, 127, 0.34);
+}
+.mood-textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 92rpx;
+  margin-top: 20rpx;
+  padding: 20rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.1);
+  border-radius: 20rpx;
+  color: #ffffff;
+  font-size: 26rpx;
+  line-height: 1.55;
+  background: rgba(7, 14, 29, 0.44);
+}
+.mood-placeholder {
+  color: #718099;
+}
+.mood-preview-wrap {
+  margin-top: 20rpx;
+  overflow: hidden;
+  border: 2rpx solid rgba(255, 255, 255, 0.12);
+  border-radius: 24rpx;
+  background: #0b1120;
+}
+.mood-preview,
+.mood-preview-empty {
+  display: flex;
+  width: 100%;
+  height: 410rpx;
+}
+.mood-preview {
+  object-fit: cover;
+}
+.mood-preview-empty {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #a7b3c8;
+  font-size: 25rpx;
+  background: radial-gradient(circle at 50% 12%, #4d597e 0%, #1c263f 38%, #0e1527 100%);
+}
+.mood-preview-emoji {
+  margin-bottom: 18rpx;
+  font-size: 74rpx;
+}
+.mood-main-action {
+  margin-top: 18rpx;
+  padding: 22rpx;
+  border-radius: 999rpx;
+  text-align: center;
+  color: #ffffff;
+  font-size: 28rpx;
+  font-weight: 600;
+  background: linear-gradient(135deg, #db6e79, #8d65ba);
+  box-shadow: 0 8rpx 22rpx rgba(177, 80, 129, 0.28);
+}
+.mood-main-disabled {
+  color: rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+}
+.mood-ready {
+  margin-top: 18rpx;
+  padding: 18rpx;
+  border: 2rpx solid rgba(255, 201, 206, 0.18);
+  border-radius: 24rpx;
+  background: rgba(255, 255, 255, 0.055);
+}
+.mood-ready-row {
+  display: flex;
+  flex-direction: row;
+  gap: 16rpx;
+}
+.mood-secondary {
+  flex: 1;
+  padding: 16rpx 0;
+  border: 2rpx solid rgba(255, 255, 255, 0.15);
+  border-radius: 999rpx;
+  text-align: center;
+  color: #f5d6dd;
+  font-size: 24rpx;
+  background: rgba(255, 255, 255, 0.08);
+}
+.mood-ready-note,
+.mood-privacy {
+  display: block;
+  margin-top: 14rpx;
+  color: #8b9ab3;
+  font-size: 21rpx;
+  line-height: 1.55;
+}
+.mood-privacy {
+  margin: 20rpx 2rpx 0;
 }
 
 /* AI天气助手：默认由 meta.js 关闭，开启后也只在用户主动提问时消耗额度。 */
