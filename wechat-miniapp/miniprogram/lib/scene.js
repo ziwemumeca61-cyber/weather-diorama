@@ -406,11 +406,16 @@ export function createScene(canvas, opts) {
   // 城市模型在画布中整体下移一点，缩放和旋转中心保持不变。
   const cameraTarget = new THREE.Vector3(0, 0.45, 0)
 
+  // 可见太阳、方向光和阴影都使用同一个世界坐标，避免“太阳在一边、光从另一边来”。
+  const daySunPosition = new THREE.Vector3(-26, 15, 2)
+  const nightSunPosition = new THREE.Vector3(-8, 12, -6)
+
   const ambient = new THREE.AmbientLight(0xaecbe6, 0.58)
   const hemisphere = new THREE.HemisphereLight(0xbcd9ec, 0x3a3f47, 0.46)
   // 晴天采用更强的定向日照：幕墙会有高光，建筑和树木也有清晰但柔和的投影。
+  // 这是晴天真正参与建筑明暗和投影的太阳光源，不是只显示在天空里的装饰球。
   const sun = new THREE.DirectionalLight(0xfff7e7, 3.65)
-  sun.position.set(11, 17, 8)
+  sun.position.copy(daySunPosition)
   sun.castShadow = true
   sun.shadow.mapSize.set(1024, 1024)
   sun.shadow.camera.near = 1
@@ -422,7 +427,7 @@ export function createScene(canvas, opts) {
   sun.shadow.camera.updateProjectionMatrix()
   sun.shadow.bias = -0.0007
   sun.shadow.normalBias = 0.018
-  sun.shadow.radius = 2.6
+  sun.shadow.radius = 1.8
   // Web 端 Environment 中的蓝色侧光、暖色轮廓光和底部反射光的原生近似。
   // 这些灯不投射阴影，只负责让阴天建筑仍有真实的体积明暗。
   const blueFill = new THREE.DirectionalLight(0xcfe7ff, 0.28)
@@ -440,6 +445,8 @@ export function createScene(canvas, opts) {
   const cityRoot = new THREE.Group()
   world.add(cityRoot)
   scene.add(world)
+  // 让 DirectionalLight 瞄准实际城市场景，而不是默认的场景原点目标。
+  sun.target = world
 
   let environment = null
   let props = null
@@ -459,7 +466,7 @@ export function createScene(canvas, opts) {
     sky: new THREE.Color(0xbcd9ec),
     sun: new THREE.Color(0xfff4e2),
     ambient: new THREE.Color(0xaecbe6),
-    sunPosition: new THREE.Vector3(9, 14, 6),
+    sunPosition: daySunPosition.clone(),
     sunIntensity: 3.65,
     ambientIntensity: 0.58,
     fogDensity: 0.003,
@@ -471,7 +478,7 @@ export function createScene(canvas, opts) {
     sky: new THREE.Color(0xbcd9ec),
     sun: new THREE.Color(0xfff4e2),
     ambient: new THREE.Color(0xaecbe6),
-    sunPosition: new THREE.Vector3(9, 14, 6),
+    sunPosition: daySunPosition.clone(),
     sunIntensity: 2.4,
     ambientIntensity: 0.55,
     fogDensity: 0.003,
@@ -490,7 +497,7 @@ export function createScene(canvas, opts) {
       target.ambient.set(0x243049)
       target.sunIntensity = 0.35
       target.ambientIntensity = 0.4
-      target.sunPosition.set(-8, 12, -6)
+      target.sunPosition.copy(nightSunPosition)
       target.night = 1
     } else {
       target.sky.set(0xbcd9ec)
@@ -498,7 +505,7 @@ export function createScene(canvas, opts) {
       target.ambient.set(0xaecbe6)
       target.sunIntensity = 3.65
       target.ambientIntensity = 0.58
-      target.sunPosition.set(11, 17, 8)
+      target.sunPosition.copy(daySunPosition)
       target.night = 0
     }
     target.sky.lerp(grey, mod.grey).multiplyScalar(1 - mod.darken)
@@ -775,7 +782,7 @@ export function createScene(canvas, opts) {
     }
     if (landmarkSpin) landmarkSpin.rotation.z += dt * 0.24
     if (landmarkAnimate) landmarkAnimate(t, current.landmarkGlow, current.night)
-    sky.update(current.night, currentWeather, camera, t)
+    sky.update(current.night, currentWeather, camera, t, current.sunPosition)
 
     world.position.y = Math.sin(t * 0.5) * 0.18
     world.rotation.z = Math.sin(t * 0.4) * 0.012

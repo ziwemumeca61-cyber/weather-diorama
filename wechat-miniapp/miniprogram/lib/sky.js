@@ -144,7 +144,7 @@ export function createSky() {
   const up = new THREE.Vector3(0, 1, 0)
   const clearByKind = { clear: 1, cloudy: 0.4, overcast: 0, fog: 0, rain: 0, snow: 0, thunder: 0 }
 
-  function update(nightFactor, weather, camera, t) {
+  function update(nightFactor, weather, camera, t, sunPosition) {
     const kind = typeof weather === 'string' ? weather : weather ? 'clear' : 'overcast'
     const clearness = clearByKind[kind] == null ? 1 : clearByKind[kind]
     const nf = Math.max(0, Math.min(1, nightFactor)) * clearness
@@ -167,6 +167,9 @@ export function createSky() {
     }
 
     const day = Math.max(0, 1 - nightFactor * 1.6) * (kind === 'clear' ? 1 : 0)
+    // 太阳圆盘与 scene.js 中的 DirectionalLight 使用同一位置；圆盘可见时，
+    // 建筑受到的日照方向也就是这颗太阳的方向。
+    if (sunPosition && sunPosition.x != null) sunGroup.position.copy(sunPosition)
     sunGroup.visible = day > 0.01
     sunMat.opacity = day
     haloMat.opacity = day * 0.3
