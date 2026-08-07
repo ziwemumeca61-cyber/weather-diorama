@@ -466,7 +466,7 @@ Page({
 
   onGenerateAiMood() {
     if (!this.data.aiEnabled) {
-      wx.showToast({ title: 'AI 心情贴将在审核通过后开放', icon: 'none' })
+      wx.showToast({ title: 'AI 心情贴暂不可用，请稍后再试', icon: 'none' })
       return
     }
     if (this.data.loading || !this.shareCity() || this.data.moodLoading) return

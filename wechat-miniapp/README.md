@@ -20,8 +20,8 @@ wechat-miniapp/
     package.json           # three 依赖（需「构建 npm」）
   cloudfunctions/
     weather/               # 云函数：代理 Open-Meteo（绕开域名备案）
-    aiWeather/             # 云函数：成长计划天气助手（默认关闭）
-    moodSticker/           # 云函数：AI 情绪氛围图（默认关闭）
+    aiWeather/             # 云函数：成长计划天气助手
+    moodSticker/           # 云函数：AI 情绪氛围图
 ```
 
 ## 首次跑起来（约 10 分钟）
@@ -59,15 +59,15 @@ wechat-miniapp/
 - 纯逻辑（天气码、城市生成）单独成模块，将来 web / 小程序 / App 三端可共享，不重复造轮子；
 - 未来 **App 上架**：仓库已有 Capacitor 安卓工程（web 套壳成 APK/IPA），保持 web 健康即保留了这条路。
 
-### 成长计划 AI（审核通过后再开启）
+### 成长计划 AI
 
-AI 助手默认关闭，当前审核版不会显示 AI 入口。审核通过后：
+AI 入口已开启。使用前请完成以下部署：
 
 1. 确认云开发环境已报名「小程序成长计划」，并启用 `cloudbase` 分组的 `hy3` 模型。
 2. 右键 `cloudfunctions/aiWeather` → 「上传并部署（云端安装依赖）」。
 3. 右键 `cloudfunctions/moodSticker` → 「上传并部署（云端安装依赖）」，并在云开发控制台把函数超时调为 **180 秒**。
-4. 把 `miniprogram/lib/meta.js` 中的 `AI_ASSISTANT_ENABLED` 改为 `true`。
-5. 重新编译、真机预览，再上传新版本。
+4. 确认 `miniprogram/lib/meta.js` 中的 `AI_ASSISTANT_ENABLED` 为 `true`。
+5. 重新编译、真机预览，再上传新版本。若云函数未部署，AI 天气助手会回退到本地规则，AI 心情贴会提示生成失败。
 
 AI 只在用户主动点击提问时调用；同一城市、当天的相同问题会在本地缓存 24 小时，云函数还有实例缓存和每个用户 10 分钟最多 5 次的限制。调用失败时自动退回本地规则，不影响天气查询。
 
@@ -77,7 +77,7 @@ AI 只在用户主动点击提问时调用；同一城市、当天的相同问�
 
 - **我的照片**：用户从相册选择或拍照后，小程序只在本机叠加城市、温度、天气和心情，不会上传原图。
 - **AI 心情贴**：用户主动点击后，由 `moodSticker` 调用成长计划的 `HY-Image-3.0-Plus-4090-Tob-v1.0` 生成无文字氛围背景；小程序再在本机叠加准确天气。单用户 10 分钟最多 2 次，相同请求在函数实例中缓存 24 小时。
-- **发表公众号**：生成贴图后先「保存图片」和「复制图文」，再使用官方 `official-account-publish` 组件进入用户自己的公众号发布器，从相册选择图片并粘贴文案。小程序不能替用户自动向公众号上传或发表内容。
+- **发表公众号**：打开「天气心情贴」后，顶部会直接显示官方 `official-account-publish` 组件，点击即可进入用户自己的公众号编辑器，不需要先生成贴图。需要把贴图和文案带入文章时，再保存图片、复制图文，并在编辑器中从相册选择和粘贴。小程序不能替用户自动向公众号上传或发表内容。
 - 该组件要求基础库 **3.9.3+**；`project.config.json` 已同步设置为 3.9.3。发布前还需在微信开发者工具用真机确认当前账号具备该组件资格。
 
 ## 现在能用的
@@ -103,19 +103,3 @@ AI 只在用户主动点击提问时调用；同一城市、当天的相同问�
 - web 的 `tsconfig` 只包含 `src`，此目录不参与 web 构建；
 - 纯逻辑（天气码、城市生成）单独成模块，将来 web / 小程序 / App 三端可共享，不重复造轮子；
 - 未来 **App 上架**：仓库已有 Capacitor 安卓工程（web 套壳成 APK/IPA），保持 web 健康即保留了这条路。
-// 小程序元信息。版本号在每次提交审核前手动 +1，方便线上排查问题。
-export const VERSION = '1.0.0'
-
-// 已收录专属地标的城市数（新增地标时同步更新）
-export const CITY_COUNT = 53
-
-// Open-Meteo 为 CC-BY 4.0，要求署名，必须在界面上可见（不能只写在代码注释里）
-export const WEATHER_CREDIT = {
-  name: 'Open-Meteo',
-  license: 'CC-BY 4.0',
-  url: 'https://open-meteo.com',
-}
-
-// AI 助手先默认关闭：审核版只展示天气和 3D 城市；审核通过后改为 true，
-// 重新上传小程序并部署 aiWeather 云函数即可开启成长计划额度。
-export const AI_ASSISTANT_ENABLED = false

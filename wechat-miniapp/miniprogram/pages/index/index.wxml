@@ -55,7 +55,7 @@
       <text class="mood-entry-btn">去制作</text>
     </view>
 
-    <!-- AI 先做成审核安全的可开关模块：默认关闭，开启后只有用户主动点击才调用额度。 -->
+    <!-- AI 只有在用户主动提问或生成心情贴时才调用额度。 -->
     <view class="ai-entry" wx:if="{{aiEnabled}}">
       <view class="ai-entry-copy">
         <text class="ai-entry-icon">☁️</text>
@@ -133,6 +133,15 @@
         <text class="mood-close" bindtap="onMoodClose">×</text>
       </view>
 
+      <view class="mood-publish-entry">
+        <view class="mood-publish-copy">
+          <text class="mood-publish-title">进入公众号编辑器</text>
+          <text class="mood-publish-sub">点击下方微信原生入口，可直接编辑并发表公众号图文</text>
+        </view>
+        <official-account-publish topic="{{publishTopic}}" background-color="#405b9d"></official-account-publish>
+        <text class="mood-publish-tip">开发者工具若不显示该组件，请使用真机预览。</text>
+      </view>
+
       <view class="mood-tabs">
         <view class="mood-tab {{moodTab === 'photo' ? 'mood-tab-on' : ''}}" data-tab="photo" bindtap="onMoodTab">我的照片</view>
         <view class="mood-tab {{moodTab === 'ai' ? 'mood-tab-on' : ''}}" data-tab="ai" bindtap="onMoodTab">AI 心情贴</view>
@@ -170,7 +179,7 @@
         {{moodLoading ? '正在合成…' : moodPhoto ? '换一张照片' : '从相册选择 / 现在拍照'}}
       </view>
       <view class="mood-main-action {{!aiEnabled ? 'mood-main-disabled' : ''}}" wx:else bindtap="onGenerateAiMood">
-        {{moodLoading ? 'AI 正在生成…' : aiEnabled ? '生成 AI 心情贴' : '审核通过后开放 AI 心情贴'}}
+        {{moodLoading ? 'AI 正在生成…' : aiEnabled ? '生成 AI 心情贴' : 'AI 心情贴暂不可用'}}
       </view>
 
       <view class="mood-ready" wx:if="{{moodPreview}}">
@@ -178,8 +187,7 @@
           <view class="mood-secondary" bindtap="onSaveMoodSticker">保存图片</view>
           <view class="mood-secondary" bindtap="onCopyMoodArticle">复制图文</view>
         </view>
-        <text class="mood-ready-note">先保存这张图；进入发布器后，从相册选择它并粘贴文案。</text>
-        <official-account-publish topic="{{publishTopic}}" background-color="#405b9d"></official-account-publish>
+        <text class="mood-ready-note">保存图片并复制图文后，可使用上方入口进入公众号编辑器。</text>
       </view>
 
       <text class="mood-privacy">本地照片只在手机上合成，不会上传；AI 图仅在你主动点击生成时使用成长计划额度。</text>
