@@ -10,6 +10,9 @@
     bindtouchcancel="onCanvasTouchEnd"
   ></canvas>
 
+  <!-- 生成天气贴图时使用的隐藏 2D 合成画布；不参与页面布局。 -->
+  <canvas type="2d" id="shareCanvas" class="share-canvas"></canvas>
+
   <!-- 3D 初始化失败时的降级提示：天气信息仍可正常使用 -->
   <view class="glfail" wx:if="{{glFailed}}">
     <text class="glfail-e">🏙️</text>
@@ -40,6 +43,15 @@
         <text class="fc-lo">{{item.lo}}°</text>
       </view>
     </scroll-view>
+
+    <view class="share-entry" hover-class="share-entry-hover" bindtap="onShareImage">
+      <view class="share-entry-icon">🖼️</view>
+      <view class="share-entry-copy">
+        <text class="share-entry-title">生成天气贴图</text>
+        <text class="share-entry-sub">把这座 3D 城市分享给朋友</text>
+      </view>
+      <view class="share-entry-btn">{{shareImageLoading ? '生成中' : '分享'}}</view>
+    </view>
 
     <!-- AI 先做成审核安全的可开关模块：默认关闭，开启后只有用户主动点击才调用额度。 -->
     <view class="ai-entry" wx:if="{{aiEnabled}}">
