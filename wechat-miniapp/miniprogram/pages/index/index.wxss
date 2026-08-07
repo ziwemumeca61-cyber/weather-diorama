@@ -13,6 +13,16 @@
   width: 100%;
 }
 
+.share-canvas {
+  position: absolute;
+  left: -2000rpx;
+  top: -2000rpx;
+  width: 750rpx;
+  height: 1000rpx;
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* 昼夜切换按钮：避开微信右上角原生胶囊，固定在画布右侧安全区下方 */
 .daynight {
   position: absolute;
@@ -109,6 +119,51 @@
   font-size: 22rpx;
   color: #7c88a0;
   margin-top: 2rpx;
+}
+
+/* 一键生成天气贴图 */
+.share-entry {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin: 0 0 20rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 24rpx;
+  background: linear-gradient(135deg, rgba(32, 126, 140, 0.28), rgba(42, 79, 125, 0.42));
+  border: 2rpx solid rgba(106, 201, 211, 0.24);
+}
+.share-entry-hover {
+  opacity: 0.78;
+}
+.share-entry-icon {
+  flex: none;
+  font-size: 38rpx;
+  margin-right: 14rpx;
+}
+.share-entry-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.share-entry-title {
+  color: #ffffff;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+.share-entry-sub {
+  margin-top: 5rpx;
+  color: #9fc6d0;
+  font-size: 21rpx;
+}
+.share-entry-btn {
+  flex: none;
+  padding: 12rpx 24rpx;
+  border-radius: 999rpx;
+  color: #ffffff;
+  font-size: 24rpx;
+  background: linear-gradient(135deg, #2d9eaa, #4d8bd5);
+  box-shadow: 0 5rpx 15rpx rgba(39, 144, 165, 0.3);
 }
 
 /* AI天气助手：默认由 meta.js 关闭，开启后也只在用户主动提问时消耗额度。 */
