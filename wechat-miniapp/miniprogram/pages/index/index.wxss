@@ -217,6 +217,36 @@
   font-size: 48rpx;
   font-weight: 200;
 }
+.mood-publish-entry {
+  margin-top: 24rpx;
+  padding: 22rpx;
+  border: 2rpx solid rgba(139, 177, 242, 0.25);
+  border-radius: 24rpx;
+  background: linear-gradient(135deg, rgba(70, 111, 190, 0.28), rgba(75, 74, 142, 0.34));
+}
+.mood-publish-copy {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16rpx;
+}
+.mood-publish-title {
+  color: #ffffff;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+.mood-publish-sub,
+.mood-publish-tip {
+  color: #aebbd1;
+  font-size: 21rpx;
+  line-height: 1.55;
+}
+.mood-publish-sub {
+  margin-top: 6rpx;
+}
+.mood-publish-tip {
+  display: block;
+  margin-top: 12rpx;
+}
 .mood-tabs {
   display: flex;
   flex-direction: row;
@@ -352,7 +382,7 @@
   margin: 20rpx 2rpx 0;
 }
 
-/* AI天气助手：默认由 meta.js 关闭，开启后也只在用户主动提问时消耗额度。 */
+/* AI天气助手只在用户主动提问时消耗额度。 */
 .ai-entry {
   display: flex;
   flex-direction: row;
