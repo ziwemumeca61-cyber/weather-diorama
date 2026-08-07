@@ -2,6 +2,7 @@ import { createScene } from '../../lib/scene'
 import { KIND_LABEL, KIND_EMOJI, KINDS, localTime, buildForecast } from '../../lib/weatherCode'
 import { nearestCity } from '../../lib/cityCoords'
 import { AI_ASSISTANT_ENABLED } from '../../lib/meta'
+import { createWeatherShareImage } from '../../lib/shareImage'
 
 let sceneApi = null
 const LAST_CITY = 'lastCity'
@@ -29,6 +30,7 @@ Page({
     aiLoading: false,
     aiSource: '',
     aiCacheHint: '',
+    shareImageLoading: false,
     aiPrompts: ['今天适合出门吗？', '要不要带伞？', '今天适合户外活动吗？', '帮我写一句天气分享'],
   },
 
@@ -66,6 +68,7 @@ Page({
           return
         }
         const canvas = info.node
+        this.glCanvas = canvas
         const win = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
         const dpr = win.pixelRatio || 2
         // 尺寸兜底：SelectorQuery 偶尔拿到 0，退回窗口尺寸，避免 0 尺寸画布导致全空白
@@ -82,6 +85,16 @@ Page({
           // 设备不支持 WebGL 时不让整页作废：标记降级，天气信息照常可看
           console.error('[scene] init failed', e)
           this.setData({ glFailed: true })
+        }
+      })
+    wx.createSelectorQuery()
+      .select('#shareCanvas')
+      .fields({ node: true })
+      .exec((res) => {
+        const info = res && res[0]
+        if (info && info.node) {
+          this.shareCanvas = info.node
+          this.shareCanvasDpr = Math.min((wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()).pixelRatio || 2, 2)
         }
       })
   },
@@ -340,6 +353,84 @@ Page({
     })
   },
 
+  onShareImage() {
+    if (this.data.shareImageLoading) return
+    if (!this.shareCity() || this.data.loading) {
+      wx.showToast({ title: '天气加载完成后再生成', icon: 'none' })
+      return
+    }
+    if (typeof wx.showShareImageMenu !== 'function') {
+      wx.showToast({ title: '当前微信版本暂不支持', icon: 'none' })
+      return
+    }
+    if (!sceneApi || typeof sceneApi.captureDataURL !== 'function' || !this.shareCanvas) {
+      wx.showToast({ title: '3D画面还没准备好', icon: 'none' })
+      return
+    }
+
+    this.setData({ shareImageLoading: true })
+    wx.showLoading({ title: '生成贴图中…', mask: true })
+    const d = this.data
+    const meta = {
+      city: this.shareCity(),
+      temp: d.temp,
+      kindLabel: d.kindLabel,
+      emoji: d.emoji,
+      dateLabel: d.dateLabel,
+    }
+    const dataUrl = sceneApi.captureDataURL()
+    const compose = (source) => createWeatherShareImage({
+      canvas: this.shareCanvas,
+      scope: this,
+      dpr: this.shareCanvasDpr,
+      sourceDataUrl: source.sourceDataUrl,
+      sourcePath: source.sourcePath,
+      meta,
+    })
+    let imagePromise
+    if (dataUrl) {
+      imagePromise = compose({ sourceDataUrl: dataUrl })
+    } else if (this.glCanvas && typeof wx.canvasToTempFilePath === 'function') {
+      // iOS 某些基础库不暴露 WebGL canvas.toDataURL，尝试直接导出 WebGL 节点。
+      imagePromise = new Promise((resolve, reject) => {
+        wx.canvasToTempFilePath({
+          canvas: this.glCanvas,
+          fileType: 'png',
+          quality: 1,
+          success: (result) => {
+            if (!result || !result.tempFilePath) {
+              reject(new Error('城市画面导出失败'))
+              return
+            }
+            compose({ sourcePath: result.tempFilePath }).then(resolve).catch(reject)
+          },
+          fail: reject,
+        }, this)
+      })
+    } else {
+      imagePromise = Promise.reject(new Error('当前设备不支持城市截图'))
+    }
+
+    imagePromise.then((path) => {
+      wx.showShareImageMenu({
+        path,
+        success: () => {},
+        fail: (error) => {
+          console.error('[share] show image menu failed', error)
+          // 不支持图片菜单的客户端仍然展示成品，用户可以长按图片保存/转发。
+          wx.previewImage({ current: path, urls: [path] })
+        },
+      })
+    }).catch((error) => {
+      console.error('[share] create image failed', error)
+      wx.showToast({ title: error && error.message ? error.message : '贴图生成失败', icon: 'none' })
+    }).then(() => {
+      wx.hideLoading()
+      this.setData({ shareImageLoading: false })
+    })
+  },
+
+
   // 手动切换天气特效（演示 / 不联网）
   onChip(e) {
     const k = e.currentTarget.dataset.k
@@ -401,5 +492,7 @@ Page({
   onUnload() {
     if (sceneApi) sceneApi.dispose()
     sceneApi = null
+    this.glCanvas = null
+    this.shareCanvas = null
   },
 })
