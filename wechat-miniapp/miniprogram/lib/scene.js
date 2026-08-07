@@ -385,9 +385,12 @@ export function createScene(canvas, opts) {
   if (typeof canvas.removeEventListener !== 'function') canvas.removeEventListener = () => {}
   if (canvas.style === undefined) canvas.style = { width: '', height: '' }
 
-  const gl = canvas.getContext('webgl', { antialias: true, alpha: false }) || canvas.getContext('experimental-webgl', { antialias: true, alpha: false })
+  // 导出天气贴图时需要读取当前帧。保留绘图缓冲区，避免某些真机在渲染后
+  // 清空 WebGL back buffer，导致 toDataURL 得到透明或全黑图片。
+  const glOptions = { antialias: true, alpha: false, preserveDrawingBuffer: true }
+  const gl = canvas.getContext('webgl', glOptions) || canvas.getContext('experimental-webgl', glOptions)
   if (!gl) throw new Error('当前设备无法创建 WebGL 场景')
-  const renderer = new THREE.WebGLRenderer({ canvas, context: gl, antialias: true, alpha: false })
+  const renderer = new THREE.WebGLRenderer({ canvas, context: gl, antialias: true, alpha: false, preserveDrawingBuffer: true })
   renderer.setPixelRatio(dpr)
   renderer.setSize(width, height, false)
   renderer.shadowMap.enabled = true
@@ -799,6 +802,27 @@ export function createScene(canvas, opts) {
     setCity: buildCity,
     setWeather,
     setNight,
+    // 供“生成天气贴图”读取当前 WebGL 帧。不同基础库暴露的 canvas 对象略有差异，
+    // 依次兼容标准节点、Three 挂载节点和旧版 _ctx.canvas。
+    captureDataURL() {
+      try {
+        renderer.render(scene, camera)
+        const targets = [
+          canvas,
+          renderer.domElement,
+          renderer.domElement && renderer.domElement._ctx && renderer.domElement._ctx.canvas,
+        ]
+        for (let i = 0; i < targets.length; i++) {
+          const targetCanvas = targets[i]
+          if (!targetCanvas || typeof targetCanvas.toDataURL !== 'function') continue
+          const dataUrl = targetCanvas.toDataURL('image/png')
+          if (dataUrl && dataUrl.indexOf('data:image/') === 0) return dataUrl
+        }
+      } catch (e) {
+        console.error('[scene] capture failed', e)
+      }
+      return ''
+    },
     isNight: () => isNight,
     onTouchStart,
     onTouchMove,
