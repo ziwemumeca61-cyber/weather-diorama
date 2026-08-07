@@ -11,12 +11,13 @@ wechat-miniapp/
   project.config.json      # 用微信开发者工具「导入」这个目录
   miniprogram/
     app.js / app.json / app.wxss
-    pages/index/           # 天气卡 + 搜索/定位 + 手动天气 chips + WebGL 画布
+    pages/index/           # 天气卡 + 搜索/定位 + 天气贴图 + 手动天气 chips + WebGL 画布
     lib/
       weatherCode.js       # 天气码/文案（三端可共享的纯逻辑）
       cityData.js          # 程序化城市生成（纯逻辑）
       scene.js             # 原生 Three.js 场景（托盘+楼群+主塔+自动环绕）
       platform-adapter.js  # 让 three 跑在小程序里的极简 shim
+      shareImage.js        # 3D 城市截图与天气信息合成分享贴图
     package.json           # three 依赖（需「构建 npm」）
   cloudfunctions/
     weather/               # 云函数：代理 Open-Meteo（绕开域名备案）
@@ -39,6 +40,7 @@ wechat-miniapp/
 - ✅ 城市搜索 / 定位
 - ✅ 手动切换 晴/多云/阴/雾/雨/雪/雷（切换天空与光照色调）
 - ✅ 原生 Three.js 微缩城市（楼群 InstancedMesh + 主塔 + 云托底 + 自动环绕）
+- ✅ 生成天气贴图：3D 城市截图 + 城市天气信息，一键调起微信图片分享菜单
 
 ## 待迭代（把 web 版的内容逐步搬进来）
 - [ ] 昼夜灯光（按当地时间）+ 夜晚窗户 emissive
