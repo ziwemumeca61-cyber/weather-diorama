@@ -404,7 +404,7 @@ export function createScene(canvas, opts) {
   const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 200)
   // 下方固定天气面板会占用视觉重量；把观察目标抬高约 0.45 个世界单位，
   // 城市模型在画布中整体下移一点，缩放和旋转中心保持不变。
-  const cameraTarget = new THREE.Vector3(0, -0.55, 0)
+  const cameraTarget = new THREE.Vector3(0, 0.45, 0)
 
   const ambient = new THREE.AmbientLight(0xaecbe6, 0.58)
   const hemisphere = new THREE.HemisphereLight(0xbcd9ec, 0x3a3f47, 0.46)
