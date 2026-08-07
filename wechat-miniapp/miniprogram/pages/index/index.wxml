@@ -10,6 +10,9 @@
     bindtouchcancel="onCanvasTouchEnd"
   ></canvas>
 
+  <!-- 用于把本地照片 / AI 背景与天气心情本地合成；不显示，不上传。 -->
+  <canvas type="2d" id="weather-mood-canvas" class="mood-canvas"></canvas>
+
   <!-- 3D 初始化失败时的降级提示：天气信息仍可正常使用 -->
   <view class="glfail" wx:if="{{glFailed}}">
     <text class="glfail-e">🏙️</text>
@@ -40,6 +43,17 @@
         <text class="fc-lo">{{item.lo}}°</text>
       </view>
     </scroll-view>
+
+    <view class="mood-entry" bindtap="onMoodToggle">
+      <view class="mood-entry-copy">
+        <text class="mood-entry-icon">💭</text>
+        <view class="mood-entry-text">
+          <text class="mood-entry-title">天气心情贴</text>
+          <text class="mood-entry-sub">把天气、照片和此刻心情发成一篇图文</text>
+        </view>
+      </view>
+      <text class="mood-entry-btn">去制作</text>
+    </view>
 
     <!-- AI 先做成审核安全的可开关模块：默认关闭，开启后只有用户主动点击才调用额度。 -->
     <view class="ai-entry" wx:if="{{aiEnabled}}">
@@ -106,5 +120,69 @@
       <text class="credit-t">天气数据 Open-Meteo (CC-BY 4.0) · 定位仅用于查询本地天气</text>
       <text class="credit-a" bindtap="onAbout">关于</text>
     </view>
+  </view>
+
+  <!-- 独立制作层：避免把主页挤得很长，图片始终由用户主动选择或主动生成。 -->
+  <view class="mood-mask" wx:if="{{moodOpen}}">
+    <scroll-view class="mood-sheet" scroll-y>
+      <view class="mood-sheet-head">
+        <view>
+          <text class="mood-sheet-title">今天想怎么表达？</text>
+          <text class="mood-sheet-sub">天气是背景，心情才是主角</text>
+        </view>
+        <text class="mood-close" bindtap="onMoodClose">×</text>
+      </view>
+
+      <view class="mood-tabs">
+        <view class="mood-tab {{moodTab === 'photo' ? 'mood-tab-on' : ''}}" data-tab="photo" bindtap="onMoodTab">我的照片</view>
+        <view class="mood-tab {{moodTab === 'ai' ? 'mood-tab-on' : ''}}" data-tab="ai" bindtap="onMoodTab">AI 心情贴</view>
+      </view>
+
+      <scroll-view class="mood-options" scroll-x enable-flex>
+        <view
+          wx:for="{{moodOptions}}"
+          wx:key="key"
+          class="mood-option {{moodKey === item.key ? 'mood-option-on' : ''}}"
+          data-key="{{item.key}}"
+          bindtap="onMoodPick"
+        >{{item.emoji}} {{item.label}}</view>
+      </scroll-view>
+
+      <textarea
+        class="mood-textarea"
+        value="{{moodText}}"
+        maxlength="80"
+        placeholder="写一句今天想说的话（可不写）"
+        placeholder-class="mood-placeholder"
+        auto-height
+        bindinput="onMoodText"
+      />
+
+      <view class="mood-preview-wrap">
+        <image class="mood-preview" wx:if="{{moodPreview}}" src="{{moodPreview}}" mode="aspectFill" />
+        <view class="mood-preview-empty" wx:else>
+          <text class="mood-preview-emoji">{{moodTab === 'photo' ? '📷' : '✨'}}</text>
+          <text>{{moodLoading ? '正在把心情变成一张图…' : moodTab === 'photo' ? '选择一张照片，天气会贴上去' : '选好心情后，生成专属氛围图'}}</text>
+        </view>
+      </view>
+
+      <view class="mood-main-action" wx:if="{{moodTab === 'photo'}}" bindtap="onChooseMoodPhoto">
+        {{moodLoading ? '正在合成…' : moodPhoto ? '换一张照片' : '从相册选择 / 现在拍照'}}
+      </view>
+      <view class="mood-main-action {{!aiEnabled ? 'mood-main-disabled' : ''}}" wx:else bindtap="onGenerateAiMood">
+        {{moodLoading ? 'AI 正在生成…' : aiEnabled ? '生成 AI 心情贴' : '审核通过后开放 AI 心情贴'}}
+      </view>
+
+      <view class="mood-ready" wx:if="{{moodPreview}}">
+        <view class="mood-ready-row">
+          <view class="mood-secondary" bindtap="onSaveMoodSticker">保存图片</view>
+          <view class="mood-secondary" bindtap="onCopyMoodArticle">复制图文</view>
+        </view>
+        <text class="mood-ready-note">先保存这张图；进入发布器后，从相册选择它并粘贴文案。</text>
+        <official-account-publish topic="{{publishTopic}}" background-color="#405b9d"></official-account-publish>
+      </view>
+
+      <text class="mood-privacy">本地照片只在手机上合成，不会上传；AI 图仅在你主动点击生成时使用成长计划额度。</text>
+    </scroll-view>
   </view>
 </view>

@@ -2,6 +2,7 @@ import { createScene } from '../../lib/scene'
 import { KIND_LABEL, KIND_EMOJI, KINDS, localTime, buildForecast } from '../../lib/weatherCode'
 import { nearestCity } from '../../lib/cityCoords'
 import { AI_ASSISTANT_ENABLED } from '../../lib/meta'
+import { makeWeatherMoodSticker } from '../../lib/weatherMoodSticker'
 
 let sceneApi = null
 const LAST_CITY = 'lastCity'
@@ -30,6 +31,23 @@ Page({
     aiSource: '',
     aiCacheHint: '',
     aiPrompts: ['今天适合出门吗？', '要不要带伞？', '今天适合户外活动吗？', '帮我写一句天气分享'],
+    moodOpen: false,
+    moodTab: 'photo',
+    moodKey: 'calm',
+    moodText: '',
+    moodPhoto: '',
+    moodPreview: '',
+    moodLoading: false,
+    moodSaving: false,
+    moodOptions: [
+      { key: 'calm', emoji: '🌫️', label: '想安静一会' },
+      { key: 'happy', emoji: '🌤️', label: '今天有点开心' },
+      { key: 'tired', emoji: '🌧️', label: '有点累但没关系' },
+      { key: 'missing', emoji: '🌙', label: '有点想念' },
+      { key: 'brave', emoji: '🌅', label: '继续往前走' },
+    ],
+    moodArticle: '',
+    publishTopic: '',
   },
 
   onLoad(options) {
@@ -84,6 +102,15 @@ Page({
           this.setData({ glFailed: true })
         }
       })
+
+    wx.createSelectorQuery()
+      .select('#weather-mood-canvas')
+      .fields({ node: true })
+      .exec((res) => {
+        const info = res && res[0]
+        this._moodCanvas = info && info.node ? info.node : null
+        if (!this._moodCanvas) console.warn('[mood] 2d canvas node not found')
+      })
   },
 
   applyWeather(d) {
@@ -101,6 +128,7 @@ Page({
       loading: false,
       errMsg: '',
     })
+    this.refreshMoodArticle()
     if (name) wx.setStorage({ key: LAST_CITY, data: name })
     if (sceneApi) {
       sceneApi.setCity(name)
@@ -340,6 +368,158 @@ Page({
     })
   },
 
+  moodOption() {
+    return this.data.moodOptions.find((item) => item.key === this.data.moodKey) || this.data.moodOptions[0]
+  },
+
+  weatherForMood() {
+    const d = this.data
+    return {
+      place: d.place,
+      temp: d.temp,
+      emoji: d.emoji,
+      kindLabel: d.kindLabel,
+      dateLabel: d.dateLabel,
+    }
+  },
+
+  buildMoodArticle() {
+    const weather = this.weatherForMood()
+    const mood = this.moodOption()
+    const city = weather.place && weather.place !== '—' ? weather.place : '这座城市'
+    const temperature = weather.temp === '—' || weather.temp == null ? '—' : `${weather.temp}°`
+    const custom = String(this.data.moodText || '').trim()
+    const title = `${city}${weather.kindLabel || '天气'} ${temperature}｜${mood.label}`
+    const feeling = custom || `今天的${city}是${weather.kindLabel || '这样的天气'}，心情也刚好想${mood.label.replace('想', '')}。`
+    return `${title}\n\n${weather.emoji || '☀️'} ${weather.kindLabel || '天气'} · ${temperature} · ${weather.dateLabel || '今天'}\n\n${feeling}\n\n天气会变，心情也会。把这一刻留给自己。\n\n#天气 #心情 #云上幻象天气`
+  },
+
+  refreshMoodArticle() {
+    const article = this.buildMoodArticle()
+    const firstLine = article.split('\n')[0]
+    this.setData({ moodArticle: article, publishTopic: firstLine.slice(0, 30) })
+  },
+
+  onMoodToggle() {
+    const open = !this.data.moodOpen
+    this.setData({ moodOpen: open })
+    if (open) this.refreshMoodArticle()
+  },
+
+  onMoodClose() {
+    this.setData({ moodOpen: false })
+  },
+
+  onMoodTab(e) {
+    this.setData({ moodTab: e.currentTarget.dataset.tab || 'photo' })
+  },
+
+  onMoodPick(e) {
+    this.setData({ moodKey: e.currentTarget.dataset.key || 'calm', moodPreview: '' }, () => this.refreshMoodArticle())
+  },
+
+  onMoodText(e) {
+    this.setData({ moodText: e.detail.value || '', moodPreview: '' }, () => this.refreshMoodArticle())
+  },
+
+  composeMoodSticker(backgroundPath) {
+    if (!this._moodCanvas) return Promise.reject(new Error('贴图画布尚未准备好'))
+    return makeWeatherMoodSticker(this._moodCanvas, backgroundPath, this.weatherForMood(), {
+      ...this.moodOption(),
+      text: this.data.moodText,
+    })
+  },
+
+  onChooseMoodPhoto() {
+    if (this.data.loading || !this.shareCity()) {
+      wx.showToast({ title: '天气加载完成后再制作', icon: 'none' })
+      return
+    }
+    wx.chooseImage({
+      count: 1,
+      sourceType: ['album', 'camera'],
+      sizeType: ['compressed'],
+      success: (res) => {
+        const photoPath = res && res.tempFilePaths && res.tempFilePaths[0]
+        if (!photoPath) return
+        this.setData({ moodLoading: true, moodPhoto: photoPath, moodPreview: '' })
+        this.composeMoodSticker(photoPath)
+          .then((preview) => this.setData({ moodPreview: preview, moodLoading: false }))
+          .catch((error) => {
+            console.error('[mood] photo compose failed', error)
+            this.setData({ moodLoading: false })
+            wx.showToast({ title: '合成失败，请换一张照片', icon: 'none' })
+          })
+      },
+    })
+  },
+
+  moodWeatherPayload() {
+    const d = this.data
+    return {
+      city: d.place,
+      dateLabel: d.dateLabel,
+      temperature: d.temp,
+      kindLabel: d.kindLabel,
+    }
+  },
+
+  onGenerateAiMood() {
+    if (!this.data.aiEnabled) {
+      wx.showToast({ title: 'AI 心情贴将在审核通过后开放', icon: 'none' })
+      return
+    }
+    if (this.data.loading || !this.shareCity() || this.data.moodLoading) return
+    this.setData({ moodLoading: true, moodPreview: '' })
+    wx.cloud.callFunction({
+      name: 'moodSticker',
+      data: {
+        moodKey: this.data.moodKey,
+        moodText: String(this.data.moodText || '').trim().slice(0, 80),
+        weather: this.moodWeatherPayload(),
+      },
+    })
+      .then((res) => {
+        const result = (res && res.result) || {}
+        if (!result.ok || !result.fileID) throw new Error(result.error || 'AI 图片生成失败')
+        return wx.cloud.downloadFile({ fileID: result.fileID })
+      })
+      .then((download) => this.composeMoodSticker(download.tempFilePath))
+      .then((preview) => this.setData({ moodPreview: preview, moodLoading: false }))
+      .catch((error) => {
+        console.error('[mood] AI generate failed', error)
+        this.setData({ moodLoading: false })
+        wx.showToast({ title: error.message || 'AI 心情贴生成失败', icon: 'none' })
+      })
+  },
+
+  onSaveMoodSticker() {
+    const filePath = this.data.moodPreview
+    if (!filePath || this.data.moodSaving) return
+    this.setData({ moodSaving: true })
+    wx.saveImageToPhotosAlbum({
+      filePath,
+      success: () => wx.showToast({ title: '已保存，发布时从相册选择', icon: 'none' }),
+      fail: (error) => {
+        if (error && /auth deny|authorize no response/.test(error.errMsg || '')) {
+          wx.showModal({
+            title: '需要相册权限',
+            content: '允许保存后，才能把心情贴带进公众号发布器。',
+            success: (res) => { if (res.confirm) wx.openSetting() },
+          })
+        }
+      },
+      complete: () => this.setData({ moodSaving: false }),
+    })
+  },
+
+  onCopyMoodArticle() {
+    wx.setClipboardData({
+      data: this.data.moodArticle || this.buildMoodArticle(),
+      success: () => wx.showToast({ title: '图文文案已复制', icon: 'none' }),
+    })
+  },
+
   // 手动切换天气特效（演示 / 不联网）
   onChip(e) {
     const k = e.currentTarget.dataset.k
@@ -401,5 +581,6 @@ Page({
   onUnload() {
     if (sceneApi) sceneApi.dispose()
     sceneApi = null
+    this._moodCanvas = null
   },
 })
