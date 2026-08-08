@@ -40,14 +40,15 @@ Page({
     moodLoading: false,
     moodSaving: false,
     moodOptions: [
-      { key: 'calm', emoji: '🌫️', label: '想安静一会' },
-      { key: 'happy', emoji: '🌤️', label: '今天有点开心' },
-      { key: 'tired', emoji: '🌧️', label: '有点累但没关系' },
-      { key: 'missing', emoji: '🌙', label: '有点想念' },
-      { key: 'brave', emoji: '🌅', label: '继续往前走' },
+      { key: 'calm', emoji: '🌫️', label: '暂时不想解释', copy: '暂时不想解释，也没关系。雾会散，我先安静一会。' },
+      { key: 'happy', emoji: '🌤️', label: '好事正在靠近', copy: '风吹开云的时候，我忽然觉得，好事正在靠近。' },
+      { key: 'tired', emoji: '🌧️', label: '累了也没关系', copy: '今天已经做得够多了。雨替我落下，我先回到那盏灯里。' },
+      { key: 'sad', emoji: '☔', label: '今天允许难过', copy: '今天允许自己难过，不急着振作，也不用向谁解释。' },
+      { key: 'missing', emoji: '🌙', label: '有些想念没说', copy: '有些想念没有说出口，只是远处那盏灯一直亮着。' },
+      { key: 'brave', emoji: '⛈️', label: '生活没晴我先走', copy: '生活还没放晴，但我决定先往前走。' },
+      { key: 'healing', emoji: '🌱', label: '慢慢会好起来', copy: '不用一下子变好。云正在散，我也正在慢慢回来。' },
     ],
     moodArticle: '',
-    publishTopic: '',
   },
 
   onLoad(options) {
@@ -390,14 +391,13 @@ Page({
     const temperature = weather.temp === '—' || weather.temp == null ? '—' : `${weather.temp}°`
     const custom = String(this.data.moodText || '').trim()
     const title = `${city}${weather.kindLabel || '天气'} ${temperature}｜${mood.label}`
-    const feeling = custom || `今天的${city}是${weather.kindLabel || '这样的天气'}，心情也刚好想${mood.label.replace('想', '')}。`
+    const feeling = custom || mood.copy
     return `${title}\n\n${weather.emoji || '☀️'} ${weather.kindLabel || '天气'} · ${temperature} · ${weather.dateLabel || '今天'}\n\n${feeling}\n\n天气会变，心情也会。把这一刻留给自己。\n\n#天气 #心情 #云上幻象天气`
   },
 
   refreshMoodArticle() {
     const article = this.buildMoodArticle()
-    const firstLine = article.split('\n')[0]
-    this.setData({ moodArticle: article, publishTopic: firstLine.slice(0, 30) })
+    this.setData({ moodArticle: article })
   },
 
   onMoodToggle() {
@@ -520,10 +520,72 @@ Page({
     })
   },
 
+  onPublishMoodSticker() {
+    const imagePath = this.data.moodPreview
+    if (!imagePath) {
+      wx.showToast({ title: '请先生成一张天气心情贴', icon: 'none' })
+      return
+    }
+    if (typeof wx.shareToOfficialAccount !== 'function') {
+      wx.showModal({
+        title: '当前微信版本暂不支持',
+        content: '请升级微信后在 Android 或 iPhone 真机中发布；也可以先保存图片并复制文案。',
+        showCancel: false,
+      })
+      return
+    }
+
+    const weather = this.weatherForMood()
+    const mood = this.moodOption()
+    const city = weather.place && weather.place !== '—' ? weather.place : '这座城市'
+    const article = this.data.moodArticle || this.buildMoodArticle()
+    const title = article.split('\n')[0].slice(0, 64)
+    const tags = ['天气心情贴', city, weather.kindLabel, mood.label]
+      .map((item) => String(item || '').replace(/^#+/, '').trim())
+      .filter(Boolean)
+      .slice(0, 10)
+
+    wx.shareToOfficialAccount({
+      title,
+      content: article,
+      tags,
+      images: [imagePath],
+      recommendPath: `/pages/index/index?city=${encodeURIComponent(city)}`,
+      recommendTitle: `看看${city}此刻的天气`,
+      success: (res) => {
+        console.log('[mood] official account publish success', res)
+        wx.showToast({ title: '天气心情贴已发表', icon: 'success' })
+      },
+      fail: (error) => {
+        console.log('[mood] official account publish closed', error)
+        const message = String((error && error.errMsg) || '')
+        if (!/cancel|取消|退出/i.test(message)) {
+          wx.showToast({ title: '暂时无法发布，请稍后再试', icon: 'none' })
+        }
+      },
+    })
+  },
+
+  onMoodComponentError(e) {
+    console.error('[mood] official account component error', e && e.detail)
+  },
+
+  onMoodComponentEmpty() {
+    console.log('[mood] official account topic is empty')
+  },
+
+  onMoodComponentPublishSuccess(e) {
+    console.log('[mood] official account component publish success', e && e.detail)
+  },
+
+  onMoodComponentPublishFail(e) {
+    console.log('[mood] official account component publish fail', e && e.detail)
+  },
+
   // 手动切换天气特效（演示 / 不联网）
   onChip(e) {
     const k = e.currentTarget.dataset.k
-    this.setData({ curKind: k, kindLabel: KIND_LABEL[k], emoji: KIND_EMOJI[k], aiText: '', aiCacheHint: '' })
+    this.setData({ curKind: k, kindLabel: KIND_LABEL[k], emoji: KIND_EMOJI[k], aiText: '', aiCacheHint: '' }, () => this.refreshMoodArticle())
     if (sceneApi) sceneApi.setWeather(k)
   },
 

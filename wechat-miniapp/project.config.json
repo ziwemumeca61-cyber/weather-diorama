@@ -5,7 +5,7 @@
   "appid": "REPLACE_WITH_YOUR_APPID",
   "projectname": "3d-weather-diorama",
   "description": "3D微缩城市天气 · 原生小程序 + 云开发",
-  "libVersion": "3.9.3",
+  "libVersion": "3.16.1",
   "setting": {
     "urlCheck": false,
     "es6": true,

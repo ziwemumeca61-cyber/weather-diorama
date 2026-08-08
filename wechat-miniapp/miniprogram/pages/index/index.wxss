@@ -218,7 +218,7 @@
   font-weight: 200;
 }
 .mood-publish-entry {
-  margin-top: 24rpx;
+  margin-top: 22rpx;
   padding: 22rpx;
   border: 2rpx solid rgba(139, 177, 242, 0.25);
   border-radius: 24rpx;
@@ -359,6 +359,24 @@
   display: flex;
   flex-direction: row;
   gap: 16rpx;
+  margin-top: 14rpx;
+}
+.mood-publish-action {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding: 21rpx 24rpx;
+  border-radius: 999rpx;
+  color: #ffffff;
+  font-size: 28rpx;
+  font-weight: 700;
+  background: linear-gradient(135deg, #ee6d74, #ac5eab);
+  box-shadow: 0 10rpx 24rpx rgba(202, 86, 121, 0.32);
+}
+.mood-publish-action-icon {
+  margin-right: 12rpx;
+  font-size: 24rpx;
 }
 .mood-secondary {
   flex: 1;
