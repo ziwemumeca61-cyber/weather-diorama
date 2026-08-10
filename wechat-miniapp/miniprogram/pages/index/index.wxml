@@ -84,7 +84,7 @@
 
   <!-- 独立制作层：避免把主页挤得很长，图片始终由用户主动选择或主动生成。 -->
   <view class="mood-mask {{moodClosing ? 'mood-mask-closing' : ''}}" wx:if="{{moodOpen}}" bindtap="onMoodClose">
-    <view class="mood-sheet {{moodClosing ? 'mood-sheet-closing' : 'mood-sheet-opening'}}" style="top: {{moodSheetTopPx}}px;" catchtap="onMoodSheetTap">
+    <view class="mood-sheet {{moodClosing ? 'mood-sheet-closing' : 'mood-sheet-opening'}}" style="top: {{moodSheetTopPx}}px;" catchtap="onMoodSheetTap" bindanimationend="onMoodSheetAnimationEnd">
       <view class="mood-sheet-head">
         <view>
           <text class="mood-sheet-title">今天想怎么表达？</text>
@@ -97,15 +97,8 @@
         scroll-y
         enhanced
         show-scrollbar="{{false}}"
-        scroll-into-view="{{moodScrollTarget}}"
         scroll-top="{{moodScrollTop}}"
-        bindscroll="onMoodBodyScroll"
       >
-      <view class="mood-native-jump" bindtap="onShowNativePublish">
-        <text>想直接创作？查看微信原生「发一条」</text>
-        <text class="mood-native-jump-arrow">↓</text>
-      </view>
-
       <view class="mood-tabs">
         <view class="mood-tab {{moodTab === 'photo' ? 'mood-tab-on' : ''}}" data-tab="photo" bindtap="onMoodTab">我的照片</view>
         <view class="mood-tab {{moodTab === 'ai' ? 'mood-tab-on' : ''}}" data-tab="ai" bindtap="onMoodTab">AI 心情贴</view>
@@ -145,6 +138,7 @@
         placeholder-class="mood-placeholder"
         auto-height
         bindinput="onMoodText"
+        bindblur="onMoodTextCommit"
       />
 
       <view class="mood-preview-wrap">
@@ -165,21 +159,17 @@
       <text class="mood-ai-note" wx:if="{{moodTab === 'ai' && moodPreview}}">已生成背景。修改上面的文字只会本地重新排版，不会再消耗生图额度。</text>
 
       <view class="mood-ready" wx:if="{{moodPreview}}">
-        <view class="mood-publish-action" bindtap="onPublishMoodSticker">
-          <text class="mood-publish-action-icon">◉</text>
-          <text>发布天气心情贴</text>
-        </view>
         <view class="mood-ready-row">
           <view class="mood-secondary" bindtap="onSaveMoodSticker">保存图片</view>
           <view class="mood-secondary" bindtap="onCopyMoodArticle">复制图文</view>
         </view>
-        <text class="mood-ready-note">发布时会自动带入图片和文案；保存、复制可作为备用。</text>
+        <text class="mood-ready-note">保存图片并复制文案后，可通过下方微信官方「发一条」发布。</text>
       </view>
 
       <view class="mood-publish-entry" id="mood-native-publish">
         <view class="mood-publish-copy">
-          <text class="mood-publish-title">大家的天气心情贴</text>
-          <text class="mood-publish-sub">浏览同话题内容，也可以从微信原生「发一条」开始创作。</text>
+          <text class="mood-publish-title">发一条天气心情贴</text>
+          <text class="mood-publish-sub">使用微信官方入口发布，也可以浏览同话题内容。</text>
         </view>
         <official-account-publish
           topic="天气心情贴"

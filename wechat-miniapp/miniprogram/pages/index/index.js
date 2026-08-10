@@ -37,7 +37,6 @@ Page({
     moodBackgroundType: '',
     moodLoading: false,
     moodSaving: false,
-    moodScrollTarget: '',
     moodScrollTop: 0,
     moodSheetTopPx: 72,
     moodCloseTopPx: 84,
@@ -289,12 +288,8 @@ Page({
       return
     }
     this.updateMoodLayout()
-    // 每次重新打开都回到顶部，避免上次跳到「发一条」后保留在底部。
-    if (this._moodCloseTimer) {
-      clearTimeout(this._moodCloseTimer)
-      this._moodCloseTimer = null
-    }
-    this.setData({ moodOpen: true, moodClosing: false, moodScrollTarget: '', moodScrollTop: 1 }, () => {
+    // 每次重新打开都回到顶部。
+    this.setData({ moodOpen: true, moodClosing: false, moodScrollTop: 1 }, () => {
       this.setData({ moodScrollTop: 0 })
     })
     this.refreshMoodArticle()
@@ -302,25 +297,18 @@ Page({
 
   onMoodClose() {
     if (!this.data.moodOpen || this.data.moodClosing) return
-    // 先保留遮罩播放退场动画，再真正卸载弹层，点击窗口外和关闭键共用此流程。
-    this.setData({ moodClosing: true, moodScrollTarget: '' })
-    this._moodCloseTimer = setTimeout(() => {
-      this._moodCloseTimer = null
-      this.setData({ moodOpen: false, moodClosing: false })
-    }, 260)
+    // 先保留遮罩播放退场动画；由 animationend 收尾，避免 AppService 定时器超时。
+    this.setData({ moodClosing: true })
+  },
+
+  onMoodSheetAnimationEnd(e) {
+    if (!this.data.moodClosing) return
+    const name = e && e.detail ? e.detail.animationName : ''
+    if (name && name !== 'mood-sheet-out') return
+    this.setData({ moodOpen: false, moodClosing: false })
   },
 
   onMoodSheetTap() {},
-
-  onMoodBodyScroll(e) {
-    this._moodScrollTop = e && e.detail ? Number(e.detail.scrollTop) || 0 : 0
-  },
-
-  onShowNativePublish() {
-    this.setData({ moodScrollTarget: '' }, () => {
-      this.setData({ moodScrollTarget: 'mood-native-publish' })
-    })
-  },
 
   onMoodTab(e) {
     const tab = e.currentTarget.dataset.tab || 'photo'
@@ -363,11 +351,12 @@ Page({
   onMoodText(e) {
     this.setData({ moodText: e.detail.value || '' }, () => {
       this.refreshMoodArticle()
-      if (this._moodTextTimer) clearTimeout(this._moodTextTimer)
-      if (this.data.moodBackground) {
-        this._moodTextTimer = setTimeout(() => this.recomposeMoodSticker(), 180)
-      }
     })
+  },
+
+  onMoodTextCommit() {
+    // 输入期间只更新文案；完成输入后再导出一次海报，避免每个字符都触发重型 Canvas 工作。
+    if (this.data.moodBackground) this.recomposeMoodSticker()
   },
 
   composeMoodSticker(backgroundPath, generatedByAi = false) {
@@ -549,53 +538,6 @@ Page({
     })
   },
 
-  onPublishMoodSticker() {
-    const imagePath = this.data.moodPreview
-    if (!imagePath) {
-      wx.showToast({ title: '请先生成一张天气心情贴', icon: 'none' })
-      return
-    }
-    if (typeof wx.shareToOfficialAccount !== 'function') {
-      wx.showModal({
-        title: '当前微信版本暂不支持',
-        content: '请升级微信后在 Android 或 iPhone 真机中发布；也可以先保存图片并复制文案。',
-        showCancel: false,
-      })
-      return
-    }
-
-    const weather = this.weatherForMood()
-    const mood = this.moodOption()
-    const style = this.moodStyle()
-    const city = weather.place && weather.place !== '—' ? weather.place : '这座城市'
-    const article = this.data.moodArticle || this.buildMoodArticle()
-    const title = article.split('\n')[0].slice(0, 64)
-    const tags = ['天气心情贴', city, weather.kindLabel, mood.label, style.label]
-      .map((item) => String(item || '').replace(/^#+/, '').trim())
-      .filter(Boolean)
-      .slice(0, 10)
-
-    wx.shareToOfficialAccount({
-      title,
-      content: article,
-      tags,
-      images: [imagePath],
-      recommendPath: `/pages/index/index?city=${encodeURIComponent(city)}`,
-      recommendTitle: `看看${city}此刻的天气`,
-      success: (res) => {
-        console.log('[mood] official account publish success', res)
-        wx.showToast({ title: '天气心情贴已发表', icon: 'success' })
-      },
-      fail: (error) => {
-        console.log('[mood] official account publish closed', error)
-        const message = String((error && error.errMsg) || '')
-        if (!/cancel|取消|退出/i.test(message)) {
-          wx.showToast({ title: '暂时无法发布，请稍后再试', icon: 'none' })
-        }
-      },
-    })
-  },
-
   onMoodComponentError(e) {
     console.error('[mood] official account component error', e && e.detail)
   },
@@ -671,8 +613,6 @@ Page({
   },
 
   onUnload() {
-    if (this._moodTextTimer) clearTimeout(this._moodTextTimer)
-    if (this._moodCloseTimer) clearTimeout(this._moodCloseTimer)
     if (sceneApi) sceneApi.dispose()
     sceneApi = null
     this._moodCanvas = null
