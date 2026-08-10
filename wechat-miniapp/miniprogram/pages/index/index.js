@@ -1,11 +1,12 @@
 import { createScene } from '../../lib/scene'
 import { KIND_LABEL, KIND_EMOJI, KINDS, localTime, buildForecast } from '../../lib/weatherCode'
 import { nearestCity } from '../../lib/cityCoords'
-import { AI_ASSISTANT_ENABLED } from '../../lib/meta'
+import { MOOD_IMAGE_ENABLED } from '../../lib/meta'
 import { makeWeatherMoodSticker } from '../../lib/weatherMoodSticker'
 
 let sceneApi = null
 const LAST_CITY = 'lastCity'
+const MOOD_IMAGE_CACHE_TTL = 7 * 24 * 60 * 60 * 1000
 
 Page({
   data: {
@@ -23,22 +24,18 @@ Page({
     loading: true,
     errMsg: '',
     glFailed: false,
-    aiEnabled: AI_ASSISTANT_ENABLED,
-    aiOpen: false,
-    aiQuestion: '',
-    aiText: '',
-    aiLoading: false,
-    aiSource: '',
-    aiCacheHint: '',
-    aiPrompts: ['今天适合出门吗？', '要不要带伞？', '今天适合户外活动吗？', '帮我写一句天气分享'],
+    moodImageEnabled: MOOD_IMAGE_ENABLED,
     moodOpen: false,
     moodTab: 'photo',
     moodKey: 'calm',
     moodText: '',
     moodPhoto: '',
     moodPreview: '',
+    moodBackground: '',
+    moodBackgroundType: '',
     moodLoading: false,
     moodSaving: false,
+    moodScrollTarget: '',
     moodOptions: [
       { key: 'calm', emoji: '🌫️', label: '暂时不想解释', copy: '暂时不想解释，也没关系。雾会散，我先安静一会。' },
       { key: 'happy', emoji: '🌤️', label: '好事正在靠近', copy: '风吹开云的时候，我忽然觉得，好事正在靠近。' },
@@ -47,6 +44,13 @@ Page({
       { key: 'missing', emoji: '🌙', label: '有些想念没说', copy: '有些想念没有说出口，只是远处那盏灯一直亮着。' },
       { key: 'brave', emoji: '⛈️', label: '生活没晴我先走', copy: '生活还没放晴，但我决定先往前走。' },
       { key: 'healing', emoji: '🌱', label: '慢慢会好起来', copy: '不用一下子变好。云正在散，我也正在慢慢回来。' },
+    ],
+    moodStyleKey: 'cinematic',
+    moodStyles: [
+      { key: 'cinematic', emoji: '🎬', label: '电影叙事', copy: '真实光影，像一帧有故事的电影' },
+      { key: 'miniature', emoji: '🏙️', label: '3D微缩', copy: '精致城市微缩，天气变成情绪装置' },
+      { key: 'healing', emoji: '🎨', label: '治愈插画', copy: '细腻笔触，温柔但不廉价梦幻' },
+      { key: 'oriental', emoji: '🌙', label: '东方留白', copy: '含蓄构图，用风、雾、雨讲情绪' },
     ],
     moodArticle: '',
   },
@@ -144,7 +148,7 @@ Page({
 
   callWeather(payload) {
     this._lastPayload = payload // 供「重试」用
-    this.setData({ loading: true, errMsg: '', aiText: '', aiSource: '', aiCacheHint: '' })
+    this.setData({ loading: true, errMsg: '' })
     wx.cloud
       .callFunction({ name: 'weather', data: payload })
       .then((r) => {
@@ -218,159 +222,12 @@ Page({
   },
 
 
-  onAiToggle() {
-    if (!this.data.aiEnabled) return
-    this.setData({ aiOpen: !this.data.aiOpen })
-  },
-
-  onAiInput(e) {
-    this.setData({ aiQuestion: e.detail.value || '' })
-  },
-
-  onAiPrompt(e) {
-    const question = e.currentTarget.dataset.q || ''
-    this.setData({ aiQuestion: question, aiOpen: true })
-    this.askAi(question)
-  },
-
-  onAiAsk() {
-    this.askAi(this.data.aiQuestion)
-  },
-
-  aiCacheKey(question) {
-    const d = this.data
-    const forecast = (d.forecast || [])
-      .map((item) => `${item.label}:${item.hi}/${item.lo}/${item.emoji}`)
-      .join(',')
-    const signature = [d.place, d.dateLabel, d.temp, d.curKind, forecast, question].join('|')
-    return `aiWeather:v1:${encodeURIComponent(signature).slice(0, 180)}`
-  },
-
-  aiWeatherPayload() {
-    const d = this.data
-    return {
-      city: d.place,
-      dateLabel: d.dateLabel,
-      temperature: d.temp,
-      kind: d.curKind,
-      kindLabel: d.kindLabel,
-      isDay: !d.night,
-      forecast: (d.forecast || []).slice(0, 7).map((item) => ({
-        label: item.label,
-        emoji: item.emoji,
-        hi: item.hi,
-        lo: item.lo,
-      })),
-    }
-  },
-
-  localAiFallback(question) {
-    const d = this.data
-    const temp = Number(d.temp)
-    const degree = Number.isFinite(temp) ? `${temp}°` : '当前温度'
-    const kind = d.kindLabel || '当前天气'
-    const asksUmbrella = /伞|雨|淋/.test(question || '')
-    const asksOutdoor = /出门|户外|跑步|运动|遛娃|拍照|旅游|海边/.test(question || '')
-    let judgement = `${kind}，当前约 ${degree}。`
-    let suggestion = '按个人体感穿着，出门前再看一眼实时天气。'
-    let warning = '天气建议仅作日常参考，恶劣天气以官方预警为准。'
-
-    if (d.curKind === 'thunder') {
-      judgement += ' 不建议把户外活动排在今天。'
-      suggestion = '尽量减少户外停留，准备雨具，远离高处、树下和空旷地带。'
-      warning = '雷雨时优先进入安全建筑内，不要在户外逗留。'
-    } else if (d.curKind === 'rain') {
-      judgement += ' 出门需要考虑降雨影响。'
-      suggestion = '建议带伞并穿防滑鞋，通勤预留一些时间。'
-      warning = '路面湿滑，驾车和骑行请降低速度。'
-    } else if (d.curKind === 'snow') {
-      judgement += ' 体感偏冷，路面可能湿滑。'
-      suggestion = '注意保暖，穿防滑鞋，户外活动不要安排得太久。'
-      warning = '关注道路结冰和交通变化。'
-    } else if (d.curKind === 'fog') {
-      judgement += ' 能见度可能较低。'
-      suggestion = '驾车或骑行请开灯、降速，户外活动尽量选择近距离路线。'
-      warning = '出行前关注能见度和道路提示。'
-    } else if (d.curKind === 'clear' && (!Number.isFinite(temp) || temp >= 8)) {
-      judgement += ' 整体适合安排日常出行。'
-      suggestion = '适合通勤、散步和短时户外活动，注意补水和防晒。'
-      warning = '如果长时间户外，记得防晒并观察体感变化。'
-    }
-
-    if (asksUmbrella && d.curKind !== 'rain' && d.curKind !== 'thunder') {
-      suggestion = '当前没有明显降雨提示，短时出门可不带伞；远行前再看一次预报。'
-    }
-    if (asksOutdoor && (d.curKind === 'clear' || d.curKind === 'cloudy')) {
-      suggestion = '适合安排短时户外活动，选择有遮阴或方便撤离的路线。'
-    }
-
-    const share = `${d.place || '今天'}：${kind}，约 ${degree}。${suggestion}`
-    return `【天气判断】${judgement}\n【建议】${suggestion}\n【提醒】${warning}\n【分享文案】${share}`
-  },
-
-  askAi(question) {
-    if (!this.data.aiEnabled || this.data.aiLoading) return
-    if (!this.data.place || this.data.place === '—' || this.data.loading) {
-      wx.showToast({ title: '天气加载完成后再问我', icon: 'none' })
-      return
-    }
-
-    const q = String(question || '').trim().slice(0, 200) || '根据当前天气给我今天的出行建议'
-    const cacheKey = this.aiCacheKey(q)
-    const cached = wx.getStorageSync(cacheKey)
-    if (cached && cached.text && cached.expiresAt > Date.now()) {
-      this.setData({
-        aiOpen: true,
-        aiQuestion: q,
-        aiText: cached.text,
-        aiSource: 'cache',
-        aiCacheHint: '已读取今日缓存，本次未消耗 AI 额度',
-      })
-      return
-    }
-
-    this.setData({ aiOpen: true, aiQuestion: q, aiLoading: true, aiText: '', aiCacheHint: '' })
-    wx.cloud
-      .callFunction({
-        name: 'aiWeather',
-        data: { question: q, weather: this.aiWeatherPayload() },
-      })
-      .then((r) => {
-        const result = (r && r.result) || {}
-        if (!result.ok || !result.text) throw new Error(result.error || 'AI 暂时不可用')
-        const text = String(result.text).trim()
-        wx.setStorage({
-          key: cacheKey,
-          data: { text, expiresAt: Date.now() + 24 * 60 * 60 * 1000 },
-        })
-        this.setData({
-          aiText: text,
-          aiSource: result.source || 'ai',
-          aiCacheHint: result.source === 'rule' ? '本次使用本地规则，未消耗 AI 额度' : '已根据当前天气生成',
-        })
-      })
-      .catch((e) => {
-        console.error('[cloud] aiWeather failed', e)
-        const text = this.localAiFallback(q)
-        this.setData({
-          aiText: text,
-          aiSource: 'rule',
-          aiCacheHint: 'AI 暂时不可用，已切换本地规则，未消耗额度',
-        })
-      })
-      .then(() => this.setData({ aiLoading: false }))
-  },
-
-  onAiCopy() {
-    if (!this.data.aiText) return
-    wx.setClipboardData({
-      data: this.data.aiText,
-      success: () => wx.showToast({ title: '内容已复制', icon: 'none' }),
-    })
-  },
-
   moodOption() {
     return this.data.moodOptions.find((item) => item.key === this.data.moodKey) || this.data.moodOptions[0]
+  },
+
+  moodStyle() {
+    return this.data.moodStyles.find((item) => item.key === this.data.moodStyleKey) || this.data.moodStyles[0]
   },
 
   weatherForMood() {
@@ -392,7 +249,8 @@ Page({
     const custom = String(this.data.moodText || '').trim()
     const title = `${city}${weather.kindLabel || '天气'} ${temperature}｜${mood.label}`
     const feeling = custom || mood.copy
-    return `${title}\n\n${weather.emoji || '☀️'} ${weather.kindLabel || '天气'} · ${temperature} · ${weather.dateLabel || '今天'}\n\n${feeling}\n\n天气会变，心情也会。把这一刻留给自己。\n\n#天气 #心情 #云上幻象天气`
+    const disclosure = this.data.moodBackgroundType === 'ai' ? '\n\n画面背景由 AI 生成。' : ''
+    return `${title}\n\n${weather.emoji || '☀️'} ${weather.kindLabel || '天气'} · ${temperature} · ${weather.dateLabel || '今天'}\n\n${feeling}\n\n天气会变，心情也会。把这一刻留给自己。${disclosure}\n\n#天气 #心情 #云上幻象天气`
   },
 
   refreshMoodArticle() {
@@ -402,32 +260,90 @@ Page({
 
   onMoodToggle() {
     const open = !this.data.moodOpen
-    this.setData({ moodOpen: open })
+    this.setData({ moodOpen: open, moodScrollTarget: '' })
     if (open) this.refreshMoodArticle()
   },
 
   onMoodClose() {
-    this.setData({ moodOpen: false })
+    this.setData({ moodOpen: false, moodScrollTarget: '' })
+  },
+
+  onMoodSheetTap() {},
+
+  onShowNativePublish() {
+    this.setData({ moodScrollTarget: '' }, () => {
+      this.setData({ moodScrollTarget: 'mood-native-publish' })
+    })
   },
 
   onMoodTab(e) {
-    this.setData({ moodTab: e.currentTarget.dataset.tab || 'photo' })
+    const tab = e.currentTarget.dataset.tab || 'photo'
+    const background = tab === 'photo' ? this.data.moodPhoto : ''
+    this.setData({
+      moodTab: tab,
+      moodPreview: '',
+      moodBackground: background,
+      moodBackgroundType: background ? 'photo' : '',
+    }, () => {
+      this.refreshMoodArticle()
+      if (background) this.recomposeMoodSticker()
+    })
   },
 
   onMoodPick(e) {
-    this.setData({ moodKey: e.currentTarget.dataset.key || 'calm', moodPreview: '' }, () => this.refreshMoodArticle())
+    const photoBackground = this.data.moodTab === 'photo' ? this.data.moodPhoto : ''
+    this.setData({
+      moodKey: e.currentTarget.dataset.key || 'calm',
+      moodPreview: '',
+      moodBackground: photoBackground,
+      moodBackgroundType: photoBackground ? 'photo' : '',
+    }, () => {
+      this.refreshMoodArticle()
+      if (photoBackground) this.recomposeMoodSticker()
+    })
+  },
+
+  onMoodStylePick(e) {
+    const moodStyleKey = e.currentTarget.dataset.key || 'cinematic'
+    if (moodStyleKey === this.data.moodStyleKey) return
+    this.setData({
+      moodStyleKey,
+      moodPreview: '',
+      moodBackground: '',
+      moodBackgroundType: '',
+    }, () => this.refreshMoodArticle())
   },
 
   onMoodText(e) {
-    this.setData({ moodText: e.detail.value || '', moodPreview: '' }, () => this.refreshMoodArticle())
+    this.setData({ moodText: e.detail.value || '' }, () => {
+      this.refreshMoodArticle()
+      if (this._moodTextTimer) clearTimeout(this._moodTextTimer)
+      if (this.data.moodBackground) {
+        this._moodTextTimer = setTimeout(() => this.recomposeMoodSticker(), 180)
+      }
+    })
   },
 
-  composeMoodSticker(backgroundPath) {
+  composeMoodSticker(backgroundPath, generatedByAi = false) {
     if (!this._moodCanvas) return Promise.reject(new Error('贴图画布尚未准备好'))
     return makeWeatherMoodSticker(this._moodCanvas, backgroundPath, this.weatherForMood(), {
       ...this.moodOption(),
       text: this.data.moodText,
+      generatedByAi,
     })
+  },
+
+  recomposeMoodSticker() {
+    const backgroundPath = this.data.moodBackground
+    if (!backgroundPath || this.data.moodLoading) return
+    const generatedByAi = this.data.moodBackgroundType === 'ai'
+    this.setData({ moodLoading: true })
+    this.composeMoodSticker(backgroundPath, generatedByAi)
+      .then((preview) => this.setData({ moodPreview: preview, moodLoading: false }))
+      .catch((error) => {
+        console.error('[mood] local recompose failed', error)
+        this.setData({ moodLoading: false })
+      })
   },
 
   onChooseMoodPhoto() {
@@ -442,14 +358,22 @@ Page({
       success: (res) => {
         const photoPath = res && res.tempFilePaths && res.tempFilePaths[0]
         if (!photoPath) return
-        this.setData({ moodLoading: true, moodPhoto: photoPath, moodPreview: '' })
-        this.composeMoodSticker(photoPath)
-          .then((preview) => this.setData({ moodPreview: preview, moodLoading: false }))
-          .catch((error) => {
-            console.error('[mood] photo compose failed', error)
-            this.setData({ moodLoading: false })
-            wx.showToast({ title: '合成失败，请换一张照片', icon: 'none' })
-          })
+        this.setData({
+          moodLoading: true,
+          moodPhoto: photoPath,
+          moodPreview: '',
+          moodBackground: photoPath,
+          moodBackgroundType: 'photo',
+        }, () => {
+          this.refreshMoodArticle()
+          this.composeMoodSticker(photoPath)
+            .then((preview) => this.setData({ moodPreview: preview, moodLoading: false }))
+            .catch((error) => {
+              console.error('[mood] photo compose failed', error)
+              this.setData({ moodLoading: false })
+              wx.showToast({ title: '合成失败，请换一张照片', icon: 'none' })
+            })
+        })
       },
     })
   },
@@ -464,33 +388,65 @@ Page({
     }
   },
 
-  onGenerateAiMood() {
-    if (!this.data.aiEnabled) {
+  moodImageCacheKey() {
+    const d = this.data
+    const signature = [d.place, d.dateLabel, d.temp, d.kindLabel, d.moodKey, d.moodStyleKey].join('|')
+    return `moodImage:v3:${encodeURIComponent(signature).slice(0, 220)}`
+  },
+
+  async onGenerateAiMood() {
+    if (!this.data.moodImageEnabled) {
       wx.showToast({ title: 'AI 心情贴暂不可用，请稍后再试', icon: 'none' })
       return
     }
     if (this.data.loading || !this.shareCity() || this.data.moodLoading) return
-    this.setData({ moodLoading: true, moodPreview: '' })
-    wx.cloud.callFunction({
-      name: 'moodSticker',
-      data: {
-        moodKey: this.data.moodKey,
-        moodText: String(this.data.moodText || '').trim().slice(0, 80),
-        weather: this.moodWeatherPayload(),
-      },
-    })
-      .then((res) => {
+    const cacheKey = this.moodImageCacheKey()
+    const cached = wx.getStorageSync(cacheKey)
+    let fileID = cached && cached.fileID && cached.expiresAt > Date.now() ? cached.fileID : ''
+    let reused = Boolean(fileID)
+    this.setData({ moodLoading: true, moodPreview: '', moodBackground: '', moodBackgroundType: '' })
+
+    try {
+      let download
+      if (fileID) {
+        try {
+          download = await wx.cloud.downloadFile({ fileID })
+        } catch (cacheError) {
+          console.warn('[mood] cached image expired', cacheError)
+          wx.removeStorageSync(cacheKey)
+          fileID = ''
+          reused = false
+        }
+      }
+
+      if (!fileID) {
+        const res = await wx.cloud.callFunction({
+          name: 'moodSticker',
+          data: {
+            moodKey: this.data.moodKey,
+            moodStyleKey: this.data.moodStyleKey,
+            weather: this.moodWeatherPayload(),
+          },
+        })
         const result = (res && res.result) || {}
         if (!result.ok || !result.fileID) throw new Error(result.error || 'AI 图片生成失败')
-        return wx.cloud.downloadFile({ fileID: result.fileID })
-      })
-      .then((download) => this.composeMoodSticker(download.tempFilePath))
-      .then((preview) => this.setData({ moodPreview: preview, moodLoading: false }))
-      .catch((error) => {
-        console.error('[mood] AI generate failed', error)
-        this.setData({ moodLoading: false })
-        wx.showToast({ title: error.message || 'AI 心情贴生成失败', icon: 'none' })
-      })
+        fileID = result.fileID
+        reused = Boolean(result.cached)
+        wx.setStorageSync(cacheKey, { fileID, expiresAt: Date.now() + MOOD_IMAGE_CACHE_TTL })
+        download = await wx.cloud.downloadFile({ fileID })
+      }
+
+      const backgroundPath = download && download.tempFilePath
+      if (!backgroundPath) throw new Error('生成背景下载失败')
+      this.setData({ moodBackground: backgroundPath, moodBackgroundType: 'ai' }, () => this.refreshMoodArticle())
+      const preview = await this.composeMoodSticker(backgroundPath, true)
+      this.setData({ moodPreview: preview, moodLoading: false })
+      if (reused) wx.showToast({ title: '已复用背景，未消耗生图额度', icon: 'none' })
+    } catch (error) {
+      console.error('[mood] AI generate failed', error)
+      this.setData({ moodLoading: false })
+      wx.showToast({ title: error.message || 'AI 心情贴生成失败', icon: 'none' })
+    }
   },
 
   onSaveMoodSticker() {
@@ -537,10 +493,11 @@ Page({
 
     const weather = this.weatherForMood()
     const mood = this.moodOption()
+    const style = this.moodStyle()
     const city = weather.place && weather.place !== '—' ? weather.place : '这座城市'
     const article = this.data.moodArticle || this.buildMoodArticle()
     const title = article.split('\n')[0].slice(0, 64)
-    const tags = ['天气心情贴', city, weather.kindLabel, mood.label]
+    const tags = ['天气心情贴', city, weather.kindLabel, mood.label, style.label]
       .map((item) => String(item || '').replace(/^#+/, '').trim())
       .filter(Boolean)
       .slice(0, 10)
@@ -585,7 +542,7 @@ Page({
   // 手动切换天气特效（演示 / 不联网）
   onChip(e) {
     const k = e.currentTarget.dataset.k
-    this.setData({ curKind: k, kindLabel: KIND_LABEL[k], emoji: KIND_EMOJI[k], aiText: '', aiCacheHint: '' }, () => this.refreshMoodArticle())
+    this.setData({ curKind: k, kindLabel: KIND_LABEL[k], emoji: KIND_EMOJI[k] }, () => this.refreshMoodArticle())
     if (sceneApi) sceneApi.setWeather(k)
   },
 
@@ -641,6 +598,7 @@ Page({
   },
 
   onUnload() {
+    if (this._moodTextTimer) clearTimeout(this._moodTextTimer)
     if (sceneApi) sceneApi.dispose()
     sceneApi = null
     this._moodCanvas = null
