@@ -71,7 +71,7 @@ function clipText(ctx, value, maxWidth) {
 
 /**
  * 在用户本地照片或 AI 生成背景上，精确叠加天气和心情。
- * 这个步骤完全在小程序本地完成：原图、AI 图不会被二次上传。
+ * 这个步骤完全在小程序本地完成；AI 背景会在成品中明确标识。
  */
 export async function makeWeatherMoodSticker(canvas, backgroundPath, weather, mood) {
   if (!canvas || !backgroundPath) throw new Error('请先准备一张背景图')
@@ -101,6 +101,15 @@ export async function makeWeatherMoodSticker(canvas, backgroundPath, weather, mo
   ctx.fillStyle = '#ffffff'
   ctx.font = '500 22px sans-serif'
   ctx.fillText('云上幻象天气 · 心情贴', 65, 77)
+
+  if (mood.generatedByAi) {
+    ctx.fillStyle = 'rgba(7, 14, 31, 0.52)'
+    roundedRect(ctx, OUTPUT_WIDTH - 190, 42, 146, 54, 27)
+    ctx.fill()
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.86)'
+    ctx.font = '500 20px sans-serif'
+    ctx.fillText('AI 生成背景', OUTPUT_WIDTH - 171, 76)
+  }
 
   const city = weather.place || '当前城市'
   const temperature = weather.temp === '—' || weather.temp == null ? '—' : `${weather.temp}°`
