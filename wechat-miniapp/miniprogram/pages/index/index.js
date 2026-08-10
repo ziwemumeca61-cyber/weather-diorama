@@ -27,6 +27,7 @@ Page({
     glFailed: false,
     moodImageEnabled: MOOD_IMAGE_ENABLED,
     moodOpen: false,
+    moodClosing: false,
     moodTab: 'photo',
     moodKey: 'calm',
     moodText: '',
@@ -37,6 +38,9 @@ Page({
     moodLoading: false,
     moodSaving: false,
     moodScrollTarget: '',
+    moodScrollTop: 0,
+    moodSheetTopPx: 72,
+    moodCloseTopPx: 84,
     moodOptions: [
       { key: 'calm', emoji: '🌫️', label: '暂时不想解释', copy: '暂时不想解释，也没关系。雾会散，我先安静一会。' },
       { key: 'happy', emoji: '🌤️', label: '好事正在靠近', copy: '风吹开云的时候，我忽然觉得，好事正在靠近。' },
@@ -57,6 +61,7 @@ Page({
   },
 
   onLoad(options) {
+    this.updateMoodLayout()
     // 分享出去的链接带城市参数，点开直接看那座城
     const shared = options && options.city ? decodeURIComponent(options.city) : ''
     if (shared) {
@@ -259,17 +264,57 @@ Page({
     this.setData({ moodArticle: article })
   },
 
+  updateMoodLayout() {
+    const win = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
+    const statusBarHeight = Number(win.statusBarHeight) || 0
+    let menuBottom = 0
+    try {
+      const menu = wx.getMenuButtonBoundingClientRect && wx.getMenuButtonBoundingClientRect()
+      menuBottom = menu && Number(menu.bottom) ? Number(menu.bottom) : 0
+    } catch (error) {
+      console.warn('[mood] menu button metrics unavailable', error)
+    }
+    // 自定义导航栏下必须避开状态栏和右上角胶囊，不再依赖真机上不稳定的 vh。
+    const sheetTop = Math.ceil(Math.max(statusBarHeight + 12, menuBottom + 8, 56))
+    this.setData({
+      moodSheetTopPx: sheetTop,
+      moodCloseTopPx: sheetTop + 10,
+    })
+  },
+
   onMoodToggle() {
     const open = !this.data.moodOpen
-    this.setData({ moodOpen: open, moodScrollTarget: '' })
-    if (open) this.refreshMoodArticle()
+    if (!open) {
+      this.onMoodClose()
+      return
+    }
+    this.updateMoodLayout()
+    // 每次重新打开都回到顶部，避免上次跳到「发一条」后保留在底部。
+    if (this._moodCloseTimer) {
+      clearTimeout(this._moodCloseTimer)
+      this._moodCloseTimer = null
+    }
+    this.setData({ moodOpen: true, moodClosing: false, moodScrollTarget: '', moodScrollTop: 1 }, () => {
+      this.setData({ moodScrollTop: 0 })
+    })
+    this.refreshMoodArticle()
   },
 
   onMoodClose() {
-    this.setData({ moodOpen: false, moodScrollTarget: '' })
+    if (!this.data.moodOpen || this.data.moodClosing) return
+    // 先保留遮罩播放退场动画，再真正卸载弹层，点击窗口外和关闭键共用此流程。
+    this.setData({ moodClosing: true, moodScrollTarget: '' })
+    this._moodCloseTimer = setTimeout(() => {
+      this._moodCloseTimer = null
+      this.setData({ moodOpen: false, moodClosing: false })
+    }, 260)
   },
 
   onMoodSheetTap() {},
+
+  onMoodBodyScroll(e) {
+    this._moodScrollTop = e && e.detail ? Number(e.detail.scrollTop) || 0 : 0
+  },
 
   onShowNativePublish() {
     this.setData({ moodScrollTarget: '' }, () => {
@@ -627,8 +672,13 @@ Page({
 
   onUnload() {
     if (this._moodTextTimer) clearTimeout(this._moodTextTimer)
+    if (this._moodCloseTimer) clearTimeout(this._moodCloseTimer)
     if (sceneApi) sceneApi.dispose()
     sceneApi = null
     this._moodCanvas = null
+  },
+
+  onResize() {
+    this.updateMoodLayout()
   },
 })

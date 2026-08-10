@@ -177,20 +177,32 @@
   right: 0;
   top: 0;
   bottom: 0;
-  display: flex;
-  align-items: flex-end;
+  overflow: hidden;
   background: rgba(3, 8, 19, 0.66);
 }
+.mood-mask-closing {
+  animation: mood-mask-out 260ms ease-out forwards;
+}
 .mood-sheet {
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  right: 0;
+  bottom: 0;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  width: 100%;
-  height: 92vh;
   overflow: hidden;
   border-radius: 38rpx 38rpx 0 0;
   background: linear-gradient(180deg, #202b49 0%, #10182a 100%);
   box-shadow: 0 -20rpx 60rpx rgba(0, 0, 0, 0.45);
+}
+.mood-sheet-opening {
+  animation: mood-sheet-in 240ms cubic-bezier(0.22, 0.8, 0.32, 1) both;
+}
+.mood-sheet-closing {
+  pointer-events: none;
+  animation: mood-sheet-out 260ms cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 .mood-sheet-head {
   box-sizing: border-box;
@@ -199,7 +211,8 @@
   flex-direction: row;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 30rpx 30rpx 20rpx;
+  min-height: 122rpx;
+  padding: 30rpx 126rpx 20rpx 30rpx;
   border-bottom: 2rpx solid rgba(255, 255, 255, 0.06);
   background: #202b49;
 }
@@ -222,20 +235,45 @@
   color: #9eafca;
   font-size: 23rpx;
 }
-.mood-close {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
+.mood-close-float {
+  position: fixed;
+  z-index: 30;
+  right: 24rpx;
+  box-sizing: border-box;
   width: 68rpx;
   height: 68rpx;
-  margin: -6rpx -6rpx 0 20rpx;
+  line-height: 64rpx;
+  text-align: center;
   border: 2rpx solid rgba(255, 255, 255, 0.12);
   border-radius: 999rpx;
   color: #ced7e8;
   font-size: 44rpx;
   font-weight: 200;
   background: rgba(255, 255, 255, 0.07);
+}
+.mood-close-closing {
+  pointer-events: none;
+  animation: mood-close-out 160ms ease-out forwards;
+}
+
+@keyframes mood-sheet-in {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes mood-sheet-out {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+
+@keyframes mood-mask-out {
+  from { background: rgba(3, 8, 19, 0.66); }
+  to { background: rgba(3, 8, 19, 0); }
+}
+
+@keyframes mood-close-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
 }
 .mood-native-jump {
   display: flex;
