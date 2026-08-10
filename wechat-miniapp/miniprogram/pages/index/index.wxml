@@ -46,13 +46,13 @@
 
     <view class="mood-entry" bindtap="onMoodToggle">
       <view class="mood-entry-copy">
-        <text class="mood-entry-icon">💭</text>
+        <view class="mood-entry-icon"><text>☁️</text></view>
         <view class="mood-entry-text">
           <text class="mood-entry-title">天气心情贴</text>
-          <text class="mood-entry-sub">选一种心情，让天气替你表达</text>
+          <text class="mood-entry-sub">把此刻的天气和心情，留成一张贴</text>
         </view>
       </view>
-      <text class="mood-entry-btn">去制作</text>
+      <view class="mood-entry-btn"><text>去制作</text><text class="mood-entry-arrow">›</text></view>
     </view>
 
     <view class="row">
@@ -86,10 +86,12 @@
   <view class="mood-mask {{moodClosing ? 'mood-mask-closing' : ''}}" wx:if="{{moodOpen}}" bindtap="onMoodClose">
     <view class="mood-sheet {{moodClosing ? 'mood-sheet-closing' : 'mood-sheet-opening'}}" style="top: {{moodSheetTopPx}}px;" catchtap="onMoodSheetTap" bindanimationend="onMoodSheetAnimationEnd">
       <view class="mood-sheet-head">
-        <view>
-          <text class="mood-sheet-title">今天想怎么表达？</text>
-          <text class="mood-sheet-sub">天气不是背景，是此刻心情的化身</text>
+        <view class="mood-sheet-copy">
+          <text class="mood-sheet-eyebrow">WEATHER MOMENT</text>
+          <text class="mood-sheet-title">把今天，贴进天气里</text>
+          <text class="mood-sheet-sub">{{place}} · {{temp}}° · {{kindLabel}}</text>
         </view>
+        <view class="mood-sheet-weather"><text>{{emoji}}</text></view>
       </view>
 
       <scroll-view
@@ -99,23 +101,32 @@
         show-scrollbar="{{false}}"
         scroll-top="{{moodScrollTop}}"
       >
-      <view class="mood-tabs">
+      <view class="mood-tabs" aria-label="选择制作方式">
         <view class="mood-tab {{moodTab === 'photo' ? 'mood-tab-on' : ''}}" data-tab="photo" bindtap="onMoodTab">我的照片</view>
         <view class="mood-tab {{moodTab === 'ai' ? 'mood-tab-on' : ''}}" data-tab="ai" bindtap="onMoodTab">AI 心情贴</view>
       </view>
 
-      <scroll-view class="mood-options" scroll-x enable-flex>
-        <view
-          wx:for="{{moodOptions}}"
-          wx:key="key"
-          class="mood-option {{moodKey === item.key ? 'mood-option-on' : ''}}"
-          data-key="{{item.key}}"
-          bindtap="onMoodPick"
-        >{{item.emoji}} {{item.label}}</view>
-      </scroll-view>
+      <view class="mood-section">
+        <view class="mood-section-head">
+          <text class="mood-section-title">此刻的心情</text>
+          <text class="mood-section-state">选择一种感觉</text>
+        </view>
+        <scroll-view class="mood-options" scroll-x enable-flex>
+          <view
+            wx:for="{{moodOptions}}"
+            wx:key="key"
+            class="mood-option {{moodKey === item.key ? 'mood-option-on' : ''}}"
+            data-key="{{item.key}}"
+            bindtap="onMoodPick"
+          ><text class="mood-option-emoji">{{item.emoji}}</text><text>{{item.label}}</text></view>
+        </scroll-view>
+      </view>
 
       <view wx:if="{{moodTab === 'ai'}}">
-        <text class="mood-section-label">选择画面风格</text>
+        <view class="mood-section-head mood-style-head">
+          <text class="mood-section-title">画面风格</text>
+          <text class="mood-section-tip">生成不包含文字</text>
+        </view>
         <scroll-view class="mood-styles" scroll-x enable-flex>
           <view
             wx:for="{{moodStyles}}"
@@ -130,53 +141,68 @@
         </scroll-view>
       </view>
 
-      <textarea
-        class="mood-textarea"
-        value="{{moodText}}"
-        maxlength="80"
-        placeholder="写一句没说出口的话，天气会替你表达（可不写）"
-        placeholder-class="mood-placeholder"
-        auto-height
-        bindinput="onMoodText"
-        bindblur="onMoodTextCommit"
-      />
+      <view class="mood-writing">
+        <view class="mood-writing-head"><text>写给今天的话</text><text>选填</text></view>
+        <textarea
+          class="mood-textarea"
+          value="{{moodText}}"
+          maxlength="80"
+          placeholder="例如：云散以后，也记得抬头看看。"
+          placeholder-class="mood-placeholder"
+          auto-height
+          bindinput="onMoodText"
+          bindblur="onMoodTextCommit"
+        />
+      </view>
 
       <view class="mood-preview-wrap">
         <image class="mood-preview" wx:if="{{moodPreview}}" src="{{moodPreview}}" mode="aspectFill" />
         <view class="mood-preview-empty" wx:else>
           <text class="mood-preview-emoji">{{moodTab === 'photo' ? '📷' : '✨'}}</text>
-          <text>{{moodLoading ? '天气正在替你组织情绪…' : moodTab === 'photo' ? '选择一张照片，把此刻天气贴上去' : '选一种心情，让天气替你表达'}}</text>
+          <text class="mood-preview-title">{{moodLoading ? '正在生成你的天气心情贴' : moodTab === 'photo' ? '从一张照片开始' : '让天气替你画出心情'}}</text>
+          <text class="mood-preview-sub">{{moodLoading ? '请稍候，完成后可保存或发表' : moodTab === 'photo' ? '照片只在本机合成，不会上传' : '选择心情和画面风格后开始生成'}}</text>
         </view>
       </view>
 
       <view class="mood-main-action" wx:if="{{moodTab === 'photo'}}" bindtap="onChooseMoodPhoto">
-        {{moodLoading ? '正在合成…' : moodPhoto ? '换一张照片' : '从相册选择 / 现在拍照'}}
+        <text class="mood-action-icon">{{moodLoading ? '◌' : '＋'}}</text><text>{{moodLoading ? '正在合成…' : moodPhoto ? '换一张照片' : '选一张照片'}}</text>
       </view>
       <view class="mood-main-action {{!moodImageEnabled ? 'mood-main-disabled' : ''}}" wx:elif="{{!moodPreview}}" bindtap="onGenerateAiMood">
-        {{moodLoading ? '正在把心情变成天气…' : moodImageEnabled ? '生成 AI 心情画面' : '心情画面暂不可用'}}
+        <text class="mood-action-icon">{{moodLoading ? '◌' : '✦'}}</text><text>{{moodLoading ? '正在生成…' : moodImageEnabled ? '生成 AI 心情贴' : '心情画面暂不可用'}}</text>
       </view>
 
       <text class="mood-ai-note" wx:if="{{moodTab === 'ai' && moodPreview}}">已生成背景。修改上面的文字只会本地重新排版，不会再消耗生图额度。</text>
 
       <view class="mood-ready" wx:if="{{moodPreview}}">
+        <view class="mood-ready-title"><text>贴图已准备好</text><text>可保存，也可直接发一条</text></view>
         <view class="mood-ready-row">
           <view class="mood-secondary" bindtap="onSaveMoodSticker">保存图片</view>
           <view class="mood-secondary" bindtap="onCopyMoodArticle">复制图文</view>
         </view>
       </view>
 
-      <official-account-publish
-        topic="天气心情贴"
-        limit="4"
-        recommend-path="/pages/index/index"
-        recommend-title="制作我的天气心情贴"
-        binderror="onMoodComponentError"
-        bindempty="onMoodComponentEmpty"
-        bindpublishsuccess="onMoodComponentPublishSuccess"
-        bindpublishfail="onMoodComponentPublishFail"
-      ></official-account-publish>
+      <view class="mood-publish-area">
+        <view class="mood-publish-head">
+          <view><text class="mood-publish-title">天气心情贴</text><text class="mood-publish-sub">微信官方发表入口</text></view>
+          <text class="mood-publish-badge">官方</text>
+        </view>
+        <official-account-publish
+          topic="天气心情贴"
+          limit="4"
+          placeholder="说说此刻的天气和心情…"
+          background-color="#f6f8fc"
+          color-unity="{{true}}"
+          show-related="{{true}}"
+          recommend-path="/pages/index/index"
+          recommend-title="云上幻象天气 · 制作天气心情贴"
+          binderror="onMoodComponentError"
+          bindempty="onMoodComponentEmpty"
+          bindpublishsuccess="onMoodComponentPublishSuccess"
+          bindpublishfail="onMoodComponentPublishFail"
+        ></official-account-publish>
+      </view>
 
-      <text class="mood-privacy">本地照片只在手机上合成，不会上传；AI 背景仅在你主动点击生成时调用，心情文字不会发给生图模型。</text>
+      <text class="mood-privacy">照片仅在本机合成；AI 画面只在你主动生成时调用。</text>
       </scroll-view>
     </view>
     <!-- cover-view 可保证关闭键始终压在微信原生发布组件之上。 -->
