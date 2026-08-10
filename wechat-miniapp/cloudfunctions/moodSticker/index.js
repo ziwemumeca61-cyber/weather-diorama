@@ -10,9 +10,12 @@ cloud.init({
 const MODEL = 'HY-Image-3.0-Plus-4090-Tob-v1.0'
 const RATE_WINDOW = 10 * 60 * 1000
 const RATE_LIMIT = 2
+const RATE_RETRY_SECONDS = 60
 const CACHE_TTL = 7 * 24 * 60 * 60 * 1000
 const rate = new Map()
 const cache = new Map()
+const inflight = new Map()
+let serviceCooldownUntil = 0
 
 const MOODS = {
   calm: {
@@ -125,6 +128,24 @@ function putCache(key, value) {
   if (cache.size > 100) cache.delete(cache.keys().next().value)
 }
 
+function isRateLimitError(error) {
+  const response = error && error.response
+  const data = response && response.data
+  const nested = (error && error.error) || (data && data.error)
+  const detail = [
+    error && error.message,
+    error && error.errMsg,
+    error && error.code,
+    error && error.status,
+    error && error.statusCode,
+    response && response.status,
+    response && response.statusCode,
+    nested && nested.code,
+    nested && nested.message,
+  ].filter(Boolean).join(' ')
+  return /(?:^|\D)429(?:\D|$)|too many requests|rate.?limit|请求(?:频率|速率).*超|限流/i.test(detail)
+}
+
 function buildPrompt(weather, mood, style) {
   const city = clean(weather.city, 40) || '一座中国城市'
   const condition = clean(weather.kindLabel, 16) || '晴朗天气'
@@ -178,6 +199,27 @@ function downloadImage(url, redirects = 0) {
   })
 }
 
+async function generateBackground(key, keyHash, weather, mood, style) {
+  const imageModel = cloud.ai().createImageModel('hunyuan-image')
+  const result = await imageModel.generateImage({
+    model: MODEL,
+    prompt: buildPrompt(weather, mood, style),
+    size: '768x1024',
+    revise: { value: false },
+    enable_thinking: { value: false },
+  })
+  const url = result && result.data && result.data[0] && result.data[0].url
+  if (!url) throw new Error('AI 图片返回为空')
+
+  // 生成服务 URL 仅保留 24 小时；存入云存储后可在小程序中稳定下载和保存。
+  const upload = await cloud.uploadFile({
+    cloudPath: `mood-stickers/shared/${keyHash}.jpg`,
+    fileContent: await downloadImage(url),
+  })
+  putCache(key, { fileID: upload.fileID })
+  return { ok: true, fileID: upload.fileID, cached: false }
+}
+
 exports.main = async (event = {}, context = {}) => {
   const moodKey = clean(event.moodKey, 20)
   const mood = MOODS[moodKey]
@@ -194,29 +236,41 @@ exports.main = async (event = {}, context = {}) => {
   const keyHash = crypto.createHash('sha256').update(key).digest('hex').slice(0, 32)
   const cached = getCached(key)
   if (cached) return { ok: true, fileID: cached.fileID, cached: true }
+  const coolingSeconds = Math.ceil((serviceCooldownUntil - Date.now()) / 1000)
+  if (coolingSeconds > 0) {
+    return { ok: false, code: 'RATE_LIMITED', retryAfter: coolingSeconds, error: `生成服务正忙，请 ${coolingSeconds} 秒后再试` }
+  }
+
+  // 同一热实例内，相同画面只允许一个模型请求；后来的请求等待并复用结果。
+  // 这既避免用户连点，也避免多名用户同时制作相同画面时重复消耗额度。
+  const pending = inflight.get(key)
+  if (pending) {
+    try {
+      const result = await pending
+      return { ...result, cached: true, joined: true }
+    } catch (error) {
+      if (isRateLimitError(error)) {
+        serviceCooldownUntil = Date.now() + RATE_RETRY_SECONDS * 1000
+        return { ok: false, code: 'RATE_LIMITED', retryAfter: RATE_RETRY_SECONDS, error: '生成服务正忙，请 1 分钟后再试' }
+      }
+      console.error('[moodSticker] joined request failed', error)
+      return { ok: false, error: 'AI 心情贴生成失败，请稍后再试' }
+    }
+  }
   if (!canGenerate(openid)) return { ok: false, error: '生成有点频繁，10 分钟后再试试' }
 
+  const task = generateBackground(key, keyHash, weather, mood, style)
+  inflight.set(key, task)
   try {
-    const imageModel = cloud.ai().createImageModel('hunyuan-image')
-    const result = await imageModel.generateImage({
-      model: MODEL,
-      prompt: buildPrompt(weather, mood, style),
-      size: '768x1024',
-      revise: { value: false },
-      enable_thinking: { value: false },
-    })
-    const url = result && result.data && result.data[0] && result.data[0].url
-    if (!url) throw new Error('AI 图片返回为空')
-
-    // 生成服务 URL 仅保留 24 小时；存入云存储后可在小程序中稳定下载和保存。
-    const upload = await cloud.uploadFile({
-      cloudPath: `mood-stickers/shared/${keyHash}.jpg`,
-      fileContent: await downloadImage(url),
-    })
-    putCache(key, { fileID: upload.fileID })
-    return { ok: true, fileID: upload.fileID, cached: false }
+    return await task
   } catch (error) {
+    if (isRateLimitError(error)) {
+      serviceCooldownUntil = Date.now() + RATE_RETRY_SECONDS * 1000
+      return { ok: false, code: 'RATE_LIMITED', retryAfter: RATE_RETRY_SECONDS, error: '生成服务正忙，请 1 分钟后再试' }
+    }
     console.error('[moodSticker]', error)
     return { ok: false, error: 'AI 心情贴生成失败，请稍后再试' }
+  } finally {
+    if (inflight.get(key) === task) inflight.delete(key)
   }
 }
