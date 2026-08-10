@@ -7,6 +7,7 @@ import { makeWeatherMoodSticker } from '../../lib/weatherMoodSticker'
 let sceneApi = null
 const LAST_CITY = 'lastCity'
 const MOOD_IMAGE_CACHE_TTL = 7 * 24 * 60 * 60 * 1000
+const MOOD_AI_COOLDOWN_KEY = 'moodAiCooldownUntil'
 
 Page({
   data: {
@@ -399,7 +400,21 @@ Page({
       wx.showToast({ title: 'AI 心情贴暂不可用，请稍后再试', icon: 'none' })
       return
     }
-    if (this.data.loading || !this.shareCity() || this.data.moodLoading) return
+    if (this.data.loading || !this.shareCity()) return
+    // setData 更新前的连续点击也必须被挡住，避免同一画面并发请求模型。
+    if (this._moodAiRunning || this.data.moodLoading) {
+      wx.showToast({ title: '正在生成，请不要重复点击', icon: 'none' })
+      return
+    }
+    const cooldownUntil = Number(wx.getStorageSync(MOOD_AI_COOLDOWN_KEY)) || 0
+    if (cooldownUntil > Date.now()) {
+      const seconds = Math.max(1, Math.ceil((cooldownUntil - Date.now()) / 1000))
+      wx.showToast({ title: `生成服务正忙，${seconds} 秒后再试`, icon: 'none' })
+      return
+    }
+    if (cooldownUntil) wx.removeStorageSync(MOOD_AI_COOLDOWN_KEY)
+
+    this._moodAiRunning = true
     const cacheKey = this.moodImageCacheKey()
     const cached = wx.getStorageSync(cacheKey)
     let fileID = cached && cached.fileID && cached.expiresAt > Date.now() ? cached.fileID : ''
@@ -429,7 +444,15 @@ Page({
           },
         })
         const result = (res && res.result) || {}
-        if (!result.ok || !result.fileID) throw new Error(result.error || 'AI 图片生成失败')
+        if (!result.ok || !result.fileID) {
+          const error = new Error(result.error || 'AI 图片生成失败')
+          if (result.code === 'RATE_LIMITED') {
+            const retryAfter = Math.max(1, Math.min(600, Number(result.retryAfter) || 60))
+            wx.setStorageSync(MOOD_AI_COOLDOWN_KEY, Date.now() + retryAfter * 1000)
+            error.code = 'RATE_LIMITED'
+          }
+          throw error
+        }
         fileID = result.fileID
         reused = Boolean(result.cached)
         wx.setStorageSync(cacheKey, { fileID, expiresAt: Date.now() + MOOD_IMAGE_CACHE_TTL })
@@ -445,7 +468,12 @@ Page({
     } catch (error) {
       console.error('[mood] AI generate failed', error)
       this.setData({ moodLoading: false })
-      wx.showToast({ title: error.message || 'AI 心情贴生成失败', icon: 'none' })
+      wx.showToast({
+        title: error.code === 'RATE_LIMITED' ? '生成服务正忙，请 1 分钟后再试' : error.message || 'AI 心情贴生成失败',
+        icon: 'none',
+      })
+    } finally {
+      this._moodAiRunning = false
     }
   },
 
