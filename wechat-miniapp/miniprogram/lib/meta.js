@@ -11,6 +11,6 @@ export const WEATHER_CREDIT = {
   url: 'https://open-meteo.com',
 }
 
-// AI 只在用户主动提问或生成心情贴时调用成长计划额度。
-// 上线前需部署 aiWeather 与 moodSticker 云函数。
-export const AI_ASSISTANT_ENABLED = true
+// 生图只用于“天气心情贴”的受控创作流程，不提供开放式 AI 问答。
+// 上线前只需部署 moodSticker 云函数。
+export const MOOD_IMAGE_ENABLED = true
