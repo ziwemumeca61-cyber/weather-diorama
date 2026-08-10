@@ -163,30 +163,18 @@
           <view class="mood-secondary" bindtap="onSaveMoodSticker">保存图片</view>
           <view class="mood-secondary" bindtap="onCopyMoodArticle">复制图文</view>
         </view>
-        <text class="mood-ready-note">保存图片并复制文案后，可通过下方微信官方「发一条」发布。</text>
       </view>
 
-      <view class="mood-publish-entry" id="mood-native-publish">
-        <view class="mood-publish-copy">
-          <text class="mood-publish-title">发一条天气心情贴</text>
-          <text class="mood-publish-sub">使用微信官方入口发布，也可以浏览同话题内容。</text>
-        </view>
-        <official-account-publish
-          topic="天气心情贴"
-          limit="4"
-          placeholder="来发第一条天气心情吧"
-          background-color="#f4f1ec"
-          color-unity="{{true}}"
-          show-related="{{false}}"
-          recommend-path="/pages/index/index"
-          recommend-title="制作我的天气心情贴"
-          binderror="onMoodComponentError"
-          bindempty="onMoodComponentEmpty"
-          bindpublishsuccess="onMoodComponentPublishSuccess"
-          bindpublishfail="onMoodComponentPublishFail"
-        ></official-account-publish>
-        <text class="mood-publish-tip">原生发表按钮请在 Android 或 iPhone 真机中测试。</text>
-      </view>
+      <official-account-publish
+        topic="天气心情贴"
+        limit="4"
+        recommend-path="/pages/index/index"
+        recommend-title="制作我的天气心情贴"
+        binderror="onMoodComponentError"
+        bindempty="onMoodComponentEmpty"
+        bindpublishsuccess="onMoodComponentPublishSuccess"
+        bindpublishfail="onMoodComponentPublishFail"
+      ></official-account-publish>
 
       <text class="mood-privacy">本地照片只在手机上合成，不会上传；AI 背景仅在你主动点击生成时调用，心情文字不会发给生图模型。</text>
       </scroll-view>
