@@ -444,6 +444,23 @@
   font-size: 24rpx;
   background: rgba(255, 255, 255, 0.08);
 }
+.mood-publish-fallback {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  margin-top: 20rpx;
+  padding: 18rpx 28rpx;
+  border-radius: 16rpx;
+  color: #1f2937;
+  font-size: 28rpx;
+  background: #ffffff;
+  box-shadow: 0 8rpx 22rpx rgba(0, 0, 0, 0.12);
+}
+.mood-publish-fallback-icon {
+  margin-right: 10rpx;
+  font-size: 30rpx;
+}
 .mood-privacy {
   display: block;
   margin-top: 14rpx;
