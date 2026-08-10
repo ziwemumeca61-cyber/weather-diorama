@@ -275,23 +275,6 @@
   from { opacity: 1; }
   to { opacity: 0; }
 }
-.mood-native-jump {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 18rpx;
-  padding: 16rpx 20rpx;
-  border: 2rpx solid rgba(139, 177, 242, 0.22);
-  border-radius: 18rpx;
-  color: #cbd9f3;
-  font-size: 23rpx;
-  background: rgba(70, 111, 190, 0.16);
-}
-.mood-native-jump-arrow {
-  margin-left: 16rpx;
-  color: #ffffff;
-  font-size: 28rpx;
-}
 .mood-publish-entry {
   margin-top: 22rpx;
   padding: 22rpx;
@@ -480,23 +463,6 @@
   flex-direction: row;
   gap: 16rpx;
   margin-top: 14rpx;
-}
-.mood-publish-action {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  padding: 21rpx 24rpx;
-  border-radius: 999rpx;
-  color: #ffffff;
-  font-size: 28rpx;
-  font-weight: 700;
-  background: linear-gradient(135deg, #ee6d74, #ac5eab);
-  box-shadow: 0 10rpx 24rpx rgba(202, 86, 121, 0.32);
-}
-.mood-publish-action-icon {
-  margin-right: 12rpx;
-  font-size: 24rpx;
 }
 .mood-secondary {
   flex: 1;
