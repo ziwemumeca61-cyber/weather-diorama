@@ -275,36 +275,6 @@
   from { opacity: 1; }
   to { opacity: 0; }
 }
-.mood-publish-entry {
-  margin-top: 22rpx;
-  padding: 22rpx;
-  border: 2rpx solid rgba(139, 177, 242, 0.25);
-  border-radius: 24rpx;
-  background: linear-gradient(135deg, rgba(70, 111, 190, 0.28), rgba(75, 74, 142, 0.34));
-}
-.mood-publish-copy {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 16rpx;
-}
-.mood-publish-title {
-  color: #ffffff;
-  font-size: 28rpx;
-  font-weight: 600;
-}
-.mood-publish-sub,
-.mood-publish-tip {
-  color: #aebbd1;
-  font-size: 21rpx;
-  line-height: 1.55;
-}
-.mood-publish-sub {
-  margin-top: 6rpx;
-}
-.mood-publish-tip {
-  display: block;
-  margin-top: 12rpx;
-}
 .mood-tabs {
   display: flex;
   flex-direction: row;
@@ -474,7 +444,6 @@
   font-size: 24rpx;
   background: rgba(255, 255, 255, 0.08);
 }
-.mood-ready-note,
 .mood-privacy {
   display: block;
   margin-top: 14rpx;
