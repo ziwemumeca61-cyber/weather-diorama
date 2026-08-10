@@ -145,14 +145,11 @@
         <image class="mood-preview" wx:if="{{moodPreview}}" src="{{moodPreview}}" mode="aspectFill" />
         <view class="mood-preview-empty" wx:else>
           <text class="mood-preview-emoji">{{moodTab === 'photo' ? '📷' : '✨'}}</text>
-          <text>{{moodLoading ? '天气正在替你组织情绪…' : moodTab === 'photo' ? '选择一张照片，把此刻天气贴上去' : '选一种心情，让天气替你表达'}}</text>
+          <text>{{moodLoading ? '天气正在替你组织情绪…' : moodTab === 'photo' ? '点击下方“发一条”，在微信官方发表页选图' : '选一种心情，让天气替你表达'}}</text>
         </view>
       </view>
 
-      <view class="mood-main-action" wx:if="{{moodTab === 'photo'}}" bindtap="onChooseMoodPhoto">
-        {{moodLoading ? '正在合成…' : moodPhoto ? '换一张照片' : '从相册选择 / 现在拍照'}}
-      </view>
-      <view class="mood-main-action {{!moodImageEnabled ? 'mood-main-disabled' : ''}}" wx:elif="{{!moodPreview}}" bindtap="onGenerateAiMood">
+      <view class="mood-main-action {{!moodImageEnabled ? 'mood-main-disabled' : ''}}" wx:if="{{moodTab === 'ai' && !moodPreview}}" bindtap="onGenerateAiMood">
         {{moodLoading ? '正在把心情变成天气…' : moodImageEnabled ? '生成 AI 心情画面' : '心情画面暂不可用'}}
       </view>
 
@@ -163,6 +160,12 @@
           <view class="mood-secondary" bindtap="onSaveMoodSticker">保存图片</view>
           <view class="mood-secondary" bindtap="onCopyMoodArticle">复制图文</view>
         </view>
+      </view>
+
+      <!-- 空话题时官方组件不会显示原生“发一条”，用官方 API 提供同名兜底入口。 -->
+      <view class="mood-publish-fallback" wx:if="{{moodTopicEmpty}}" bindtap="onOfficialPublishMood">
+        <text class="mood-publish-fallback-icon">✎</text>
+        <text>发一条</text>
       </view>
 
       <official-account-publish
