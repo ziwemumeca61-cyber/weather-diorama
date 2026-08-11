@@ -37,6 +37,7 @@ Page({
     moodBackgroundType: '',
     moodLoading: false,
     moodSaving: false,
+    officialPublishEnabled: false,
     moodScrollTop: 0,
     moodSheetTopPx: 72,
     moodCloseTopPx: 84,
@@ -60,6 +61,7 @@ Page({
   },
 
   onLoad(options) {
+    this.updateOfficialPublishAvailability()
     this.updateMoodLayout()
     // 分享出去的链接带城市参数，点开直接看那座城
     const shared = options && options.city ? decodeURIComponent(options.city) : ''
@@ -263,6 +265,18 @@ Page({
     this.setData({ moodArticle: article })
   },
 
+  updateOfficialPublishAvailability() {
+    let platform = ''
+    try {
+      const info = wx.getDeviceInfo ? wx.getDeviceInfo() : wx.getSystemInfoSync()
+      platform = String(info && info.platform || '').toLowerCase()
+    } catch (error) {
+      console.warn('[mood] platform detection unavailable', error)
+    }
+    // 官方发表组件和 shareToOfficialAccount 在开发者工具、Windows、Mac、鸿蒙环境不可用。
+    const unsupported = /devtools|windows|mac|ohos|harmony/.test(platform)
+    this.setData({ officialPublishEnabled: !unsupported })
+  },
   updateMoodLayout() {
     const win = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
     const statusBarHeight = Number(win.statusBarHeight) || 0
@@ -273,8 +287,10 @@ Page({
     } catch (error) {
       console.warn('[mood] menu button metrics unavailable', error)
     }
-    // 自定义导航栏下必须避开状态栏和右上角胶囊，不再依赖真机上不稳定的 vh。
-    const sheetTop = Math.ceil(Math.max(statusBarHeight + 12, menuBottom + 8, 56))
+    // 开发者工具偶尔返回异常的胶囊 bottom，必须限制弹层顶部，避免弹层只剩屏幕下半段。
+    const measuredTop = Math.max(statusBarHeight + 12, menuBottom + 8, 56)
+    const maxTop = win.windowHeight ? Math.max(64, Math.floor(Number(win.windowHeight) * 0.12)) : 96
+    const sheetTop = Math.ceil(Math.min(measuredTop, maxTop))
     this.setData({
       moodSheetTopPx: sheetTop,
       moodCloseTopPx: sheetTop + 10,
@@ -297,14 +313,19 @@ Page({
 
   onMoodClose() {
     if (!this.data.moodOpen || this.data.moodClosing) return
-    // 先保留遮罩播放退场动画；由 animationend 收尾，避免 AppService 定时器超时。
+    // 先播放退场动画；animationend 和短时兜底都会收起弹层，避免关闭键失效。
+    clearTimeout(this._moodCloseTimer)
     this.setData({ moodClosing: true })
+    this._moodCloseTimer = setTimeout(() => {
+      if (this.data.moodClosing) this.setData({ moodOpen: false, moodClosing: false })
+    }, 320)
   },
 
   onMoodSheetAnimationEnd(e) {
     if (!this.data.moodClosing) return
     const name = e && e.detail ? e.detail.animationName : ''
     if (name && name !== 'mood-sheet-out') return
+    clearTimeout(this._moodCloseTimer)
     this.setData({ moodOpen: false, moodClosing: false })
   },
 
@@ -531,7 +552,19 @@ Page({
     })
   },
 
+  showOfficialPublishUnavailable() {
+    wx.showModal({
+      title: '请用手机微信发布',
+      content: '开发者工具、Windows、Mac 和鸿蒙环境不支持官方发表页，请使用 Android 或 iPhone 真机预览。',
+      showCancel: false,
+    })
+  },
+
   onOfficialPublishMood() {
+    if (!this.data.officialPublishEnabled) {
+      this.showOfficialPublishUnavailable()
+      return
+    }
     if (typeof wx.shareToOfficialAccount !== 'function') {
       wx.showToast({ title: '当前微信版本不支持贴图发表', icon: 'none' })
       return
@@ -555,6 +588,10 @@ Page({
       },
       fail: (error) => {
         const message = error && error.errMsg ? error.errMsg : ''
+        if (/platform not supported/i.test(message)) {
+          this.showOfficialPublishUnavailable()
+          return
+        }
         if (!/cancel|abort|deny/i.test(message)) {
           console.error('[mood] official publish api failed', error)
           wx.showToast({ title: '官方发表页打开失败', icon: 'none' })
@@ -573,10 +610,6 @@ Page({
 
   onMoodComponentError(e) {
     console.error('[mood] official account component error', e && e.detail)
-  },
-
-  onMoodComponentEmpty() {
-    console.log('[mood] official account topic is empty')
   },
 
   onMoodComponentPublishSuccess(e) {
