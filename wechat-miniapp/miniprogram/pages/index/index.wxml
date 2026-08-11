@@ -159,22 +159,19 @@
         <image class="mood-preview" wx:if="{{moodPreview}}" src="{{moodPreview}}" mode="aspectFill" />
         <view class="mood-preview-empty" wx:else>
           <text class="mood-preview-emoji">{{moodTab === 'photo' ? '📷' : '✨'}}</text>
-          <text class="mood-preview-title">{{moodLoading ? '正在生成你的天气心情贴' : moodTab === 'photo' ? '从一张照片开始' : '让天气替你画出心情'}}</text>
-          <text class="mood-preview-sub">{{moodLoading ? '请稍候，完成后可保存或发表' : moodTab === 'photo' ? '照片只在本机合成，不会上传' : '选择心情和画面风格后开始生成'}}</text>
+          <text class="mood-preview-title">{{moodLoading ? '正在生成你的天气心情贴' : moodTab === 'photo' ? '点击“发一条”选择照片' : '让天气替你画出心情'}}</text>
+          <text class="mood-preview-sub">{{moodLoading ? '请稍候，完成后可保存或发表' : moodTab === 'photo' ? '进入官方发表页后可从相册或相机选择' : '选择心情和画面风格后开始生成'}}</text>
         </view>
       </view>
 
-      <view class="mood-main-action" wx:if="{{moodTab === 'photo'}}" bindtap="onChooseMoodPhoto">
-        <text class="mood-action-icon">{{moodLoading ? '◌' : '＋'}}</text><text>{{moodLoading ? '正在合成…' : moodPhoto ? '换一张照片' : '选一张照片'}}</text>
-      </view>
-      <view class="mood-main-action {{!moodImageEnabled ? 'mood-main-disabled' : ''}}" wx:elif="{{!moodPreview}}" bindtap="onGenerateAiMood">
+      <view class="mood-main-action {{!moodImageEnabled ? 'mood-main-disabled' : ''}}" wx:if="{{moodTab === 'ai' && !moodPreview}}" bindtap="onGenerateAiMood">
         <text class="mood-action-icon">{{moodLoading ? '◌' : '✦'}}</text><text>{{moodLoading ? '正在生成…' : moodImageEnabled ? '生成 AI 心情贴' : '心情画面暂不可用'}}</text>
       </view>
 
       <text class="mood-ai-note" wx:if="{{moodTab === 'ai' && moodPreview}}">已生成背景。修改上面的文字只会本地重新排版，不会再消耗生图额度。</text>
 
       <view class="mood-ready" wx:if="{{moodPreview}}">
-        <view class="mood-ready-title"><text>贴图已准备好</text><text>可保存，也可直接发一条</text></view>
+        <view class="mood-ready-title"><text>贴图已准备好</text><text>可保存，也可点击右上角发一条</text></view>
         <view class="mood-ready-row">
           <view class="mood-secondary" bindtap="onSaveMoodSticker">保存图片</view>
           <view class="mood-secondary" bindtap="onCopyMoodArticle">复制图文</view>
@@ -184,7 +181,12 @@
       <view class="mood-publish-area">
         <view class="mood-publish-head">
           <view><text class="mood-publish-title">天气心情贴</text><text class="mood-publish-sub">微信官方发表入口</text></view>
-          <text class="mood-publish-badge">官方</text>
+          <view class="mood-publish-head-right">
+            <view class="mood-publish-action" bindtap="onOfficialPublishMood">
+              <text class="mood-publish-action-icon">✎</text><text>发一条</text>
+            </view>
+            <text class="mood-publish-badge">官方</text>
+          </view>
         </view>
         <official-account-publish
           topic="天气心情贴"
