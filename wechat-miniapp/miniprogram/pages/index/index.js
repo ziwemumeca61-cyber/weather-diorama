@@ -517,12 +517,12 @@ Page({
     this.setData({ moodSaving: true })
     wx.saveImageToPhotosAlbum({
       filePath,
-      success: () => wx.showToast({ title: '已保存，发布时从相册选择', icon: 'none' }),
+      success: () => wx.showToast({ title: '已保存到相册', icon: 'none' }),
       fail: (error) => {
         if (error && /auth deny|authorize no response/.test(error.errMsg || '')) {
           wx.showModal({
             title: '需要相册权限',
-            content: '允许保存后，才能把心情贴带进公众号发布器。',
+            content: '允许保存后，才能把心情贴保存在手机相册。',
             success: (res) => { if (res.confirm) wx.openSetting() },
           })
         }
