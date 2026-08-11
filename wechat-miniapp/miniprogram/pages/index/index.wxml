@@ -188,7 +188,12 @@
             <text class="mood-publish-badge">官方</text>
           </view>
         </view>
+        <view class="mood-official-unavailable" wx:if="{{!officialPublishEnabled}}">
+          <text class="mood-official-unavailable-title">官方发表预览仅支持手机微信</text>
+          <text class="mood-official-unavailable-sub">请用 Android 或 iPhone 真机打开「发一条」</text>
+        </view>
         <official-account-publish
+          wx:elif="{{officialPublishEnabled}}"
           topic="天气心情贴"
           limit="4"
           placeholder="说说此刻的天气和心情…"
@@ -198,7 +203,6 @@
           recommend-path="/pages/index/index"
           recommend-title="云上幻象天气 · 制作天气心情贴"
           binderror="onMoodComponentError"
-          bindempty="onMoodComponentEmpty"
           bindpublishsuccess="onMoodComponentPublishSuccess"
           bindpublishfail="onMoodComponentPublishFail"
         ></official-account-publish>
@@ -207,12 +211,11 @@
       <text class="mood-privacy">照片仅在本机合成；AI 画面只在你主动生成时调用。</text>
       </scroll-view>
     </view>
-    <!-- cover-view 可保证关闭键始终压在微信原生发布组件之上。 -->
-    <cover-view
+    <view
       class="mood-close-float {{moodClosing ? 'mood-close-closing' : ''}}"
       style="top: {{moodCloseTopPx}}px;"
       catchtap="onMoodClose"
       aria-label="关闭天气心情贴"
-    >×</cover-view>
+    >×</view>
   </view>
 </view>
