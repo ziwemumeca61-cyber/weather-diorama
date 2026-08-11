@@ -235,6 +235,7 @@
   box-sizing: border-box;
   flex: 1;
   min-height: 0;
+  height: 0;
   width: 100%;
   padding: 0 28rpx calc(34rpx + env(safe-area-inset-bottom));
 }
@@ -256,17 +257,21 @@
   position: fixed;
   z-index: 30;
   right: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   box-sizing: border-box;
-  width: 68rpx;
-  height: 68rpx;
-  line-height: 64rpx;
+  width: 72rpx;
+  height: 72rpx;
+  line-height: 1;
   text-align: center;
-  border: 2rpx solid rgba(65, 92, 141, 0.12);
+  border: 2rpx solid rgba(65, 92, 141, 0.18);
   border-radius: 999rpx;
-  color: #4b618a;
+  color: #304b78;
   font-size: 44rpx;
-  font-weight: 200;
-  background: rgba(255, 255, 255, 0.78);
+  font-weight: 300;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 8rpx 22rpx rgba(35, 61, 108, 0.18);
 }
 .mood-close-closing {
   pointer-events: none;
@@ -495,6 +500,19 @@
 }
 .mood-publish-action-icon { margin-right: 6rpx; font-size: 24rpx; line-height: 1; }
 .mood-publish-badge { padding: 5rpx 12rpx; border-radius: 999rpx; color: #4a70b8; font-size: 18rpx; background: #edf3ff; }
+.mood-official-unavailable {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 176rpx;
+  padding: 22rpx;
+  border-radius: 18rpx;
+  text-align: center;
+  background: #f4f7fc;
+}
+.mood-official-unavailable-title { display: block; color: #536987; font-size: 24rpx; font-weight: 600; }
+.mood-official-unavailable-sub { display: block; margin-top: 10rpx; color: #93a1b6; font-size: 20rpx; line-height: 1.5; }
 .mood-privacy {
   display: block;
   margin-top: 14rpx;
