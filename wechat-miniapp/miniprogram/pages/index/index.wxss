@@ -479,6 +479,21 @@
 .mood-publish-title, .mood-publish-sub { display: block; }
 .mood-publish-title { color: #31445f; font-size: 28rpx; font-weight: 700; }
 .mood-publish-sub { margin-top: 5rpx; color: #8a98ac; font-size: 20rpx; }
+.mood-publish-head-right { display: flex; flex-direction: row; align-items: center; gap: 10rpx; }
+.mood-publish-action {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 10rpx 18rpx;
+  border: 2rpx solid #d7e3f7;
+  border-radius: 999rpx;
+  color: #315a9d;
+  font-size: 22rpx;
+  font-weight: 600;
+  background: #f3f7ff;
+  box-shadow: 0 5rpx 14rpx rgba(57, 91, 153, 0.12);
+}
+.mood-publish-action-icon { margin-right: 6rpx; font-size: 24rpx; line-height: 1; }
 .mood-publish-badge { padding: 5rpx 12rpx; border-radius: 999rpx; color: #4a70b8; font-size: 18rpx; background: #edf3ff; }
 .mood-privacy {
   display: block;
