@@ -531,6 +531,39 @@ Page({
     })
   },
 
+  onOfficialPublishMood() {
+    if (typeof wx.shareToOfficialAccount !== 'function') {
+      wx.showToast({ title: '当前微信版本不支持贴图发表', icon: 'none' })
+      return
+    }
+
+    const article = this.data.moodArticle || this.buildMoodArticle()
+    const lines = article.split(/\n+/)
+    const title = (lines.shift() || '天气心情贴').trim()
+    const content = lines.join('\n').trim()
+    const options = {
+      title,
+      content,
+      tags: ['天气心情贴', '天气', '心情'],
+      recommendPath: '/pages/index/index',
+      recommendTitle: '制作我的天气心情贴',
+      success: (result) => {
+        wx.showToast({
+          title: result && result.postUrl ? '贴图已发布' : '已打开官方发表页',
+          icon: 'none',
+        })
+      },
+      fail: (error) => {
+        const message = error && error.errMsg ? error.errMsg : ''
+        if (!/cancel|abort|deny/i.test(message)) {
+          console.error('[mood] official publish api failed', error)
+          wx.showToast({ title: '官方发表页打开失败', icon: 'none' })
+        }
+      },
+    }
+    if (this.data.moodPreview) options.images = [this.data.moodPreview]
+    wx.shareToOfficialAccount(options)
+  },
   onCopyMoodArticle() {
     wx.setClipboardData({
       data: this.data.moodArticle || this.buildMoodArticle(),
