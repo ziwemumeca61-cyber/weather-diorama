@@ -393,7 +393,7 @@ export function createScene(canvas, opts) {
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
   renderer.toneMapping = THREE.ACESFilmicToneMapping
-  renderer.toneMappingExposure = 1.13
+  renderer.toneMappingExposure = 1.06
   if (THREE.SRGBColorSpace) renderer.outputColorSpace = THREE.SRGBColorSpace
 
   const scene = new THREE.Scene()
@@ -414,7 +414,7 @@ export function createScene(canvas, opts) {
   const hemisphere = new THREE.HemisphereLight(0xbcd9ec, 0x3a3f47, 0.46)
   // 晴天采用更强的定向日照：幕墙会有高光，建筑和树木也有清晰但柔和的投影。
   // 这是晴天真正参与建筑明暗和投影的太阳光源，不是只显示在天空里的装饰球。
-  const sun = new THREE.DirectionalLight(0xfff7e7, 3.65)
+  const sun = new THREE.DirectionalLight(0xfff7e7, 3.3)
   sun.position.copy(daySunPosition)
   sun.castShadow = true
   sun.shadow.mapSize.set(1024, 1024)
@@ -436,7 +436,11 @@ export function createScene(canvas, opts) {
   warmFill.position.set(-2, 11, -12)
   const groundFill = new THREE.DirectionalLight(0x9eb6d6, 0.1)
   groundFill.position.set(0, -6, 0)
-  scene.add(ambient, hemisphere, sun, blueFill, warmFill, groundFill)
+  // 只增加一盏不投影的暖色地标补光，夜间突出轮廓，开销远低于给每栋建筑加灯。
+  const landmarkFill = new THREE.PointLight(0xffd6a0, 0.06, 12, 2)
+  landmarkFill.position.set(0, 5.5, 1.5)
+  landmarkFill.castShadow = false
+  scene.add(ambient, hemisphere, sun, blueFill, warmFill, groundFill, landmarkFill)
 
   const sky = createSky()
   scene.add(sky.group)
@@ -467,12 +471,12 @@ export function createScene(canvas, opts) {
     sun: new THREE.Color(0xfff4e2),
     ambient: new THREE.Color(0xaecbe6),
     sunPosition: daySunPosition.clone(),
-    sunIntensity: 3.65,
+    sunIntensity: 3.3,
     ambientIntensity: 0.58,
     fogDensity: 0.003,
     night: 0,
     buildingGlow: 0,
-    landmarkGlow: 0.15,
+    landmarkGlow: 0.05,
   }
   const target = {
     sky: new THREE.Color(0xbcd9ec),
@@ -484,7 +488,7 @@ export function createScene(canvas, opts) {
     fogDensity: 0.003,
     night: 0,
     buildingGlow: 0,
-    landmarkGlow: 0.15,
+    landmarkGlow: 0.05,
   }
   const grey = new THREE.Color(0x9aa2ab)
   const sunGrey = new THREE.Color(0xcfd6de)
@@ -503,7 +507,7 @@ export function createScene(canvas, opts) {
       target.sky.set(0xbcd9ec)
       target.sun.set(0xfff7e7)
       target.ambient.set(0xaecbe6)
-      target.sunIntensity = 3.65
+      target.sunIntensity = 3.3
       target.ambientIntensity = 0.58
       target.sunPosition.copy(daySunPosition)
       target.night = 0
@@ -516,7 +520,7 @@ export function createScene(canvas, opts) {
     // 雾天提高体积雾浓度，拉开近景与远景的层次；雨天保持较低浓度避免糊屏。
     target.fogDensity = currentWeather === 'fog' ? 0.055 : currentWeather === 'rain' || currentWeather === 'thunder' ? 0.0065 : currentWeather === 'snow' ? 0.0045 : 0.003
     target.buildingGlow = isNight ? 1.15 : 0
-    target.landmarkGlow = isNight ? 0.9 : 0.15
+    target.landmarkGlow = isNight ? 1.05 : 0.05
   }
 
   function applyGlow() {
@@ -758,6 +762,7 @@ export function createScene(canvas, opts) {
     blueFill.intensity = Math.max(0.025, current.ambientIntensity * (0.32 + weatherLight.grey * 0.22) * nightLight)
     warmFill.intensity = Math.max(0.018, current.sunIntensity * 0.075 * nightLight)
     groundFill.intensity = Math.max(0.012, current.ambientIntensity * 0.14 * nightLight)
+    landmarkFill.intensity = 0.055 + current.night * 0.58
     if (scene.environmentIntensity != null) {
       scene.environmentIntensity = 0.65 * (0.78 + weatherLight.grey * 0.22) * nightLight
     }
