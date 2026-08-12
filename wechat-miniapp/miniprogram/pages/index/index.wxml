@@ -4,6 +4,7 @@
     type="webgl"
     id="gl"
     class="gl"
+    hidden="{{moodOpen}}"
     bindtouchstart="onCanvasTouchStart"
     bindtouchmove="onCanvasTouchMove"
     bindtouchend="onCanvasTouchEnd"
@@ -21,7 +22,7 @@
   </view>
 
   <!-- 昼夜切换（浮在画布右上角） -->
-  <view class="daynight" wx:if="{{!glFailed}}" bindtap="onToggleNight">{{night ? '🌙' : '☀️'}}</view>
+  <view class="daynight" wx:if="{{!glFailed && !moodOpen}}" bindtap="onToggleNight">{{night ? '🌙' : '☀️'}}</view>
 
   <!-- 下半屏：控制面板（普通 view，不与 canvas 重叠，一定可见） -->
   <view class="panel">
@@ -84,8 +85,11 @@
 
   <!-- 独立制作层：避免把主页挤得很长，图片始终由用户主动选择或主动生成。 -->
   <view class="mood-mask {{moodClosing ? 'mood-mask-closing' : ''}}" wx:if="{{moodOpen}}" bindtap="onMoodClose">
-    <view class="mood-sheet {{moodClosing ? 'mood-sheet-closing' : 'mood-sheet-opening'}}" style="top: {{moodSheetTopPx}}px;" catchtap="onMoodSheetTap" bindanimationend="onMoodSheetAnimationEnd">
-      <view class="mood-sheet-head">
+    <view class="mood-sheet {{moodClosing ? 'mood-sheet-closing' : 'mood-sheet-opening'}}" catchtap="onMoodSheetTap" bindanimationend="onMoodSheetAnimationEnd">
+      <view class="mood-sheet-head" style="padding-top: {{moodSheetTopPx}}px;">
+        <view class="mood-editor-close" catchtap="onMoodClose" aria-label="关闭天气心情贴">
+          <text class="mood-editor-close-icon">×</text><text>关闭</text>
+        </view>
         <view class="mood-sheet-copy">
           <text class="mood-sheet-eyebrow">WEATHER MOMENT</text>
           <text class="mood-sheet-title">把今天，贴进天气里</text>
@@ -94,17 +98,18 @@
         <view class="mood-sheet-weather"><text>{{emoji}}</text></view>
       </view>
 
+      <view class="mood-tabs" aria-label="选择制作方式">
+        <view class="mood-tab {{moodTab === 'photo' ? 'mood-tab-on' : ''}}" data-tab="photo" bindtap="onMoodTab">我的照片</view>
+        <view class="mood-tab {{moodTab === 'ai' ? 'mood-tab-on' : ''}}" data-tab="ai" bindtap="onMoodTab">✨ AI 生图</view>
+      </view>
+
       <scroll-view
         class="mood-sheet-body"
         scroll-y
         enhanced
-        show-scrollbar="{{false}}"
+        show-scrollbar="{{true}}"
         scroll-top="{{moodScrollTop}}"
       >
-      <view class="mood-tabs" aria-label="选择制作方式">
-        <view class="mood-tab {{moodTab === 'photo' ? 'mood-tab-on' : ''}}" data-tab="photo" bindtap="onMoodTab">我的照片</view>
-        <view class="mood-tab {{moodTab === 'ai' ? 'mood-tab-on' : ''}}" data-tab="ai" bindtap="onMoodTab">AI 心情贴</view>
-      </view>
 
       <view class="mood-section">
         <view class="mood-section-head">
@@ -139,6 +144,10 @@
             <text class="mood-style-sub">{{item.copy}}</text>
           </view>
         </scroll-view>
+        <view class="mood-main-action {{!moodImageEnabled ? 'mood-main-disabled' : ''}}" bindtap="onGenerateAiMood">
+          <text class="mood-action-icon">{{moodLoading ? '◌' : '✦'}}</text>
+          <text>{{moodLoading ? '正在生成…' : moodImageEnabled ? '生成 AI 天气心情贴' : 'AI 生图暂不可用'}}</text>
+        </view>
       </view>
 
       <view class="mood-writing">
@@ -162,10 +171,6 @@
           <text class="mood-preview-title">{{moodLoading ? '正在生成你的天气心情贴' : moodTab === 'photo' ? '点击“发一条”选择照片' : '让天气替你画出心情'}}</text>
           <text class="mood-preview-sub">{{moodLoading ? '请稍候，完成后可保存或发表' : moodTab === 'photo' ? '进入官方发表页后可从相册或相机选择' : '选择心情和画面风格后开始生成'}}</text>
         </view>
-      </view>
-
-      <view class="mood-main-action {{!moodImageEnabled ? 'mood-main-disabled' : ''}}" wx:if="{{moodTab === 'ai' && !moodPreview}}" bindtap="onGenerateAiMood">
-        <text class="mood-action-icon">{{moodLoading ? '◌' : '✦'}}</text><text>{{moodLoading ? '正在生成…' : moodImageEnabled ? '生成 AI 心情贴' : '心情画面暂不可用'}}</text>
       </view>
 
       <text class="mood-ai-note" wx:if="{{moodTab === 'ai' && moodPreview}}">已生成背景。修改上面的文字只会本地重新排版，不会再消耗生图额度。</text>
@@ -211,11 +216,5 @@
       <text class="mood-privacy">照片仅在本机合成；AI 画面只在你主动生成时调用。</text>
       </scroll-view>
     </view>
-    <view
-      class="mood-close-float {{moodClosing ? 'mood-close-closing' : ''}}"
-      style="top: {{moodCloseTopPx}}px;"
-      catchtap="onMoodClose"
-      aria-label="关闭天气心情贴"
-    >×</view>
   </view>
 </view>
