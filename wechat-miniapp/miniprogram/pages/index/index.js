@@ -39,8 +39,7 @@ Page({
     moodSaving: false,
     officialPublishEnabled: false,
     moodScrollTop: 0,
-    moodSheetTopPx: 72,
-    moodCloseTopPx: 84,
+    moodSheetTopPx: 56,
     moodOptions: [
       { key: 'calm', emoji: '🌫️', label: '暂时不想解释', copy: '暂时不想解释，也没关系。雾会散，我先安静一会。' },
       { key: 'happy', emoji: '🌤️', label: '好事正在靠近', copy: '风吹开云的时候，我忽然觉得，好事正在靠近。' },
@@ -273,9 +272,9 @@ Page({
     } catch (error) {
       console.warn('[mood] platform detection unavailable', error)
     }
-    // 官方发表组件和 shareToOfficialAccount 在开发者工具、Windows、Mac、鸿蒙环境不可用。
-    const unsupported = /devtools|windows|mac|ohos|harmony/.test(platform)
-    this.setData({ officialPublishEnabled: !unsupported })
+    // 官方发表组件和 shareToOfficialAccount 只在 Android / iPhone 手机微信中启用。
+    const supported = /android|ios/.test(platform)
+    this.setData({ officialPublishEnabled: supported })
   },
   updateMoodLayout() {
     const win = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
@@ -287,14 +286,9 @@ Page({
     } catch (error) {
       console.warn('[mood] menu button metrics unavailable', error)
     }
-    // 开发者工具偶尔返回异常的胶囊 bottom，必须限制弹层顶部，避免弹层只剩屏幕下半段。
-    const measuredTop = Math.max(statusBarHeight + 12, menuBottom + 8, 56)
-    const maxTop = win.windowHeight ? Math.max(64, Math.floor(Number(win.windowHeight) * 0.12)) : 96
-    const sheetTop = Math.ceil(Math.min(measuredTop, maxTop))
-    this.setData({
-      moodSheetTopPx: sheetTop,
-      moodCloseTopPx: sheetTop + 10,
-    })
+    // 弹层本身从屏幕顶部开始，这个值只负责把头部内容放到状态栏/胶囊下方。
+    const headerTop = Math.ceil(Math.max(statusBarHeight + 12, Math.min(menuBottom + 8, 96), 44))
+    this.setData({ moodSheetTopPx: headerTop })
   },
 
   onMoodToggle() {
@@ -339,7 +333,9 @@ Page({
       moodPreview: '',
       moodBackground: background,
       moodBackgroundType: background ? 'photo' : '',
+      moodScrollTop: 1,
     }, () => {
+      this.setData({ moodScrollTop: 0 })
       this.refreshMoodArticle()
       if (background) this.recomposeMoodSticker()
     })
@@ -679,6 +675,7 @@ Page({
   },
 
   onUnload() {
+    clearTimeout(this._moodCloseTimer)
     if (sceneApi) sceneApi.dispose()
     sceneApi = null
     this._moodCanvas = null
