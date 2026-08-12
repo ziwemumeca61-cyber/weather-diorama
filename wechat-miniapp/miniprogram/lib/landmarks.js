@@ -10,11 +10,11 @@ import { buildEnhancedLandmark } from './landmarksEnhanced'
 
 function std(color, opts) {
   return new THREE.MeshStandardMaterial(
-    Object.assign({ color: new THREE.Color(color), roughness: 0.6, metalness: 0.2 }, opts || {}),
+    Object.assign({ color: new THREE.Color(color), roughness: 0.56, metalness: 0.18, envMapIntensity: 0.72 }, opts || {}),
   )
 }
 function glowMat(color, emissive) {
-  const m = std(color, { emissive: new THREE.Color(emissive), emissiveIntensity: 0.15 })
+  const m = std(color, { emissive: new THREE.Color(emissive), emissiveIntensity: 0.08 })
   return m
 }
 // 带釉面瓦纹理的屋顶材质（贴图已含底色，故 color 取白）
@@ -1694,9 +1694,9 @@ function curtainWall(accent, repX, repY) {
     emissiveMap: tex.emissiveMap,
     roughnessMap: tex.roughnessMap,
     emissiveIntensity: 0.15,
-    metalness: 0.7,
-    roughness: 0.25,
-    envMapIntensity: 1.5,
+    metalness: 0.68,
+    roughness: 0.19,
+    envMapIntensity: 2.15,
   })
 }
 
@@ -2434,24 +2434,106 @@ export function hasOwnWater(name) {
 // 没有专属造型的城市不再退回同一根通用主塔，而是按城市名哈希生成一座
 // 程序化地标（4 种原型 × 8 种配色 × 随机朝向），让每座陌生城市各不相同。
 const TOURIST_CITY_KEYS = ['北京', '上海', '杭州', '苏州', '西安', '成都', '重庆', '青岛', '烟台', '威海', '哈尔滨', '香港', '澳门', '台北']
+const COASTAL_CITY_KEYS = ['上海', '广州', '深圳', '天津', '青岛', '香港', '澳门', '海口', '烟台', '威海', '日照', '福州']
+const NORTHWEST_CITY_KEYS = ['呼和浩特', '兰州', '西宁', '乌鲁木齐', '银川']
+const MODERN_CITY_KEYS = ['重庆', '东营', '潍坊', '德州', '淄博', '南宁']
+
+function regionalSight(key, index) {
+  const rand = mulberry32(hashName(key + '_regional_' + index))
+  const accent = GENERIC_ACCENTS[Math.floor(rand() * GENERIC_ACCENTS.length)]
+  let result
+  if (COASTAL_CITY_KEYS.indexOf(key) >= 0) {
+    const kind = (hashName(key) + index) % 3
+    result = kind === 0
+      ? lighthouse()
+      : kind === 1
+        ? genDomedCivic(accent, rand)
+        : slabTower({ h: 7.4 + rand() * 1.8, w: 0.78, color: accent, taper: 0.24 })
+  } else if (NORTHWEST_CITY_KEYS.indexOf(key) >= 0) {
+    const kind = (hashName(key) + index) % 3
+    result = kind === 0
+      ? stupa()
+      : kind === 1
+        ? paifang()
+        : pagoda({ tiers: 4, baseR: 0.9, tierH: 1.0, body: shade(accent, 0.12), roof: shade(accent, -0.2) })
+  } else if (MODERN_CITY_KEYS.indexOf(key) >= 0) {
+    const builds = [genGlassSupertall, genTwinTowers, genSetbackDeco, genDomedCivic]
+    result = builds[(hashName(key) + index) % builds.length](accent, rand)
+  } else {
+    const kind = (hashName(key) + index) % 3
+    result = kind === 0
+      ? cityGate()
+      : kind === 1
+        ? pagoda({ tiers: 4 + Math.floor(rand() * 2), baseR: 0.9, tierH: 1.0, body: shade(accent, 0.12), roof: shade(accent, -0.2) })
+        : pavilion({ tiers: 2 + Math.floor(rand() * 2), w: 2.8, d: 2.3, tierH: 1.2, body: shade(accent, 0.08), roof: shade(accent, -0.22), platform: 0.55 })
+  }
+  result.group.rotation.y += (rand() - 0.5) * 0.7
+  return result
+}
+
+function polishLandmark(key, result) {
+  if (!result || !result.group || result.group.userData.visualPolished) return result
+  result.glow = result.glow || []
+  const glowing = result.glow.slice()
+  result.group.traverse((object) => {
+    if (!object.isMesh) return
+    object.castShadow = true
+    object.receiveShadow = true
+    const materials = Array.isArray(object.material) ? object.material : [object.material]
+    materials.forEach((material) => {
+      if (!material) return
+      material.dithering = true
+      if (material.roughness != null) material.roughness = Math.max(0.16, Math.min(0.84, material.roughness))
+      if (material.envMapIntensity != null) {
+        const reflective = material.metalness != null && material.metalness > 0.35
+        material.envMapIntensity = Math.max(material.envMapIntensity || 0, reflective ? 1.35 : 0.62)
+      }
+      const hasGlow = material.emissiveMap || (
+        material.emissive && typeof material.emissive.getHex === 'function' && material.emissive.getHex() !== 0
+      )
+      if (hasGlow && glowing.indexOf(material) < 0) glowing.push(material)
+    })
+  })
+  result.group.updateMatrixWorld(true)
+  const bounds = new THREE.Box3().setFromObject(result.group)
+  const center = bounds.getCenter(new THREE.Vector3())
+  const size = bounds.getSize(new THREE.Vector3())
+  const radius = Math.max(1.5, Math.min(5.2, Math.hypot(size.x, size.z) * 0.42))
+  const accent = GENERIC_ACCENTS[hashName(key) % GENERIC_ACCENTS.length]
+  const haloMaterial = glowMat(shade(accent, 0.08), shade(accent, 0.18))
+  haloMaterial.transparent = true
+  haloMaterial.opacity = 0.58
+  haloMaterial.depthWrite = false
+  const halo = new THREE.Mesh(new THREE.TorusGeometry(radius, 0.035, 6, 40), haloMaterial)
+  halo.position.set(center.x, 0.075, center.z)
+  halo.rotation.x = Math.PI / 2
+  halo.castShadow = false
+  halo.receiveShadow = false
+  result.group.add(halo)
+  glowing.push(haloMaterial)
+  result.glow = glowing
+  result.group.userData.visualPolished = true
+  return result
+}
 
 function ensureLandmarkSet(key, result) {
   if (!result || !result.group) return result
-  const target = TOURIST_CITY_KEYS.indexOf(key) >= 0 ? 3 : 2
+  // 53 个已登记城市统一至少 3 处；重点旅游城市至少 4 处。
+  // 补景沿用地域原型和城市哈希配色，既避免同质化，也不引入外部模型/贴图。
+  const target = TOURIST_CITY_KEYS.indexOf(key) >= 0 ? 4 : 3
   const count = result.group.userData.landmarkCount || 1
-  if (count >= target) return result
   result.glow = result.glow || []
-  const positions = [[-3.75, 2.7], [3.55, -2.7], [-3.5, -2.6]]
+  const positions = [[-3.75, 2.7], [3.55, -2.7], [-3.5, -2.6], [3.6, 2.55]]
   for (let i = count; i < target; i++) {
-    const extra = proceduralLandmark(key + '_sight_' + i)
+    const extra = regionalSight(key, i)
     const at = positions[(i - count) % positions.length]
     extra.group.position.set(at[0], 0, at[1])
-    extra.group.scale.setScalar(0.34 + (i % 2) * 0.07)
+    extra.group.scale.setScalar(0.29 + (i % 2) * 0.055)
     result.group.add(extra.group)
     ;(extra.glow || []).forEach((material) => result.glow.push(material))
   }
-  result.group.userData.landmarkCount = target
-  return result
+  result.group.userData.landmarkCount = Math.max(count, target)
+  return polishLandmark(key, result)
 }
 
 // 这些城市在旧库中已有可辨识的专属地标组合，优先使用，避免被通用玻璃塔替代。
