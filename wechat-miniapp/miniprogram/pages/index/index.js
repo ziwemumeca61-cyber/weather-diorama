@@ -311,16 +311,31 @@ Page({
     clearTimeout(this._moodCloseTimer)
     this.setData({ moodClosing: true })
     this._moodCloseTimer = setTimeout(() => {
-      if (this.data.moodClosing) this.setData({ moodOpen: false, moodClosing: false })
+      if (this.data.moodClosing) this.finishMoodClose()
     }, 320)
+  },
+
+  finishMoodClose() {
+    clearTimeout(this._moodCloseTimer)
+    this.setData({ moodOpen: false, moodClosing: false }, () => {
+      const restoreSceneSize = () => {
+        wx.createSelectorQuery()
+          .select('#gl')
+          .boundingClientRect((rect) => {
+            if (sceneApi && rect && rect.width && rect.height) sceneApi.resize(rect.width, rect.height)
+          })
+          .exec()
+      }
+      if (wx.nextTick) wx.nextTick(restoreSceneSize)
+      else setTimeout(restoreSceneSize, 0)
+    })
   },
 
   onMoodSheetAnimationEnd(e) {
     if (!this.data.moodClosing) return
     const name = e && e.detail ? e.detail.animationName : ''
     if (name && name !== 'mood-sheet-out') return
-    clearTimeout(this._moodCloseTimer)
-    this.setData({ moodOpen: false, moodClosing: false })
+    this.finishMoodClose()
   },
 
   onMoodSheetTap() {},
