@@ -62,11 +62,28 @@
   flex-direction: row;
   align-items: flex-end;
   justify-content: space-between;
-  margin-bottom: 26rpx;
+  margin-bottom: 18rpx;
 }
 .s-left {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+}
+.s-place-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  min-width: 0;
+}
+.s-place-meta {
+  flex: none;
+  margin-left: 14rpx;
+  padding: 6rpx 12rpx;
+  border-radius: 999rpx;
+  background: rgba(111, 154, 232, 0.18);
+  border: 2rpx solid rgba(153, 188, 255, 0.18);
+  color: #bcd0f2;
+  font-size: 18rpx;
 }
 .s-city {
   font-size: 48rpx;
@@ -86,11 +103,40 @@
   line-height: 1;
 }
 
-/* 七天预报横条 */
+/* 小时 / 七日预报横条 */
+.forecast-head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+}
+.forecast-title {
+  color: #dfe8f7;
+  font-size: 23rpx;
+  font-weight: 600;
+}
+.forecast-switch {
+  display: flex;
+  flex-direction: row;
+  padding: 4rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.06);
+}
+.forecast-switch-item {
+  padding: 7rpx 16rpx;
+  border-radius: 999rpx;
+  color: #8390a6;
+  font-size: 20rpx;
+}
+.forecast-switch-item.on {
+  color: #ffffff;
+  background: rgba(91, 134, 230, 0.8);
+}
 .fc {
   white-space: nowrap;
   width: 100%;
-  margin-bottom: 22rpx;
+  margin-bottom: 16rpx;
 }
 .fc-item {
   display: inline-flex;
@@ -120,6 +166,14 @@
   font-size: 22rpx;
   color: #7c88a0;
   margin-top: 2rpx;
+}
+.hourly-item {
+  min-width: 112rpx;
+}
+.fc-rain {
+  margin-top: 3rpx;
+  color: #79aee9;
+  font-size: 18rpx;
 }
 
 /* 天气心情贴：亮色、轻量的制作页；官方「发一条」组件保持原生。 */

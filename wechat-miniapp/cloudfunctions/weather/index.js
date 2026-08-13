@@ -9,6 +9,10 @@ function getJSON(url) {
         let data = ''
         res.on('data', (c) => (data += c))
         res.on('end', () => {
+          if (res.statusCode < 200 || res.statusCode >= 300) {
+            reject(new Error('HTTP ' + res.statusCode + ': ' + data.slice(0, 120)))
+            return
+          }
           try {
             resolve(JSON.parse(data))
           } catch (e) {
@@ -32,36 +36,88 @@ function kindFromCode(code) {
   return 'clear'
 }
 
+async function reverseDistrict(latitude, longitude) {
+  const key = process.env.TENCENT_MAP_KEY || process.env.QQ_MAP_KEY
+  if (!key) return null
+  const location = Number(latitude).toFixed(6) + ',' + Number(longitude).toFixed(6)
+  const response = await getJSON(
+    'https://apis.map.qq.com/ws/geocoder/v1/?location=' + location +
+      '&key=' + encodeURIComponent(key) + '&get_poi=0',
+  )
+  if (response.status !== 0 || !response.result) {
+    throw new Error(response.message || '腾讯位置服务区县反查失败')
+  }
+  const component = response.result.address_component || {}
+  return {
+    name: component.district || component.city || component.province || '',
+    city: component.city || component.province || '',
+    district: component.district || '',
+    province: component.province || '',
+    adcode: response.result.ad_info && response.result.ad_info.adcode,
+    precision: component.district ? 'district' : 'city',
+  }
+}
+
 exports.main = async (event = {}) => {
   try {
     let { query, latitude, longitude, name } = event
-    // 没给经纬度就先地理编码
-    if (latitude == null || longitude == null) {
+    let place = null
+    const isCoordinateLookup = latitude != null && longitude != null
+
+    if (!isCoordinateLookup) {
       const q = encodeURIComponent(query || '上海')
       const g = await getJSON(
-        `https://geocoding-api.open-meteo.com/v1/search?name=${q}&count=1&language=zh&format=json`,
+        'https://geocoding-api.open-meteo.com/v1/search?name=' + q + '&count=1&language=zh&format=json',
       )
-      if (!g.results || !g.results.length) return { ok: false, error: '未找到该城市' }
+      if (!g.results || !g.results.length) return { ok: false, error: '未找到该城市或区县' }
       const r = g.results[0]
       latitude = r.latitude
       longitude = r.longitude
       name = r.name
+      const district = r.admin3 || r.admin4 || (/区$|县$|旗$/.test(r.name || '') ? r.name : '')
+      place = {
+        name: district || r.name || query || '',
+        city: r.admin2 || r.admin1 || r.name || '',
+        district,
+        province: r.admin1 || '',
+        precision: district ? 'district' : 'city',
+      }
+    } else {
+      try {
+        place = await reverseDistrict(latitude, longitude)
+      } catch (e) {
+        console.warn('[weather] reverse geocoder fallback', e && e.message)
+      }
+      if (!place) {
+        place = { name: name || '当前位置', city: name || '', district: '', province: '', precision: 'city' }
+      }
     }
+
     const f = await getJSON(
-      `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
-        `&current=temperature_2m,weather_code,is_day` +
-        `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
-        `&timezone=auto&forecast_days=7`,
+      'https://api.open-meteo.com/v1/forecast?latitude=' + latitude + '&longitude=' + longitude +
+        '&current=temperature_2m,weather_code,is_day' +
+        '&hourly=temperature_2m,weather_code,precipitation_probability,is_day' +
+        '&daily=weather_code,temperature_2m_max,temperature_2m_min' +
+        '&timezone=auto&forecast_days=7&forecast_hours=24',
     )
     const cur = f.current || {}
+    if (!Number.isFinite(cur.temperature_2m) || cur.weather_code == null) {
+      return { ok: false, error: '天气数据暂不可用，请稍后重试' }
+    }
     return {
       ok: true,
-      place: { name: name || query || '', latitude, longitude },
+      place: {
+        ...place,
+        latitude: Number(latitude),
+        longitude: Number(longitude),
+      },
+      currentTime: cur.time || '',
       utcOffsetSeconds: f.utc_offset_seconds || 0,
       temperature: Math.round(cur.temperature_2m),
       weatherCode: cur.weather_code,
       kind: kindFromCode(cur.weather_code),
       isDay: cur.is_day === 1,
+      hourly: f.hourly || null,
       daily: f.daily || null,
     }
   } catch (e) {

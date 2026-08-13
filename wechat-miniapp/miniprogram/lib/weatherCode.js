@@ -57,10 +57,46 @@ export function buildForecast(daily) {
 }
 
 /** 由 UTC 偏移得到当地小时 + 中文日期 */
-export function localTime(utcOffsetSeconds) {
+export function localTime(utcOffsetSeconds, localISO) {
+  const match = String(localISO || '').match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2})/)
+  if (match) {
+    return {
+      hour: Number(match[4]),
+      dateLabel: `${Number(match[2])}月${Number(match[3])}日`,
+    }
+  }
   const d = new Date(Date.now() + (utcOffsetSeconds || 0) * 1000)
   return {
     hour: d.getUTCHours(),
     dateLabel: `${d.getUTCMonth() + 1}月${d.getUTCDate()}日`,
   }
+}
+
+/** 直接使用 Open-Meteo 返回的当地时间，生成未来 24 小时横向卡片。 */
+export function buildHourly(hourly) {
+  if (!hourly || !Array.isArray(hourly.time) || !hourly.time.length) return []
+  const times = hourly.time
+  const codes = hourly.weather_code || []
+  const temps = hourly.temperature_2m || []
+  const rains = hourly.precipitation_probability || []
+  const isDay = hourly.is_day || []
+  const firstDate = String(times[0]).slice(0, 10)
+  const out = []
+  for (let i = 0; i < times.length && i < 24; i++) {
+    const time = String(times[i] || '')
+    const kind = kindFromCode(codes[i])
+    const hour = time.slice(11, 13)
+    const nextDate = time.slice(0, 10)
+    const rain = rains[i] == null ? null : Math.max(0, Math.min(100, Math.round(rains[i])))
+    out.push({
+      time,
+      label: i === 0 ? '现在' : nextDate !== firstDate && hour === '00' ? '明天' : `${hour || '--'}时`,
+      emoji: kind === 'clear' && isDay[i] === 0 ? '🌙' : KIND_EMOJI[kind],
+      kind,
+      temp: temps[i] == null ? '—' : Math.round(temps[i]),
+      rain,
+      rainLabel: rain == null ? '降水 —' : `降水 ${rain}%`,
+    })
+  }
+  return out
 }

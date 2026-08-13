@@ -1,5 +1,5 @@
 import { createScene } from '../../lib/scene'
-import { KIND_LABEL, KIND_EMOJI, KINDS, localTime, buildForecast } from '../../lib/weatherCode'
+import { KIND_LABEL, KIND_EMOJI, KINDS, localTime, buildForecast, buildHourly } from '../../lib/weatherCode'
 import { nearestCity } from '../../lib/cityCoords'
 import { MOOD_IMAGE_ENABLED } from '../../lib/meta'
 import { makeWeatherMoodSticker } from '../../lib/weatherMoodSticker'
@@ -12,6 +12,7 @@ const MOOD_AI_COOLDOWN_KEY = 'moodAiCooldownUntil'
 Page({
   data: {
     place: '—',
+    placeMeta: '',
     emoji: '☀️',
     temp: '—',
     kindLabel: '',
@@ -21,6 +22,8 @@ Page({
     labels: KIND_LABEL,
     curKind: 'clear',
     night: false,
+    forecastMode: 'hourly',
+    hourly: [],
     forecast: [],
     loading: true,
     errMsg: '',
@@ -125,28 +128,34 @@ Page({
   },
 
   applyWeather(d) {
-    const lt = localTime(d.utcOffsetSeconds)
-    const name = d.place.name
+    const lt = localTime(d.utcOffsetSeconds, d.currentTime)
+    const place = d.place || {}
+    const displayName = place.name || '当前位置'
+    const hit = nearestCity(place.latitude, place.longitude, 220)
+    const sceneCity = (hit && hit.name) || place.city || displayName
+    const districtLocated = place.precision === 'district' && place.district
     this.setData({
-      place: name,
+      place: displayName,
+      placeMeta: districtLocated ? ((place.city ? place.city + ' · ' : '') + '区县定位') : '城市天气',
       temp: d.temperature,
       curKind: d.kind,
       kindLabel: KIND_LABEL[d.kind],
       emoji: KIND_EMOJI[d.kind],
       dateLabel: lt.dateLabel,
       night: !d.isDay,
+      hourly: buildHourly(d.hourly),
       forecast: buildForecast(d.daily),
       loading: false,
       errMsg: '',
     })
     this.refreshMoodArticle()
-    if (name) wx.setStorage({ key: LAST_CITY, data: name })
+    if (sceneCity) wx.setStorage({ key: LAST_CITY, data: sceneCity })
     if (sceneApi) {
-      sceneApi.setCity(name)
+      sceneApi.setCity(sceneCity)
       sceneApi.setNight(!d.isDay)
       sceneApi.setWeather(d.kind)
     } else {
-      this._pendingCity = name
+      this._pendingCity = sceneCity
       this._pendingKind = d.kind
       this._pendingNight = !d.isDay
     }
@@ -154,10 +163,13 @@ Page({
 
   callWeather(payload) {
     this._lastPayload = payload // 供「重试」用
+    const requestId = (this._weatherRequestId || 0) + 1
+    this._weatherRequestId = requestId
     this.setData({ loading: true, errMsg: '' })
     wx.cloud
       .callFunction({ name: 'weather', data: payload })
       .then((r) => {
+        if (requestId !== this._weatherRequestId) return
         const d = (r && r.result) || {}
         if (!d.ok) {
           // 城市查不到属于输入问题，提示即可，不摆重试条
@@ -168,6 +180,7 @@ Page({
         this.applyWeather(d)
       })
       .catch((e) => {
+        if (requestId !== this._weatherRequestId) return
         console.error('[cloud] weather failed', e)
         // 弱网/断网下审核会踩到这里：给明确文案和重试入口，而不是空白页
         wx.getNetworkType({
@@ -214,6 +227,11 @@ Page({
         else wx.showToast({ title: '需要定位授权', icon: 'none' })
       },
     })
+  },
+
+  onForecastMode(e) {
+    const mode = e.currentTarget.dataset.mode
+    if (mode === 'hourly' || mode === 'daily') this.setData({ forecastMode: mode })
   },
 
   onInput(e) {

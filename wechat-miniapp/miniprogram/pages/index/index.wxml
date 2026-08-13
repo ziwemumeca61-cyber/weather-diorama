@@ -29,14 +29,33 @@
     <view class="grip"></view>
     <view class="summary">
       <view class="s-left">
-        <text class="s-city">{{place}}</text>
+        <view class="s-place-row">
+          <text class="s-city">{{place}}</text>
+          <text class="s-place-meta" wx:if="{{placeMeta}}">{{placeMeta}}</text>
+        </view>
         <text class="s-kind">{{emoji}} {{kindLabel}} · {{dateLabel}}</text>
       </view>
       <text class="s-temp">{{temp}}°</text>
     </view>
 
-    <!-- 七天预报（云函数早就返回了 daily，之前一直没用上） -->
-    <scroll-view class="fc" scroll-x enable-flex wx:if="{{forecast.length}}">
+    <view class="forecast-head" wx:if="{{hourly.length || forecast.length}}">
+      <text class="forecast-title">{{forecastMode === 'hourly' ? '未来24小时' : '未来7日'}}</text>
+      <view class="forecast-switch">
+        <view class="forecast-switch-item {{forecastMode === 'hourly' ? 'on' : ''}}" data-mode="hourly" bindtap="onForecastMode">逐小时</view>
+        <view class="forecast-switch-item {{forecastMode === 'daily' ? 'on' : ''}}" data-mode="daily" bindtap="onForecastMode">7日</view>
+      </view>
+    </view>
+
+    <scroll-view class="fc" scroll-x enable-flex wx:if="{{forecastMode === 'hourly' && hourly.length}}">
+      <view class="fc-item hourly-item" wx:for="{{hourly}}" wx:key="time">
+        <text class="fc-d">{{item.label}}</text>
+        <text class="fc-e">{{item.emoji}}</text>
+        <text class="fc-hi">{{item.temp}}°</text>
+        <text class="fc-rain">{{item.rainLabel}}</text>
+      </view>
+    </scroll-view>
+
+    <scroll-view class="fc" scroll-x enable-flex wx:elif="{{forecast.length}}">
       <view class="fc-item" wx:for="{{forecast}}" wx:key="label">
         <text class="fc-d">{{item.label}}</text>
         <text class="fc-e">{{item.emoji}}</text>
@@ -59,7 +78,7 @@
     <view class="row">
       <input
         class="ipt"
-        placeholder="搜索城市，如上海/北京"
+        placeholder="搜索城市或区县，如黄浦区"
         placeholder-class="ph"
         confirm-type="search"
         value="{{q}}"
@@ -78,7 +97,7 @@
 
     <!-- Open-Meteo 为 CC-BY 4.0，署名必须在界面上可见 -->
     <view class="credit">
-      <text class="credit-t">天气数据 Open-Meteo (CC-BY 4.0) · 定位仅用于查询本地天气</text>
+      <text class="credit-t">天气 Open-Meteo · 区县定位 腾讯位置服务 · 定位仅用于本地天气</text>
       <text class="credit-a" bindtap="onAbout">关于</text>
     </view>
   </view>

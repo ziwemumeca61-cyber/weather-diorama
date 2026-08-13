@@ -15,7 +15,7 @@
   ],
   "permission": {
     "scope.userLocation": {
-      "desc": "用于显示你所在城市的实时天气"
+      "desc": "用于显示你所在区县的实时及小时天气"
     }
   },
   "sitemapLocation": "sitemap.json"

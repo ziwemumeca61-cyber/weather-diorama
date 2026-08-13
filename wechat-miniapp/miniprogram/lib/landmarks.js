@@ -2434,40 +2434,92 @@ export function hasOwnWater(name) {
 // 没有专属造型的城市不再退回同一根通用主塔，而是按城市名哈希生成一座
 // 程序化地标（4 种原型 × 8 种配色 × 随机朝向），让每座陌生城市各不相同。
 const TOURIST_CITY_KEYS = ['北京', '上海', '杭州', '苏州', '西安', '成都', '重庆', '青岛', '烟台', '威海', '哈尔滨', '香港', '澳门', '台北']
-const COASTAL_CITY_KEYS = ['上海', '广州', '深圳', '天津', '青岛', '香港', '澳门', '海口', '烟台', '威海', '日照', '福州']
-const NORTHWEST_CITY_KEYS = ['呼和浩特', '兰州', '西宁', '乌鲁木齐', '银川']
-const MODERN_CITY_KEYS = ['重庆', '东营', '潍坊', '德州', '淄博', '南宁']
 
-function regionalSight(key, index) {
-  const rand = mulberry32(hashName(key + '_regional_' + index))
-  const accent = GENERIC_ACCENTS[Math.floor(rand() * GENERIC_ACCENTS.length)]
+// 副地标不再按城市哈希随机拼造；每个登记城市都使用实名景点，
+// 再由一组轻量低多边形原型表达轮廓，兼顾辨识度与小程序性能。
+const NAMED_SECONDARY_SIGHTS = {
+  上海: [['外滩万国建筑群', 'civic'], ['上海中心大厦', 'tower'], ['金茂大厦', 'tower']],
+  广州: [['陈家祠', 'hall'], ['海心桥', 'bridge']],
+  北京: [['正阳门', 'gate'], ['北海白塔', 'stupa'], ['国家大剧院', 'civic']],
+  天津: [['天津鼓楼', 'gate'], ['解放桥', 'bridge'], ['天津广播电视塔', 'tv']],
+  杭州: [['雷峰塔', 'pagoda'], ['拱宸桥', 'bridge'], ['杭州城市阳台', 'civic']],
+  武汉: [['武汉长江大桥', 'bridge'], ['古德寺', 'church']],
+  西安: [['永宁门', 'gate'], ['丹凤门', 'hall'], ['小雁塔', 'pagoda']],
+  南京: [['中山陵', 'hall'], ['阅江楼', 'pavilion']],
+  开封: [['龙亭', 'pavilion'], ['大梁门', 'gate']],
+  苏州: [['北寺塔', 'pagoda'], ['盘门', 'gate'], ['苏州博物馆', 'civic']],
+  深圳: [['市民中心', 'civic'], ['深圳湾体育中心', 'civic']],
+  重庆: [['解放碑', 'tower'], ['洪崖洞', 'pavilion']],
+  成都: [['安顺廊桥', 'bridge'], ['望江楼', 'pavilion'], ['天府艺术公园', 'civic']],
+  台北: [['中正纪念堂', 'hall'], ['台北北门', 'gate'], ['新光摩天大楼', 'tower']],
+  哈尔滨: [['防洪胜利纪念塔', 'tower'], ['龙塔', 'tv'], ['松花江铁路桥', 'bridge']],
+  拉萨: [['大昭寺', 'hall'], ['布达拉宫白塔', 'stupa']],
+  香港: [['凌霄阁', 'civic'], ['天坛大佛', 'stupa']],
+  郑州: [['中原福塔', 'tv'], ['河南博物院', 'civic']],
+  青岛: [['五四广场', 'sail'], ['青岛电视塔', 'tv'], ['圣弥厄尔教堂', 'church']],
+  昆明: [['金马碧鸡坊', 'paifang'], ['大观楼', 'pavilion']],
+  沈阳: [['清福陵', 'hall'], ['辽宁广播电视塔', 'tv']],
+  济南: [['解放阁', 'pavilion'], ['山东博物馆', 'civic']],
+  澳门: [['东望洋灯塔', 'lighthouse'], ['澳门塔', 'tv'], ['葡京酒店', 'civic']],
+  呼和浩特: [['五塔寺', 'pagoda'], ['昭君博物院', 'civic']],
+  兰州: [['白塔山白塔', 'stupa'], ['黄河母亲雕塑', 'sail']],
+  西宁: [['东关清真大寺', 'civic'], ['北禅寺', 'pavilion']],
+  乌鲁木齐: [['红山塔', 'pagoda'], ['新疆博物馆', 'civic']],
+  合肥: [['清风阁', 'pavilion'], ['包公祠', 'hall']],
+  海口: [['世纪大桥', 'bridge'], ['海南省博物馆', 'civic']],
+  太原: [['晋祠', 'hall'], ['迎泽门', 'gate']],
+  银川: [['承天寺塔', 'pagoda'], ['银川鼓楼', 'pavilion']],
+  贵阳: [['文昌阁', 'pavilion'], ['青岩古镇定广门', 'gate']],
+  南昌: [['八一南昌起义纪念塔', 'tower'], ['八一大桥', 'bridge']],
+  长沙: [['岳麓书院', 'hall'], ['杜甫江阁', 'pavilion']],
+  福州: [['镇海楼', 'pavilion'], ['五一广场纪念塔', 'tower']],
+  泰安: [['岱庙', 'hall'], ['南天门', 'gate']],
+  曲阜: [['孔林万古长春坊', 'paifang'], ['颜庙', 'hall']],
+  烟台: [['烟台市博物馆', 'civic'], ['养马岛灯塔', 'lighthouse']],
+  东营: [['黄河文化馆', 'civic'], ['黄河入海塔', 'tower']],
+  潍坊: [['十笏园', 'hall'], ['世界风筝都纪念广场', 'sail']],
+  威海: [['刘公岛灯塔', 'lighthouse'], ['中国甲午战争博物院', 'civic'], ['环翠楼', 'pavilion']],
+  日照: [['灯塔广场', 'lighthouse'], ['日照海洋美学馆', 'civic']],
+  枣庄: [['台儿庄古城复兴楼', 'pavilion'], ['运河古桥', 'bridge']],
+  德州: [['董子园', 'pavilion'], ['德州大剧院', 'civic']],
+  滨州: [['黄河楼', 'pavilion'], ['魏氏庄园', 'hall']],
+  菏泽: [['曹州牡丹园', 'pavilion'], ['菏泽大剧院', 'civic']],
+  淄博: [['中国陶瓷琉璃馆', 'civic'], ['齐盛湖钟书阁', 'civic']],
+  济宁: [['崇觉寺铁塔', 'pagoda'], ['京杭运河牌坊', 'paifang']],
+  临沂: [['书法广场', 'sail'], ['临沂电视塔', 'tv']],
+  聊城: [['山陕会馆', 'hall'], ['聊城铁塔', 'pagoda']],
+  石家庄: [['正定隆兴寺', 'hall'], ['临济寺澄灵塔', 'pagoda']],
+  长春: [['伪满皇宫', 'hall'], ['长影旧址博物馆', 'civic']],
+  南宁: [['青秀山龙象塔', 'pagoda'], ['广西民族博物馆', 'civic']],
+}
+
+function namedSecondarySight(key, index) {
+  const spec = (NAMED_SECONDARY_SIGHTS[key] || [])[index]
+  if (!spec) return null
+  const name = spec[0]
+  const type = spec[1]
+  const accent = GENERIC_ACCENTS[hashName(name) % GENERIC_ACCENTS.length]
+  const rand = mulberry32(hashName(name))
   let result
-  if (COASTAL_CITY_KEYS.indexOf(key) >= 0) {
-    const kind = (hashName(key) + index) % 3
-    result = kind === 0
-      ? lighthouse()
-      : kind === 1
-        ? genDomedCivic(accent, rand)
-        : slabTower({ h: 7.4 + rand() * 1.8, w: 0.78, color: accent, taper: 0.24 })
-  } else if (NORTHWEST_CITY_KEYS.indexOf(key) >= 0) {
-    const kind = (hashName(key) + index) % 3
-    result = kind === 0
-      ? stupa()
-      : kind === 1
-        ? paifang()
-        : pagoda({ tiers: 4, baseR: 0.9, tierH: 1.0, body: shade(accent, 0.12), roof: shade(accent, -0.2) })
-  } else if (MODERN_CITY_KEYS.indexOf(key) >= 0) {
-    const builds = [genGlassSupertall, genTwinTowers, genSetbackDeco, genDomedCivic]
-    result = builds[(hashName(key) + index) % builds.length](accent, rand)
-  } else {
-    const kind = (hashName(key) + index) % 3
-    result = kind === 0
-      ? cityGate()
-      : kind === 1
-        ? pagoda({ tiers: 4 + Math.floor(rand() * 2), baseR: 0.9, tierH: 1.0, body: shade(accent, 0.12), roof: shade(accent, -0.2) })
-        : pavilion({ tiers: 2 + Math.floor(rand() * 2), w: 2.8, d: 2.3, tierH: 1.2, body: shade(accent, 0.08), roof: shade(accent, -0.22), platform: 0.55 })
+  switch (type) {
+    case 'bridge': result = zhongshanBridge(); break
+    case 'pagoda': result = pagoda({ tiers: 5, baseR: 0.9, tierH: 1.0, body: shade(accent, 0.12), roof: shade(accent, -0.2) }); break
+    case 'gate': result = cityGate(); break
+    case 'pavilion': result = pavilion({ tiers: 3, w: 2.9, d: 2.3, tierH: 1.2, body: shade(accent, 0.08), roof: shade(accent, -0.22), platform: 0.55 }); break
+    case 'tv': result = tvTower(); break
+    case 'lighthouse': result = lighthouse(); break
+    case 'stupa': result = stupa(); break
+    case 'paifang': result = paifang(); break
+    case 'church': result = stSophia(); break
+    case 'wheel': result = ferrisWheel(); break
+    case 'sail': result = sailSculpture(); break
+    case 'hall': result = dachengHall(); break
+    case 'mountain': result = mountTai(); break
+    case 'civic': result = genDomedCivic(accent, rand); break
+    default: result = slabTower({ h: 8.2, w: 0.82, color: accent, taper: 0.2 })
   }
-  result.group.rotation.y += (rand() - 0.5) * 0.7
+  result.group.userData.landmarkName = name
+  result.group.userData.landmarkRole = 'secondary'
   return result
 }
 
@@ -2519,20 +2571,25 @@ function polishLandmark(key, result) {
 function ensureLandmarkSet(key, result) {
   if (!result || !result.group) return result
   // 53 个已登记城市统一至少 3 处；重点旅游城市至少 4 处。
-  // 补景沿用地域原型和城市哈希配色，既避免同质化，也不引入外部模型/贴图。
   const target = TOURIST_CITY_KEYS.indexOf(key) >= 0 ? 4 : 3
   const count = result.group.userData.landmarkCount || 1
   result.glow = result.glow || []
+  const names = result.group.userData.secondaryLandmarks || []
   const positions = [[-3.75, 2.7], [3.55, -2.7], [-3.5, -2.6], [3.6, 2.55]]
+  let added = 0
   for (let i = count; i < target; i++) {
-    const extra = regionalSight(key, i)
-    const at = positions[(i - count) % positions.length]
+    const extra = namedSecondarySight(key, i - count)
+    if (!extra) continue
+    const at = positions[added % positions.length]
     extra.group.position.set(at[0], 0, at[1])
     extra.group.scale.setScalar(0.29 + (i % 2) * 0.055)
     result.group.add(extra.group)
+    names.push(extra.group.userData.landmarkName)
     ;(extra.glow || []).forEach((material) => result.glow.push(material))
+    added++
   }
-  result.group.userData.landmarkCount = Math.max(count, target)
+  result.group.userData.secondaryLandmarks = names
+  result.group.userData.landmarkCount = count + added
   return polishLandmark(key, result)
 }
 

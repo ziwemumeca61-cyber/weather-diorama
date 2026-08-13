@@ -7,12 +7,12 @@
   <scroll-view class="body" scroll-y>
     <view class="hero">
       <text class="hero-t">3D微缩城市天气</text>
-      <text class="hero-s">用立体微缩城市模型看实时天气</text>
+      <text class="hero-s">用立体微缩城市模型看实时与小时天气</text>
     </view>
 
     <view class="card">
       <text class="h">怎么玩</text>
-      <text class="p">· 搜索城市，或点 📍 定位到你所在的城市</text>
+      <text class="p">· 搜索城市或区县，或点 📍 定位到你所在的区县</text>
       <text class="p">· 手指在画面上拖动可以转动镜头、调整俯仰</text>
       <text class="p">· 点右上角 ☀️/🌙 手动切换白天与夜晚</text>
       <text class="p">· 点下方天气标签可以预览各种天气特效</text>
@@ -21,14 +21,14 @@
 
     <view class="card">
       <text class="h">数据来源</text>
-      <text class="p">天气与地理编码数据来自 Open-Meteo，依据 CC-BY 4.0 许可使用。</text>
+      <text class="p">天气与城市搜索数据来自 Open-Meteo，依据 CC-BY 4.0 许可使用；定位后的区县名称由腾讯位置服务反查。</text>
       <view class="link" bindtap="onCopyUrl">open-meteo.com（点击复制网址）</view>
     </view>
 
     <view class="card">
       <text class="h">关于定位</text>
-      <text class="p">位置信息仅在你主动点击「📍」时获取一次，用于查询你所在城市的天气。</text>
-      <text class="p">经纬度只传给本小程序的云函数用于查询天气，<text class="em">不会储存、不会用于其他用途、不会提供给第三方</text>。</text>
+      <text class="p">位置信息仅在你主动点击「📍」时获取一次，用于查询你所在区县的天气。</text>
+      <text class="p">经纬度经本小程序云函数传给 Open-Meteo 查询天气，并传给腾讯位置服务反查区县；<text class="em">不会储存、不会用于其他用途</text>。</text>
       <text class="p">不使用定位也可以正常搜索任意城市。</text>
     </view>
 
