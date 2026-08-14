@@ -1,0 +1,9 @@
+{
+  "triggers": [
+    {
+      "name": "mood-asset-library-timer",
+      "type": "timer",
+      "config": "0 */2 * * * * *"
+    }
+  ]
+}
