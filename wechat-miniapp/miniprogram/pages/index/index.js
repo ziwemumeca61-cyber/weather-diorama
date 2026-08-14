@@ -13,6 +13,8 @@ Page({
   data: {
     place: '—',
     placeMeta: '',
+    placeCity: '',
+    placeDistrict: '',
     emoji: '☀️',
     temp: '—',
     kindLabel: '',
@@ -58,6 +60,7 @@ Page({
       { key: 'miniature', emoji: '🏙️', label: '3D微缩', copy: '精致城市微缩，天气变成情绪装置' },
       { key: 'healing', emoji: '🎨', label: '治愈插画', copy: '细腻笔触，温柔但不廉价梦幻' },
       { key: 'oriental', emoji: '🌙', label: '东方留白', copy: '含蓄构图，用风、雾、雨讲情绪' },
+      { key: 'zine', emoji: '✂️', label: '城市采集志', copy: '地标、街角与天气碎片组成一页城市独立杂志' },
     ],
     moodArticle: '',
   },
@@ -137,6 +140,8 @@ Page({
     this.setData({
       place: displayName,
       placeMeta: districtLocated ? ((place.city ? place.city + ' · ' : '') + '区县定位') : '城市天气',
+      placeCity: sceneCity,
+      placeDistrict: districtLocated ? place.district : '',
       temp: d.temperature,
       curKind: d.kind,
       kindLabel: KIND_LABEL[d.kind],
@@ -258,6 +263,8 @@ Page({
     const d = this.data
     return {
       place: d.place,
+      city: d.placeCity || d.place,
+      district: d.placeDistrict || '',
       temp: d.temp,
       emoji: d.emoji,
       kindLabel: d.kindLabel,
@@ -414,6 +421,7 @@ Page({
     return makeWeatherMoodSticker(this._moodCanvas, backgroundPath, this.weatherForMood(), {
       ...this.moodOption(),
       text: this.data.moodText,
+      styleLabel: this.moodStyle().label,
       generatedByAi,
     })
   },
@@ -466,7 +474,8 @@ Page({
   moodWeatherPayload() {
     const d = this.data
     return {
-      city: d.place,
+      city: d.placeCity || d.place,
+      district: d.placeDistrict || (d.place !== d.placeCity ? d.place : ''),
       dateLabel: d.dateLabel,
       temperature: d.temp,
       kindLabel: d.kindLabel,
@@ -476,7 +485,7 @@ Page({
   moodImageCacheKey() {
     const d = this.data
     const signature = [d.place, d.dateLabel, d.temp, d.kindLabel, d.moodKey, d.moodStyleKey].join('|')
-    return `moodImage:v3:${encodeURIComponent(signature).slice(0, 220)}`
+    return `moodImage:v4:${encodeURIComponent(signature).slice(0, 220)}`
   },
 
   async onGenerateAiMood() {

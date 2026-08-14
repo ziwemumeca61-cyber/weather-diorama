@@ -8,6 +8,7 @@ cloud.init({
 })
 
 const MODEL = 'HY-Image-3.0-Plus-4090-Tob-v1.0'
+const PROMPT_VERSION = 'city-mood-v4'
 const RATE_WINDOW = 10 * 60 * 1000
 const RATE_LIMIT = 2
 const RATE_RETRY_SECONDS = 60
@@ -72,20 +73,101 @@ const MOODS = {
 const STYLES = {
   cinematic: {
     label: '电影叙事',
-    direction: '写实电影摄影感，自然光与真实天气质感，像一帧截自生活电影的静帧',
+    direction: '写实电影静帧，35mm 纪实摄影语言，自然光、真实材质、克制景深和可信天气',
+    composition: '一个连续场景、一个明确主体动作，镜头像在城市生活中偶然捕捉到决定性瞬间',
+    must: '真实街道尺度、自然天气光线、细微生活痕迹、电影级冷暖关系',
+    avoid: '插画感、塑料质感、棚拍、旅游宣传片、过度虚化、概念海报',
   },
   miniature: {
     label: '3D微缩',
-    direction: '高精度 3D 城市微缩模型，材质细腻，浅景深，把云、雾、雨和光做成环绕城市的情绪装置',
+    direction: '高精度低多边形城市微缩景观，实体沙盘与手工模型质感，浅景深但地标轮廓清晰',
+    composition: '俯视约三十度的单一微缩城市舞台，天气成为包围建筑的实体装置',
+    must: '可辨认城市地标、街区层次、车辆树木比例、雨雪雾与模型材质发生真实互动',
+    avoid: '普通3D楼群、随机未来城市、积木玩具、赛博朋克、真实摄影冒充微缩模型',
   },
   healing: {
     label: '治愈插画',
-    direction: '高级绘本插画，细腻纸张和笔触质感，温柔克制，避免廉价梦幻与幼儿感',
+    direction: '成熟绘本与编辑插画，手绘纸张、透明水彩和细腻铅笔线条，温柔但不幼稚',
+    composition: '一个安静生活场景贯穿整张画，留白承载呼吸，情绪转折藏在光线或小物件里',
+    must: '可见纸张纤维、克制笔触、城市特征被准确转译、柔和但有层次的色彩',
+    avoid: '儿童简笔画、糖果色、日系模板人物、廉价梦幻、发光粒子堆叠',
   },
   oriental: {
     label: '东方留白',
-    direction: '当代东方审美，含蓄留白、层叠空气透视和克制色彩，用风、雾、雨的方向讲述情绪',
+    direction: '当代东方视觉叙事，水墨空气、矿物色、宣纸肌理与现代城市剪影相结合',
+    composition: '大面积有意留白，近景一处细节、中景城市轮廓、远景天气层次，气韵连贯',
+    must: '准确地标剪影、含蓄的风雨方向、克制墨色、现代而非仿古',
+    avoid: '古装人物、传统山水套模板、满版祥云、书法字、古城替代现代城市',
   },
+  zine: {
+    label: '城市采集志',
+    direction: 'gathered-scenes 城市视觉采集册与独立杂志 zine，一页中收集同一时刻的城市碎片',
+    composition: '以一个主场景为中心，围绕它组织三到五个有触感的局部碎片：地标切片、街角物件、天气痕迹、交通或生活细节；层级清楚，不做平均宫格',
+    must: '撕纸边缘、胶带、半透明描图纸、印刷网点、铅笔标记和票据轮廓；所有碎片必须来自同一城市、同一天气、同一心情',
+    avoid: 'PPT拼版、整齐九宫格、随机素材堆砌、旅行攻略、可读英文或中文、品牌Logo',
+  },
+}
+
+const CITY_VISUAL_ANCHORS = {
+  上海: '东方明珠、陆家嘴天际线、梧桐街道或石库门肌理',
+  北京: '天坛、正阳门、胡同灰砖与中轴线空间',
+  广州: '广州塔、骑楼街、珠江水面与榕树',
+  深圳: '平安金融中心、深圳湾天际线、现代滨海步道',
+  天津: '海河桥梁、天津之眼、近代建筑立面',
+  杭州: '雷峰塔、西湖水岸、拱桥与江南树影',
+  武汉: '黄鹤楼、长江大桥、江滩与轮渡',
+  西安: '古城墙、钟楼、大雁塔与城门尺度',
+  南京: '明城墙、中山陵台阶、梧桐大道',
+  开封: '龙亭、城门、宋式屋檐与古城街巷',
+  苏州: '园林漏窗、白墙黛瓦、石桥水巷与东方之门',
+  重庆: '山城高差、洪崖洞、跨江桥与轻轨',
+  成都: '安顺廊桥、天府双塔、茶馆竹椅与银杏',
+  台北: '台北101、北门、骑楼与山城雨雾',
+  哈尔滨: '圣索菲亚教堂、中央大街、松花江与冰雪纹理',
+  拉萨: '布达拉宫、大昭寺屋顶、白塔与高原天光',
+  香港: '维港天际线、叮叮车、密集街牌轮廓与山海高差',
+  郑州: '二七塔、中原福塔、宽阔城市道路',
+  青岛: '栈桥、红瓦坡屋顶、海岸与五四广场',
+  昆明: '金马碧鸡坊、湖面、花市与高原云层',
+  沈阳: '沈阳故宫、工业红砖、电视塔与北方街道',
+  济南: '泉水、解放阁、垂柳与老城石板路',
+  澳门: '大三巴、东望洋灯塔、葡式路面与密集坡道',
+  呼和浩特: '五塔寺、草原城市边缘、乳白与青砖建筑',
+  兰州: '中山桥、黄河水面、白塔山与狭长河谷',
+  西宁: '东关清真大寺、白塔、高原城市与远山',
+  乌鲁木齐: '红山塔、国际大巴扎、雪山天际线',
+  合肥: '清风阁、包公祠、湖岸与现代城市轴线',
+  海口: '骑楼老街、世纪大桥、椰树与海风',
+  太原: '晋祠、双塔、北方院落与厚重城墙',
+  银川: '承天寺塔、鼓楼、贺兰山与干燥天光',
+  贵阳: '甲秀楼、山地城市、河谷与湿润雾气',
+  南昌: '滕王阁、八一大桥、赣江水面',
+  长沙: '岳麓书院、杜甫江阁、湘江与城市烟火',
+  福州: '三坊七巷、镇海楼、榕树与湿润石巷',
+  泰安: '泰山石阶、岱庙、南天门与云海',
+  曲阜: '孔庙大成殿、牌坊、古柏与院落轴线',
+  烟台: '烟台山灯塔、滨海礁石、葡萄酒建筑',
+  东营: '黄河入海湿地、芦苇、油井剪影与广阔天空',
+  潍坊: '风筝、十笏园、白浪河与北方城市街景',
+  威海: '幸福门、刘公岛灯塔、海湾与松树',
+  日照: '海岸灯塔、帆影、宽阔沙滩与日光',
+  枣庄: '台儿庄古城、运河古桥、水巷与青砖',
+  德州: '太阳能地标、董子园、运河城市肌理',
+  滨州: '黄河楼、黄河水面、北方平原与古院落',
+  菏泽: '牡丹园、城市剧院、花瓣与鲁西街巷',
+  淄博: '海岱楼、陶瓷琉璃、齐文化纹样与市井烟火',
+  济宁: '运河、铁塔、牌坊与儒家建筑细节',
+  临沂: '沂河、书法广场、电视塔与滨水空间',
+  聊城: '光岳楼、东昌湖、山陕会馆与古城水面',
+  石家庄: '正定古城、隆兴寺、现代城市干道',
+  长春: '地质宫、长影老建筑、宽阔林荫道与冬雪',
+  南宁: '青秀山龙象塔、民族博物馆、棕榈与湿热空气',
+}
+
+function cityVisualAnchor(city) {
+  const normalized = clean(city, 40).replace(/[市区县省]$/g, '')
+  const key = Object.keys(CITY_VISUAL_ANCHORS).find((name) => normalized.indexOf(name) >= 0 || name.indexOf(normalized) >= 0)
+  return key ? CITY_VISUAL_ANCHORS[key] : `${city}本地最有辨识度的地标轮廓、街道尺度、植被和生活物件`
 }
 
 const WEATHER_METAPHORS = [
@@ -148,27 +230,39 @@ function isRateLimitError(error) {
 
 function buildPrompt(weather, mood, style) {
   const city = clean(weather.city, 40) || '一座中国城市'
+  const district = clean(weather.district, 40)
+  const location = district && district !== city ? `${city} · ${district}` : city
   const condition = clean(weather.kindLabel, 16) || '晴朗天气'
   const temperature = clean(weather.temperature, 10)
   const weatherMetaphor = (WEATHER_METAPHORS.find((item) => item.test.test(condition)) || {}).text
     || '保留当前真实天气的核心视觉特征，并让它承担情绪表达'
+  const cityAnchor = cityVisualAnchor(city)
   return [
-    '创作一幅高级、电影感、竖版 3:4 的天气情绪叙事插画，用作中国社交平台的“天气心情贴”背景。',
-    '核心命题：天气不是背景，而是此刻心情的化身。画面必须让人先感受到情绪，再意识到天气。',
-    `现实锚点：地点是${city}，当前天气是${condition}${temperature ? `，约${temperature}℃` : ''}。${weatherMetaphor}。`,
-    `情绪主题：${mood.label}。`,
-    `天气隐喻：${mood.metaphor}。`,
-    `画面故事：${mood.story}。`,
+    '任务：生成一张高级竖版 3:4“城市天气心情贴”的纯背景，最终会由小程序叠加准确中文排版。',
+    '输入是硬约束，不得自行更换：',
+    `- 城市与区县：${location}`,
+    `- 城市视觉身份：${cityAnchor}`,
+    `- 当前真实天气：${condition}${temperature ? `，约${temperature}℃` : ''}`,
+    `- 所选心情：${mood.label}`,
+    `- 所选画风：${style.label}`,
+    '',
+    '城市约束：画面必须在第一眼能被识别为上述城市；选择一到两个最合适的地标或本地生活细节作为证据，不得换成上海、北京、香港或随机未来城市。地标服务于情绪，不做旅游明信片。',
+    `天气约束：${weatherMetaphor}。`,
+    `心情隐喻：${mood.metaphor}。`,
+    `叙事动作：${mood.story}。`,
     `情绪转折：${mood.turn}。`,
     `色彩与光线：${mood.palette}。`,
-    `画面风格：${style.label}。${style.direction}。`,
-    '必须有一个清晰的视觉隐喻和一个细小但明确的情绪转折；构图包含前景、中景、远景，具有真实空气透视和天气质感。',
-    '如果真实天气与心情相反，不要强行改天气，而要利用反差讲故事，例如晴天里的长影、雨天里的一盏暖灯。',
-    '允许出现一个很小的远景背影或生活痕迹来增加共鸣，但不要清晰人脸、不要人物特写、不要摆拍。',
-    '避免普通天气壁纸、旅游明信片、励志海报、廉价梦幻光效、拼贴、多宫格、过度饱和和戏剧化灾难场面。',
-    '下方约三分之一保留相对干净、略暗且有纹理的区域，供小程序后续叠加准确天气与心情文案。',
-    '画面内禁止任何文字、字母、数字、Logo、水印、界面、天气图标和标牌可读内容。',
-  ].filter(Boolean).join('\n')
+    '',
+    `画风执行：${style.direction}。`,
+    `构图规则：${style.composition}。`,
+    `必须出现：${style.must}。`,
+    `禁止出现：${style.avoid}。`,
+    '',
+    '成片规则：前景、中景、远景关系清楚；天气、城市与心情必须共同讲同一个瞬间，不能只是通用天气壁纸。下方约 36% 保留相对安静、略暗但仍有材质的排版安全区。',
+    '允许很小的背影或生活痕迹，但不出现清晰人脸、人物特写和摆拍。',
+    '严禁任何可读文字、乱码、字母、数字、Logo、水印、UI、天气图标；文字将由小程序本地准确叠加。',
+    '严禁旅游宣传海报、励志海报、过度饱和、廉价光效、灾难奇观和与所选画风无关的混合风格。',
+  ].join('\n')
 }
 
 // 生图服务返回的地址有有效期，先转存到云存储。显式处理重定向和非 2xx 响应，
@@ -213,11 +307,11 @@ async function generateBackground(key, keyHash, weather, mood, style) {
 
   // 生成服务 URL 仅保留 24 小时；存入云存储后可在小程序中稳定下载和保存。
   const upload = await cloud.uploadFile({
-    cloudPath: `mood-stickers/shared/${keyHash}.jpg`,
+    cloudPath: `mood-stickers/${PROMPT_VERSION}/${keyHash}.jpg`,
     fileContent: await downloadImage(url),
   })
   putCache(key, { fileID: upload.fileID })
-  return { ok: true, fileID: upload.fileID, cached: false }
+  return { ok: true, fileID: upload.fileID, cached: false, promptVersion: PROMPT_VERSION }
 }
 
 exports.main = async (event = {}, context = {}) => {
@@ -232,10 +326,10 @@ exports.main = async (event = {}, context = {}) => {
   const openid = clean(context.OPENID, 80) || 'anonymous'
   // 缓存不包含 openid：相同城市、天气、情绪和风格可以跨用户复用，避免重复生图。
   // 用户自定义文字只在客户端叠加，既不进入提示词，也不会破坏背景缓存。
-  const key = JSON.stringify({ moodKey, moodStyleKey, city: clean(weather.city, 40), date: clean(weather.dateLabel, 30), kind: clean(weather.kindLabel, 16), temperature: clean(weather.temperature, 10) })
+  const key = JSON.stringify({ promptVersion: PROMPT_VERSION, moodKey, moodStyleKey, city: clean(weather.city, 40), district: clean(weather.district, 40), date: clean(weather.dateLabel, 30), kind: clean(weather.kindLabel, 16), temperature: clean(weather.temperature, 10) })
   const keyHash = crypto.createHash('sha256').update(key).digest('hex').slice(0, 32)
   const cached = getCached(key)
-  if (cached) return { ok: true, fileID: cached.fileID, cached: true }
+  if (cached) return { ok: true, fileID: cached.fileID, cached: true, promptVersion: PROMPT_VERSION }
   const coolingSeconds = Math.ceil((serviceCooldownUntil - Date.now()) / 1000)
   if (coolingSeconds > 0) {
     return { ok: false, code: 'RATE_LIMITED', retryAfter: coolingSeconds, error: `生成服务正忙，请 ${coolingSeconds} 秒后再试` }
