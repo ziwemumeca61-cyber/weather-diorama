@@ -1,13 +1,12 @@
 import { createScene } from '../../lib/scene'
 import { KIND_LABEL, KIND_EMOJI, KINDS, localTime, buildForecast, buildHourly } from '../../lib/weatherCode'
 import { nearestCity } from '../../lib/cityCoords'
-import { MOOD_IMAGE_ENABLED } from '../../lib/meta'
+import { MOOD_ASSET_ENABLED } from '../../lib/meta'
 import { makeWeatherMoodSticker } from '../../lib/weatherMoodSticker'
 
 let sceneApi = null
 const LAST_CITY = 'lastCity'
-const MOOD_IMAGE_CACHE_TTL = 7 * 24 * 60 * 60 * 1000
-const MOOD_AI_COOLDOWN_KEY = 'moodAiCooldownUntil'
+const MOOD_ASSET_VERSION = 'city-mood-library-v1'
 
 Page({
   data: {
@@ -30,7 +29,7 @@ Page({
     loading: true,
     errMsg: '',
     glFailed: false,
-    moodImageEnabled: MOOD_IMAGE_ENABLED,
+    moodAssetEnabled: MOOD_ASSET_ENABLED,
     moodOpen: false,
     moodClosing: false,
     moodTab: 'photo',
@@ -137,6 +136,7 @@ Page({
     const hit = nearestCity(place.latitude, place.longitude, 220)
     const sceneCity = (hit && hit.name) || place.city || displayName
     const districtLocated = place.precision === 'district' && place.district
+    const resetLibraryMood = this.data.moodBackgroundType === 'library'
     this.setData({
       place: displayName,
       placeMeta: districtLocated ? ((place.city ? place.city + ' · ' : '') + '区县定位') : '城市天气',
@@ -152,8 +152,11 @@ Page({
       forecast: buildForecast(d.daily),
       loading: false,
       errMsg: '',
+      ...(resetLibraryMood ? { moodPreview: '', moodBackground: '', moodBackgroundType: '' } : {}),
+    }, () => {
+      this.refreshMoodArticle()
+      if (this.data.moodBackgroundType === 'photo' && this.data.moodBackground) this.recomposeMoodSticker()
     })
-    this.refreshMoodArticle()
     if (sceneCity) wx.setStorage({ key: LAST_CITY, data: sceneCity })
     if (sceneApi) {
       sceneApi.setCity(sceneCity)
@@ -280,7 +283,7 @@ Page({
     const custom = String(this.data.moodText || '').trim()
     const title = `${city}${weather.kindLabel || '天气'} ${temperature}｜${mood.label}`
     const feeling = custom || mood.copy
-    const disclosure = this.data.moodBackgroundType === 'ai' ? '\n\n画面背景由 AI 生成。' : ''
+    const disclosure = this.data.moodBackgroundType === 'library' ? '\n\n画面使用预生成 AI 素材；本次制作未实时调用 AI。' : ''
     return `${title}\n\n${weather.emoji || '☀️'} ${weather.kindLabel || '天气'} · ${temperature} · ${weather.dateLabel || '今天'}\n\n${feeling}\n\n天气会变，心情也会。把这一刻留给自己。${disclosure}\n\n#天气 #心情 #云上幻象天气`
   },
 
@@ -416,22 +419,22 @@ Page({
     if (this.data.moodBackground) this.recomposeMoodSticker()
   },
 
-  composeMoodSticker(backgroundPath, generatedByAi = false) {
+  composeMoodSticker(backgroundPath, usesAiAsset = false) {
     if (!this._moodCanvas) return Promise.reject(new Error('贴图画布尚未准备好'))
     return makeWeatherMoodSticker(this._moodCanvas, backgroundPath, this.weatherForMood(), {
       ...this.moodOption(),
       text: this.data.moodText,
       styleLabel: this.moodStyle().label,
-      generatedByAi,
+      generatedByAi: usesAiAsset,
     })
   },
 
   recomposeMoodSticker() {
     const backgroundPath = this.data.moodBackground
     if (!backgroundPath || this.data.moodLoading) return
-    const generatedByAi = this.data.moodBackgroundType === 'ai'
+    const usesAiAsset = this.data.moodBackgroundType === 'library'
     this.setData({ moodLoading: true })
-    this.composeMoodSticker(backgroundPath, generatedByAi)
+    this.composeMoodSticker(backgroundPath, usesAiAsset)
       .then((preview) => this.setData({ moodPreview: preview, moodLoading: false }))
       .catch((error) => {
         console.error('[mood] local recompose failed', error)
@@ -471,47 +474,27 @@ Page({
     })
   },
 
-  moodWeatherPayload() {
+  moodAssetCacheKey() {
     const d = this.data
-    return {
-      city: d.placeCity || d.place,
-      district: d.placeDistrict || (d.place !== d.placeCity ? d.place : ''),
-      dateLabel: d.dateLabel,
-      temperature: d.temp,
-      kindLabel: d.kindLabel,
-    }
+    const signature = [MOOD_ASSET_VERSION, d.placeCity || d.place, d.moodKey, d.moodStyleKey, d.kindLabel].join('|')
+    return `moodAsset:v1:${encodeURIComponent(signature).slice(0, 220)}`
   },
 
-  moodImageCacheKey() {
-    const d = this.data
-    const signature = [d.place, d.dateLabel, d.temp, d.kindLabel, d.moodKey, d.moodStyleKey].join('|')
-    return `moodImage:v5:${encodeURIComponent(signature).slice(0, 220)}`
-  },
-
-  async onGenerateAiMood() {
-    if (!this.data.moodImageEnabled) {
-      wx.showToast({ title: 'AI 心情贴暂不可用，请稍后再试', icon: 'none' })
+  async onUseMoodAsset() {
+    if (!this.data.moodAssetEnabled) {
+      wx.showToast({ title: '风格素材库暂不可用', icon: 'none' })
       return
     }
     if (this.data.loading || !this.shareCity()) return
-    // setData 更新前的连续点击也必须被挡住，避免同一画面并发请求模型。
-    if (this._moodAiRunning || this.data.moodLoading) {
-      wx.showToast({ title: '正在生成，请不要重复点击', icon: 'none' })
+    if (this._moodAssetRunning || this.data.moodLoading) {
+      wx.showToast({ title: '正在读取素材，请不要重复点击', icon: 'none' })
       return
     }
-    const cooldownUntil = Number(wx.getStorageSync(MOOD_AI_COOLDOWN_KEY)) || 0
-    if (cooldownUntil > Date.now()) {
-      const seconds = Math.max(1, Math.ceil((cooldownUntil - Date.now()) / 1000))
-      wx.showToast({ title: `生成服务正忙，${seconds} 秒后再试`, icon: 'none' })
-      return
-    }
-    if (cooldownUntil) wx.removeStorageSync(MOOD_AI_COOLDOWN_KEY)
 
-    this._moodAiRunning = true
-    const cacheKey = this.moodImageCacheKey()
+    this._moodAssetRunning = true
+    const cacheKey = this.moodAssetCacheKey()
     const cached = wx.getStorageSync(cacheKey)
-    let fileID = cached && cached.fileID && cached.expiresAt > Date.now() ? cached.fileID : ''
-    let reused = Boolean(fileID)
+    let fileID = cached && cached.fileID ? cached.fileID : ''
     this.setData({ moodLoading: true, moodPreview: '', moodBackground: '', moodBackgroundType: '' })
 
     try {
@@ -520,10 +503,9 @@ Page({
         try {
           download = await wx.cloud.downloadFile({ fileID })
         } catch (cacheError) {
-          console.warn('[mood] cached image expired', cacheError)
+          console.warn('[mood] cached library asset unavailable', cacheError)
           wx.removeStorageSync(cacheKey)
           fileID = ''
-          reused = false
         }
       }
 
@@ -533,40 +515,37 @@ Page({
           data: {
             moodKey: this.data.moodKey,
             moodStyleKey: this.data.moodStyleKey,
-            weather: this.moodWeatherPayload(),
+            city: this.data.placeCity || this.data.place,
+            weatherKind: this.data.kindLabel,
           },
         })
         const result = (res && res.result) || {}
         if (!result.ok || !result.fileID) {
-          const error = new Error(result.error || 'AI 图片生成失败')
-          if (result.code === 'RATE_LIMITED') {
-            const retryAfter = Math.max(1, Math.min(600, Number(result.retryAfter) || 60))
-            wx.setStorageSync(MOOD_AI_COOLDOWN_KEY, Date.now() + retryAfter * 1000)
-            error.code = 'RATE_LIMITED'
-          }
+          const error = new Error(result.error || '风格素材读取失败')
+          error.code = result.code || ''
           throw error
         }
         fileID = result.fileID
-        reused = Boolean(result.cached)
-        wx.setStorageSync(cacheKey, { fileID, expiresAt: Date.now() + MOOD_IMAGE_CACHE_TTL })
+        wx.setStorageSync(cacheKey, { fileID, assetVersion: result.assetVersion || MOOD_ASSET_VERSION })
         download = await wx.cloud.downloadFile({ fileID })
       }
 
       const backgroundPath = download && download.tempFilePath
-      if (!backgroundPath) throw new Error('生成背景下载失败')
-      this.setData({ moodBackground: backgroundPath, moodBackgroundType: 'ai' }, () => this.refreshMoodArticle())
+      if (!backgroundPath) throw new Error('风格素材下载失败')
+      this.setData({ moodBackground: backgroundPath, moodBackgroundType: 'library' }, () => this.refreshMoodArticle())
       const preview = await this.composeMoodSticker(backgroundPath, true)
       this.setData({ moodPreview: preview, moodLoading: false })
-      if (reused) wx.showToast({ title: '已复用背景，未消耗生图额度', icon: 'none' })
     } catch (error) {
-      console.error('[mood] AI generate failed', error)
+      console.error('[mood] library asset failed', error)
       this.setData({ moodLoading: false })
-      wx.showToast({
-        title: error.code === 'RATE_LIMITED' ? '生成服务正忙，请 1 分钟后再试' : error.message || 'AI 心情贴生成失败',
-        icon: 'none',
-      })
+      const message = error.code === 'UNSUPPORTED_CITY'
+        ? '这座城市的素材还未收录'
+        : error.code === 'ASSET_NOT_READY'
+          ? '这组素材尚在生成中'
+          : error.message || '风格素材读取失败'
+      wx.showToast({ title: message, icon: 'none' })
     } finally {
-      this._moodAiRunning = false
+      this._moodAssetRunning = false
     }
   },
 
@@ -661,7 +640,16 @@ Page({
   // 手动切换天气特效（演示 / 不联网）
   onChip(e) {
     const k = e.currentTarget.dataset.k
-    this.setData({ curKind: k, kindLabel: KIND_LABEL[k], emoji: KIND_EMOJI[k] }, () => this.refreshMoodArticle())
+    const resetLibraryMood = this.data.moodBackgroundType === 'library'
+    this.setData({
+      curKind: k,
+      kindLabel: KIND_LABEL[k],
+      emoji: KIND_EMOJI[k],
+      ...(resetLibraryMood ? { moodPreview: '', moodBackground: '', moodBackgroundType: '' } : {}),
+    }, () => {
+      this.refreshMoodArticle()
+      if (this.data.moodBackgroundType === 'photo' && this.data.moodBackground) this.recomposeMoodSticker()
+    })
     if (sceneApi) sceneApi.setWeather(k)
   },
 
