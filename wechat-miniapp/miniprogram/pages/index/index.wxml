@@ -230,6 +230,36 @@
         </view>
       </view>
 
+      <view class="mood-publish-area">
+        <view class="mood-publish-head">
+          <view><text class="mood-publish-title">天气心情贴</text><text class="mood-publish-sub">微信官方发表入口</text></view>
+          <view class="mood-publish-head-right">
+            <view class="mood-publish-action" bindtap="onOfficialPublishCommon">
+              <text class="mood-publish-action-icon">✎</text><text>发一条</text>
+            </view>
+            <text class="mood-publish-badge">官方</text>
+          </view>
+        </view>
+        <view class="mood-official-unavailable" wx:if="{{!officialPublishEnabled}}">
+          <text class="mood-official-unavailable-title">官方发表预览仅支持手机微信</text>
+          <text class="mood-official-unavailable-sub">请用 Android 或 iPhone 真机打开「发一条」</text>
+        </view>
+        <official-account-publish
+          wx:elif="{{officialPublishEnabled}}"
+          topic="天气心情贴"
+          limit="4"
+          placeholder="说说此刻的天气和心情…"
+          background-color="#f6f8fc"
+          color-unity="{{true}}"
+          show-related="{{true}}"
+          recommend-path="/pages/index/index"
+          recommend-title="云上幻象天气 · 制作天气心情贴"
+          binderror="onMoodComponentError"
+          bindpublishsuccess="onMoodComponentPublishSuccess"
+          bindpublishfail="onMoodComponentPublishFail"
+        ></official-account-publish>
+      </view>
+
       <text class="mood-privacy">照片、实时天气和文字仅在本机合成；风格背景从预生成云素材库读取。</text>
       </scroll-view>
     </view>

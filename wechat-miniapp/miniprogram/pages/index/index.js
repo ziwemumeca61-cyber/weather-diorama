@@ -614,6 +614,24 @@ Page({
       })
       return
     }
+    this.openOfficialPublisher({
+      image: this.data.moodPreview,
+      tags: expectedType === 'library'
+        ? ['天气心情贴', '风格素材', '心情']
+        : ['天气心情贴', '我的图片', '心情'],
+      recommendTitle: expectedType === 'library' ? '制作风格天气心情贴' : '制作我的天气心情贴',
+    })
+  },
+
+  onOfficialPublishCommon() {
+    this.openOfficialPublisher({
+      image: this.data.moodPreview,
+      tags: ['天气心情贴', '天气', '心情'],
+      recommendTitle: '制作我的天气心情贴',
+    })
+  },
+
+  openOfficialPublisher(config) {
     if (!this.data.officialPublishEnabled) {
       this.showOfficialPublishUnavailable()
       return
@@ -630,11 +648,9 @@ Page({
     const options = {
       title,
       content,
-      tags: expectedType === 'library'
-        ? ['天气心情贴', '风格素材', '心情']
-        : ['天气心情贴', '我的图片', '心情'],
+      tags: config.tags,
       recommendPath: '/pages/index/index',
-      recommendTitle: expectedType === 'library' ? '制作风格天气心情贴' : '制作我的天气心情贴',
+      recommendTitle: config.recommendTitle,
       success: (result) => {
         wx.showToast({
           title: result && result.postUrl ? '贴图已发布' : '已打开官方发表页',
@@ -653,14 +669,27 @@ Page({
         }
       },
     }
-    if (this.data.moodPreview) options.images = [this.data.moodPreview]
+    if (config.image) options.images = [config.image]
     wx.shareToOfficialAccount(options)
   },
+
   onCopyMoodArticle() {
     wx.setClipboardData({
       data: this.data.moodArticle || this.buildMoodArticle(),
       success: () => wx.showToast({ title: '图文文案已复制', icon: 'none' }),
     })
+  },
+
+  onMoodComponentError(e) {
+    console.error('[mood] official account component error', e && e.detail)
+  },
+
+  onMoodComponentPublishSuccess(e) {
+    console.log('[mood] official account component publish success', e && e.detail)
+  },
+
+  onMoodComponentPublishFail(e) {
+    console.log('[mood] official account component publish fail', e && e.detail)
   },
 
   // 手动切换天气特效（演示 / 不联网）
