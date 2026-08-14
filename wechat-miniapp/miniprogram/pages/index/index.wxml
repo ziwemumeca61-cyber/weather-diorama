@@ -11,7 +11,7 @@
     bindtouchcancel="onCanvasTouchEnd"
   ></canvas>
 
-  <!-- 用于把本地照片 / AI 背景与天气心情本地合成；不显示，不上传。 -->
+  <!-- 用于把本地照片 / 预生成云素材与天气心情本地合成；不显示，不上传。 -->
   <canvas type="2d" id="weather-mood-canvas" class="mood-canvas"></canvas>
 
   <!-- 3D 初始化失败时的降级提示：天气信息仍可正常使用 -->
@@ -102,7 +102,7 @@
     </view>
   </view>
 
-  <!-- 独立制作层：避免把主页挤得很长，图片始终由用户主动选择或主动生成。 -->
+  <!-- 独立制作层：避免把主页挤得很长，图片始终由用户主动选择或从素材库载入。 -->
   <view class="mood-mask {{moodClosing ? 'mood-mask-closing' : ''}}" wx:if="{{moodOpen}}" bindtap="onMoodClose">
     <view class="mood-sheet {{moodClosing ? 'mood-sheet-closing' : 'mood-sheet-opening'}}" catchtap="onMoodSheetTap" bindanimationend="onMoodSheetAnimationEnd">
       <view class="mood-sheet-head" style="padding-top: {{moodSheetTopPx}}px;">
@@ -119,7 +119,7 @@
 
       <view class="mood-tabs" aria-label="选择制作方式">
         <view class="mood-tab {{moodTab === 'photo' ? 'mood-tab-on' : ''}}" data-tab="photo" bindtap="onMoodTab">我的照片</view>
-        <view class="mood-tab {{moodTab === 'ai' ? 'mood-tab-on' : ''}}" data-tab="ai" bindtap="onMoodTab">✨ AI 生图</view>
+        <view class="mood-tab {{moodTab === 'library' ? 'mood-tab-on' : ''}}" data-tab="library" bindtap="onMoodTab">🎨 风格素材</view>
       </view>
 
       <scroll-view
@@ -146,10 +146,10 @@
         </scroll-view>
       </view>
 
-      <view wx:if="{{moodTab === 'ai'}}">
+      <view wx:if="{{moodTab === 'library'}}">
         <view class="mood-section-head mood-style-head">
           <text class="mood-section-title">画面风格</text>
-          <text class="mood-section-tip">生成不包含文字</text>
+          <text class="mood-section-tip">预生成底图 · 本地叠加天气</text>
         </view>
         <scroll-view class="mood-styles" scroll-x enable-flex>
           <view
@@ -163,9 +163,9 @@
             <text class="mood-style-sub">{{item.copy}}</text>
           </view>
         </scroll-view>
-        <view class="mood-main-action {{!moodImageEnabled ? 'mood-main-disabled' : ''}}" bindtap="onGenerateAiMood">
+        <view class="mood-main-action {{!moodAssetEnabled ? 'mood-main-disabled' : ''}}" bindtap="onUseMoodAsset">
           <text class="mood-action-icon">{{moodLoading ? '◌' : '✦'}}</text>
-          <text>{{moodLoading ? '正在生成…' : moodImageEnabled ? '生成 AI 天气心情贴' : 'AI 生图暂不可用'}}</text>
+          <text>{{moodLoading ? '正在读取素材…' : moodAssetEnabled ? '制作风格天气心情贴' : '风格素材库暂不可用'}}</text>
         </view>
       </view>
 
@@ -187,12 +187,12 @@
         <image class="mood-preview" wx:if="{{moodPreview}}" src="{{moodPreview}}" mode="aspectFill" />
         <view class="mood-preview-empty" wx:else>
           <text class="mood-preview-emoji">{{moodTab === 'photo' ? '📷' : '✨'}}</text>
-          <text class="mood-preview-title">{{moodLoading ? '正在生成你的天气心情贴' : moodTab === 'photo' ? '点击“发一条”选择照片' : '让天气替你画出心情'}}</text>
-          <text class="mood-preview-sub">{{moodLoading ? '请稍候，完成后可保存或发表' : moodTab === 'photo' ? '进入官方发表页后可从相册或相机选择' : '选择心情和画面风格后开始生成'}}</text>
+          <text class="mood-preview-title">{{moodLoading ? (moodTab === 'photo' ? '正在合成照片' : '正在载入城市风格素材') : moodTab === 'photo' ? '点击“发一条”选择照片' : '从城市素材库制作一张心情贴'}}</text>
+          <text class="mood-preview-sub">{{moodLoading ? (moodTab === 'photo' ? '照片只在本地合成' : '载入后会在本地叠加实时天气与文字') : moodTab === 'photo' ? '进入官方发表页后可从相册或相机选择' : '选择心情和画面风格后开始制作'}}</text>
         </view>
       </view>
 
-      <text class="mood-ai-note" wx:if="{{moodTab === 'ai' && moodPreview}}">已生成背景。修改上面的文字只会本地重新排版，不会再消耗生图额度。</text>
+      <text class="mood-ai-note" wx:if="{{moodTab === 'library' && moodPreview}}">背景来自预生成素材库；本次制作不调用 AI、不消耗生图额度。实时天气与文字只在本地叠加。</text>
 
       <view class="mood-ready" wx:if="{{moodPreview}}">
         <view class="mood-ready-title"><text>贴图已准备好</text><text>可保存，也可点击右上角发一条</text></view>
@@ -232,7 +232,7 @@
         ></official-account-publish>
       </view>
 
-      <text class="mood-privacy">照片仅在本机合成；AI 画面只在你主动生成时调用。</text>
+      <text class="mood-privacy">照片、实时天气和文字仅在本机合成；风格背景从预生成云素材库读取。</text>
       </scroll-view>
     </view>
   </view>
