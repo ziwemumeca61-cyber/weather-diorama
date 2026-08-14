@@ -33,6 +33,12 @@
     </view>
 
     <view class="card">
+      <text class="h">风格素材</text>
+      <text class="p">城市心情贴使用预先制作并存放在云端的风格背景；你制作贴图时不会实时调用 AI。</text>
+      <text class="p">当天的雨、雪、雾、阴云或晴光以及城市、区县、温度和文案，均在手机本地叠加；成品会标注“AI 预生成素材”。</text>
+    </view>
+
+    <view class="card">
       <text class="h">说明</text>
       <text class="p">城市模型为程序化生成的风格化演绎，用于呈现天气氛围，并非真实地理测绘，不作导航或地图用途。</text>
     </view>
