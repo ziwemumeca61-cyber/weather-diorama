@@ -32,7 +32,9 @@ wechat-miniapp/
 3. **配置区县定位并部署天气云函数**：
    - 在腾讯位置服务控制台创建 **WebService API Key**，给 `cloudfunctions/weather` 配置环境变量 `TENCENT_MAP_KEY`。
    - 右键 `cloudfunctions/weather` → 「上传并部署（云端安装依赖）」。
-   - 未配置 Key 时实时天气和小时天气仍可用，但自动定位只显示城市级名称。
+   - 部署后再次检查该函数的环境变量仍有 `TENCENT_MAP_KEY`；部署配置可能覆盖云端环境变量。
+   - 云端测试可传 `{"action":"diagnoseLocation"}`：`DISTRICT_OK` 表示区县反查正常，`MAP_KEY_MISSING` 表示实际运行环境缺少 Key，`REVERSE_GEOCODER_FAILED` 表示 Key 权限或腾讯接口请求失败。
+   - 未配置 Key 时实时天气和小时天气仍可用，但界面会明确显示“区县定位暂不可用”。
 4. 直接**编译**预览：应看到顶部天气卡（默认上海实时天气）+ 底部搜索/定位/手动天气；
    画布里是一座自动环绕的微缩城市。
    > three 已内置在 `miniprogram/lib/three.core.js`，**无需 `npm install` 或「构建 npm」**。

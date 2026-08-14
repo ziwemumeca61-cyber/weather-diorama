@@ -36,9 +36,22 @@ function kindFromCode(code) {
   return 'clear'
 }
 
+function getTencentMapKey() {
+  return String(
+    process.env.TENCENT_MAP_KEY ||
+    process.env.QQ_MAP_KEY ||
+    process.env.TENCENT_LOCATION_KEY ||
+    '',
+  ).trim()
+}
+
+function safeError(error) {
+  return String(error && error.message || error || '区县反查失败').replace(/\s+/g, ' ').slice(0, 180)
+}
+
 async function reverseDistrict(latitude, longitude) {
-  const key = process.env.TENCENT_MAP_KEY || process.env.QQ_MAP_KEY
-  if (!key) return null
+  const key = getTencentMapKey()
+  if (!key) throw new Error('weather 云函数未配置 TENCENT_MAP_KEY')
   const location = Number(latitude).toFixed(6) + ',' + Number(longitude).toFixed(6)
   const response = await getJSON(
     'https://apis.map.qq.com/ws/geocoder/v1/?location=' + location +
@@ -61,6 +74,29 @@ async function reverseDistrict(latitude, longitude) {
 exports.main = async (event = {}) => {
   try {
     let { query, latitude, longitude, name } = event
+
+    // 云端测试入口：不返回 Key，只验证实际运行环境是否配置以及腾讯逆地址是否可用。
+    if (event.action === 'diagnoseLocation') {
+      const keyConfigured = !!getTencentMapKey()
+      const testLatitude = latitude == null ? 31.2304 : Number(latitude)
+      const testLongitude = longitude == null ? 121.4737 : Number(longitude)
+      if (!keyConfigured) {
+        return { ok: false, code: 'MAP_KEY_MISSING', keyConfigured: false, error: 'weather 云函数未配置 TENCENT_MAP_KEY' }
+      }
+      try {
+        const diagnosticPlace = await reverseDistrict(testLatitude, testLongitude)
+        return {
+          ok: !!(diagnosticPlace && diagnosticPlace.district),
+          code: diagnosticPlace && diagnosticPlace.district ? 'DISTRICT_OK' : 'DISTRICT_EMPTY',
+          keyConfigured: true,
+          testedLocation: { latitude: testLatitude, longitude: testLongitude },
+          place: diagnosticPlace,
+        }
+      } catch (error) {
+        return { ok: false, code: 'REVERSE_GEOCODER_FAILED', keyConfigured: true, error: safeError(error) }
+      }
+    }
+
     let place = null
     const isCoordinateLookup = latitude != null && longitude != null
 
@@ -83,13 +119,22 @@ exports.main = async (event = {}) => {
         precision: district ? 'district' : 'city',
       }
     } else {
+      let reverseError = ''
       try {
         place = await reverseDistrict(latitude, longitude)
       } catch (e) {
-        console.warn('[weather] reverse geocoder fallback', e && e.message)
+        reverseError = safeError(e)
+        console.warn('[weather] reverse geocoder fallback', reverseError)
       }
       if (!place) {
-        place = { name: name || '当前位置', city: name || '', district: '', province: '', precision: 'city' }
+        place = {
+          name: name || '当前位置',
+          city: name || '',
+          district: '',
+          province: '',
+          precision: 'fallback',
+          locationError: reverseError || '腾讯位置服务未返回区县',
+        }
       }
     }
 
@@ -111,6 +156,14 @@ exports.main = async (event = {}) => {
         latitude: Number(latitude),
         longitude: Number(longitude),
       },
+      locationLookup: isCoordinateLookup
+        ? {
+            ok: !!place.district,
+            provider: 'tencent',
+            code: place.district ? 'DISTRICT_OK' : (place.precision === 'fallback' ? 'REVERSE_GEOCODER_FAILED' : 'DISTRICT_EMPTY'),
+            error: place.locationError || '',
+          }
+        : null,
       currentTime: cur.time || '',
       utcOffsetSeconds: f.utc_offset_seconds || 0,
       temperature: Math.round(cur.temperature_2m),

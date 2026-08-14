@@ -135,11 +135,14 @@ Page({
     const displayName = place.name || '当前位置'
     const hit = nearestCity(place.latitude, place.longitude, 220)
     const sceneCity = (hit && hit.name) || place.city || displayName
-    const districtLocated = place.precision === 'district' && place.district
+    const districtLocated = !!place.district
+    const districtLookupFailed = d.locationLookup && d.locationLookup.ok === false
     const resetLibraryMood = this.data.moodBackgroundType === 'library'
     this.setData({
       place: displayName,
-      placeMeta: districtLocated ? ((place.city ? place.city + ' · ' : '') + '区县定位') : '城市天气',
+      placeMeta: districtLocated
+        ? ((place.city ? place.city + ' · ' : '') + '区县定位')
+        : (districtLookupFailed ? '区县定位暂不可用' : '城市天气'),
       placeCity: sceneCity,
       placeDistrict: districtLocated ? place.district : '',
       temp: d.temperature,
@@ -157,6 +160,7 @@ Page({
       this.refreshMoodArticle()
       if (this.data.moodBackgroundType === 'photo' && this.data.moodBackground) this.recomposeMoodSticker()
     })
+    if (districtLookupFailed) console.warn('[location] district lookup failed', d.locationLookup)
     if (sceneCity) wx.setStorage({ key: LAST_CITY, data: sceneCity })
     if (sceneApi) {
       sceneApi.setCity(sceneCity)
@@ -230,9 +234,31 @@ Page({
           name: hit ? hit.name : '当前位置',
         })
       },
-      fail: () => {
-        if (silent) this.load(wx.getStorageSync(LAST_CITY) || '上海')
-        else wx.showToast({ title: '需要定位授权', icon: 'none' })
+      fail: (error) => {
+        if (silent) {
+          this.load(wx.getStorageSync(LAST_CITY) || '上海')
+          return
+        }
+        const message = String(error && error.errMsg || '')
+        if (/auth|authorize|permission|deny/i.test(message) && wx.openSetting) {
+          wx.showModal({
+            title: '开启位置权限',
+            content: '需要位置权限才能定位到所在区县。请在设置中允许使用位置信息。',
+            confirmText: '去设置',
+            success: (modal) => {
+              if (!modal.confirm) return
+              wx.openSetting({
+                success: (setting) => {
+                  const allowed = setting && setting.authSetting && setting.authSetting['scope.userLocation']
+                  if (allowed) this.locate(true)
+                  else wx.showToast({ title: '位置权限仍未开启', icon: 'none' })
+                },
+              })
+            },
+          })
+          return
+        }
+        wx.showToast({ title: '定位失败，请检查系统定位', icon: 'none' })
       },
     })
   },
@@ -283,8 +309,7 @@ Page({
     const custom = String(this.data.moodText || '').trim()
     const title = `${city}${weather.kindLabel || '天气'} ${temperature}｜${mood.label}`
     const feeling = custom || mood.copy
-    const disclosure = this.data.moodBackgroundType === 'library' ? '\n\n画面使用预生成 AI 素材；本次制作未实时调用 AI。' : ''
-    return `${title}\n\n${weather.emoji || '☀️'} ${weather.kindLabel || '天气'} · ${temperature} · ${weather.dateLabel || '今天'}\n\n${feeling}\n\n天气会变，心情也会。把这一刻留给自己。${disclosure}\n\n#天气 #心情 #云上幻象天气`
+    return `${title}\n\n${weather.emoji || '☀️'} ${weather.kindLabel || '天气'} · ${temperature} · ${weather.dateLabel || '今天'}\n\n${feeling}\n\n天气会变，心情也会。把这一刻留给自己。\n\n#天气 #心情 #云上幻象天气`
   },
 
   refreshMoodArticle() {
