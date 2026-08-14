@@ -1,0 +1,10 @@
+{
+  "name": "mood-asset-batch",
+  "version": "1.0.0",
+  "private": true,
+  "description": "一次性预生成城市心情素材库；完成后停用并删除云函数",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "4.0.2"
+  }
+}
