@@ -2,7 +2,7 @@ const cloud = require('wx-server-sdk')
 const https = require('https')
 const crypto = require('crypto')
 
-cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV, timeout: 180000 })
+cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV, timeout: 40000 })
 
 // 生图只发生在这个临时批处理函数中。正式小程序只调用 moodSticker 查询已有素材。
 const IMAGE_ROUTE = 'hunyuan-image'
@@ -12,9 +12,10 @@ const ASSET_COLLECTION = 'mood_assets'
 const JOB_COLLECTION = 'mood_asset_jobs'
 const JOB_ID = 'city-mood-library-v1'
 const TRIGGER_NAME = 'mood-asset-library-timer'
-const BATCH_SIZE = 6
-const CONCURRENCY = 2
-const LEASE_MS = 4 * 60 * 1000
+const BATCH_SIZE = 1
+const CONCURRENCY = 1
+const LEASE_MS = 90 * 1000
+const MAX_PROMPT_LENGTH = 480
 
 const MOODS = {
   calm: { label: '暂时不想解释', story: '安静的城市边缘、独处空间和一束很淡但确定的光，克制、留有呼吸，不表现孤立无援', palette: '雾蓝、灰绿、珍珠白，低饱和且有细腻层次' },
@@ -110,20 +111,16 @@ function assetId(task) {
 function buildPrompt(task) {
   const mood = MOODS[task.moodKey]
   const style = task.style
-  return [
-    '任务：为天气小程序的预生成素材库制作一张高级竖版3:4城市心情背景。它不是用户实时生成结果，后续会由小程序本地叠加当天真实天气特效和准确中文。',
-    `城市硬约束：${task.city}；视觉证据：${CITY_VISUAL_ANCHORS[task.city]}。必须第一眼可辨认这座城市，不得替换成上海、北京、香港或随机未来城市。`,
-    `心情主题：${mood.label}。`,
-    `情绪叙事：${mood.story}。`,
-    `色彩关系：${mood.palette}。`,
-    `画风：${style.label}；${style.direction}。`,
-    `构图：${style.composition}。`,
-    `必须出现：${style.must}。`,
-    `禁止出现：${style.avoid}。`,
-    '天气适配要求：这是可复用底图，不锁定具体天气。不要出现明确雨线、雪花、闪电、浓雾、彩虹、巨大太阳或天气图标；天空和空气层次要能自然承接后续程序化天气叠加。',
-    '下方约36%保留相对安静、略暗但仍有材质的排版安全区。允许很小的背影或生活痕迹，不出现清晰人脸和人物特写。',
-    '严禁任何可读文字、乱码、字母、数字、Logo、水印和UI。严禁旅游宣传海报、励志海报、过度饱和、廉价光效和混合画风。',
+  const prompt = [
+    '高级竖版3:4天气小程序城市心情背景，后续由程序叠加实时天气和准确中文。',
+    `城市必须是${task.city}，辨识证据：${CITY_VISUAL_ANCHORS[task.city]}；不得换成其他城市。`,
+    `心情“${mood.label}”：${mood.story}；配色：${mood.palette}。`,
+    `画风“${style.label}”：${style.direction}；构图：${style.composition}。`,
+    `避免：${style.avoid}。`,
+    '底图不锁定天气，不画明确雨雪雷雾、彩虹、巨大太阳或天气图标。下方36%保留安静略暗的排版安全区。',
+    '禁止可读文字、乱码、字母、数字、Logo、水印、UI、清晰人脸、旅游宣传海报和廉价光效。',
   ].join('\n')
+  return clean(prompt, MAX_PROMPT_LENGTH)
 }
 
 function downloadImage(url, redirects = 0) {
@@ -146,7 +143,7 @@ function downloadImage(url, redirects = 0) {
       response.on('end', () => resolve(Buffer.concat(chunks)))
       response.on('error', reject)
     })
-    request.setTimeout(30000, () => request.destroy(new Error('图片下载超时')))
+    request.setTimeout(12000, () => request.destroy(new Error('图片下载超时')))
     request.on('error', reject)
   })
 }
