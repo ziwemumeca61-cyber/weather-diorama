@@ -59,7 +59,7 @@ Page({
       { key: 'cinematic', emoji: '🎬', label: '电影叙事', copy: '真实光影，像一帧有故事的电影' },
       { key: 'miniature', emoji: '🏙️', label: '3D微缩', copy: '精致城市微缩，天气变成情绪装置' },
       { key: 'healing', emoji: '🎨', label: '治愈插画', copy: '细腻笔触，温柔但不廉价梦幻' },
-      { key: 'oriental', emoji: '🌙', label: '东方留白', copy: '含蓄构图，用风、雾、雨讲情绪' },
+      { key: 'oriental', emoji: '🌙', label: '东方意境', copy: '疏朗卷轴与城市雨境，两套构图随城市心情呈现' },
       { key: 'zine', emoji: '✂️', label: '城市采集志', copy: '地标、街角与天气碎片组成一页城市独立杂志' },
     ],
     moodArticle: '',
@@ -485,7 +485,7 @@ Page({
   moodImageCacheKey() {
     const d = this.data
     const signature = [d.place, d.dateLabel, d.temp, d.kindLabel, d.moodKey, d.moodStyleKey].join('|')
-    return `moodImage:v4:${encodeURIComponent(signature).slice(0, 220)}`
+    return `moodImage:v5:${encodeURIComponent(signature).slice(0, 220)}`
   },
 
   async onGenerateAiMood() {
