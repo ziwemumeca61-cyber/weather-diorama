@@ -176,7 +176,7 @@
   font-size: 18rpx;
 }
 
-/* 天气心情贴：亮色、轻量的制作页；官方「发一条」组件保持原生。 */
+/* 天气心情贴：亮色、轻量的制作页；图片与风格素材各自独立发布。 */
 .mood-entry {
   display: flex;
   flex-direction: row;
@@ -375,6 +375,48 @@
 .mood-section-title { color: #263752; font-size: 26rpx; font-weight: 700; }
 .mood-section-state, .mood-section-tip { color: #8b9ab4; font-size: 20rpx; }
 .mood-style-head { margin-top: 28rpx; }
+.mood-mode-card {
+  margin-top: 20rpx;
+  padding: 18rpx;
+  border: 2rpx solid #dfe7f3;
+  border-radius: 22rpx;
+  background: #ffffff;
+}
+.mood-mode-copy { display: flex; flex-direction: column; }
+.mood-mode-title { color: #304665; font-size: 25rpx; font-weight: 700; }
+.mood-mode-sub { margin-top: 5rpx; color: #8796ac; font-size: 20rpx; line-height: 1.45; }
+.mood-mode-actions { display: flex; flex-direction: row; gap: 12rpx; margin-top: 15rpx; }
+.mood-source-action,
+.mood-source-publish {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 7rpx;
+  min-height: 68rpx;
+  padding: 13rpx 14rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  font-weight: 600;
+}
+.mood-source-action {
+  border: 2rpx solid #cbdaf1;
+  color: #496a99;
+  background: #f8fbff;
+}
+.mood-source-publish {
+  color: #ffffff;
+  background: linear-gradient(135deg, #4d7ee9, #775ecb);
+  box-shadow: 0 7rpx 18rpx rgba(73, 91, 172, 0.2);
+}
+.mood-source-publish-disabled {
+  color: #8f9eb5;
+  background: #e5eaf2;
+  box-shadow: none;
+}
+.mood-library-publish .mood-source-publish { margin-top: 14rpx; width: 100%; }
 .mood-options {
   width: 100%;
   white-space: nowrap;
@@ -457,12 +499,13 @@
 .mood-preview-empty {
   display: flex;
   width: 100%;
-  height: 320rpx;
 }
 .mood-preview {
+  height: 320rpx;
   object-fit: cover;
 }
 .mood-preview-empty {
+  height: 152rpx;
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -530,40 +573,6 @@
   font-size: 24rpx;
   background: #ffffff;
 }
-.mood-publish-area { margin-top: 28rpx; padding: 22rpx 18rpx 10rpx; border: 2rpx solid #e0e7f2; border-radius: 24rpx; background: #ffffff; }
-.mood-publish-head { display: flex; flex-direction: row; align-items: center; justify-content: space-between; padding: 0 4rpx 16rpx; }
-.mood-publish-title, .mood-publish-sub { display: block; }
-.mood-publish-title { color: #31445f; font-size: 28rpx; font-weight: 700; }
-.mood-publish-sub { margin-top: 5rpx; color: #8a98ac; font-size: 20rpx; }
-.mood-publish-head-right { display: flex; flex-direction: row; align-items: center; gap: 10rpx; }
-.mood-publish-action {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  padding: 10rpx 18rpx;
-  border: 2rpx solid #d7e3f7;
-  border-radius: 999rpx;
-  color: #315a9d;
-  font-size: 22rpx;
-  font-weight: 600;
-  background: #f3f7ff;
-  box-shadow: 0 5rpx 14rpx rgba(57, 91, 153, 0.12);
-}
-.mood-publish-action-icon { margin-right: 6rpx; font-size: 24rpx; line-height: 1; }
-.mood-publish-badge { padding: 5rpx 12rpx; border-radius: 999rpx; color: #4a70b8; font-size: 18rpx; background: #edf3ff; }
-.mood-official-unavailable {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 176rpx;
-  padding: 22rpx;
-  border-radius: 18rpx;
-  text-align: center;
-  background: #f4f7fc;
-}
-.mood-official-unavailable-title { display: block; color: #536987; font-size: 24rpx; font-weight: 600; }
-.mood-official-unavailable-sub { display: block; margin-top: 10rpx; color: #93a1b6; font-size: 20rpx; line-height: 1.5; }
 .mood-privacy {
   display: block;
   margin-top: 14rpx;

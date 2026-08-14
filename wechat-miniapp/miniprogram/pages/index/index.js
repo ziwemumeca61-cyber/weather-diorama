@@ -602,7 +602,18 @@ Page({
     })
   },
 
-  onOfficialPublishMood() {
+  onOfficialPublishMood(e) {
+    const source = e && e.currentTarget && e.currentTarget.dataset
+      ? e.currentTarget.dataset.source || this.data.moodTab
+      : this.data.moodTab
+    const expectedType = source === 'library' ? 'library' : 'photo'
+    if (!this.data.moodPreview || this.data.moodBackgroundType !== expectedType) {
+      wx.showToast({
+        title: expectedType === 'library' ? '请先制作风格心情贴' : '请先选择图片',
+        icon: 'none',
+      })
+      return
+    }
     if (!this.data.officialPublishEnabled) {
       this.showOfficialPublishUnavailable()
       return
@@ -619,9 +630,11 @@ Page({
     const options = {
       title,
       content,
-      tags: ['天气心情贴', '天气', '心情'],
+      tags: expectedType === 'library'
+        ? ['天气心情贴', '风格素材', '心情']
+        : ['天气心情贴', '我的图片', '心情'],
       recommendPath: '/pages/index/index',
-      recommendTitle: '制作我的天气心情贴',
+      recommendTitle: expectedType === 'library' ? '制作风格天气心情贴' : '制作我的天气心情贴',
       success: (result) => {
         wx.showToast({
           title: result && result.postUrl ? '贴图已发布' : '已打开官方发表页',
@@ -648,18 +661,6 @@ Page({
       data: this.data.moodArticle || this.buildMoodArticle(),
       success: () => wx.showToast({ title: '图文文案已复制', icon: 'none' }),
     })
-  },
-
-  onMoodComponentError(e) {
-    console.error('[mood] official account component error', e && e.detail)
-  },
-
-  onMoodComponentPublishSuccess(e) {
-    console.log('[mood] official account component publish success', e && e.detail)
-  },
-
-  onMoodComponentPublishFail(e) {
-    console.log('[mood] official account component publish fail', e && e.detail)
   },
 
   // 手动切换天气特效（演示 / 不联网）
