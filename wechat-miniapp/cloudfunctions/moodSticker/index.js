@@ -7,8 +7,10 @@ cloud.init({
   timeout: 180000,
 })
 
-const MODEL = 'HY-Image-3.0-Plus-4090-Tob-v1.0'
-const PROMPT_VERSION = 'city-mood-v4'
+// 只调用已纳入小程序成长计划生图额度的 CloudBase 路由与模型；不配置其他模型回退。
+const GROWTH_PLAN_IMAGE_ROUTE = 'hunyuan-image'
+const GROWTH_PLAN_IMAGE_MODEL = 'HY-Image-3.0-Plus-4090-Tob-v1.0'
+const PROMPT_VERSION = 'city-mood-v5'
 const RATE_WINDOW = 10 * 60 * 1000
 const RATE_LIMIT = 2
 const RATE_RETRY_SECONDS = 60
@@ -93,18 +95,22 @@ const STYLES = {
     avoid: '儿童简笔画、糖果色、日系模板人物、廉价梦幻、发光粒子堆叠',
   },
   oriental: {
-    label: '东方留白',
-    direction: '当代东方视觉叙事，水墨空气、矿物色、宣纸肌理与现代城市剪影相结合',
-    composition: '大面积有意留白，近景一处细节、中景城市轮廓、远景天气层次，气韵连贯',
-    must: '准确地标剪影、含蓄的风雨方向、克制墨色、现代而非仿古',
-    avoid: '古装人物、传统山水套模板、满版祥云、书法字、古城替代现代城市',
+    label: '东方意境',
+    direction: '当代东方视觉叙事，把现代城市的真实地标、天气与情绪转译成水墨空气、矿物色和宣纸肌理；清雅、有当代编辑感，不仿古',
+    compositions: [
+      '疏朗卷轴构图：至少一半宣纸呼吸留白，地标以少量墨线和矿物色从下方或侧边生长；近景只留一处天气细节，以朱砂小色块平衡画面',
+      '城市雨境构图：下半部用水墨晕染重构可辨识的现代城市与水面倒影，上半部保留开阔雾白天空；建筑线条略密、雨雾向远处化开，像当代东方城市海报',
+    ],
+    composition: '在两套东方构图中稳定选择一套：疏朗卷轴或城市雨境；同一组输入保持一致，不把两套硬拼在一张图里',
+    must: '准确现代地标剪影、含蓄风雨方向、可见宣纸纤维、克制墨色与一处矿物色或朱砂色视觉锚点',
+    avoid: '古装人物、传统山水套模板、满版祥云、书法字、古城替代现代城市、廉价国潮边框',
   },
   zine: {
     label: '城市采集志',
-    direction: 'gathered-scenes 城市视觉采集册与独立杂志 zine，一页中收集同一时刻的城市碎片',
-    composition: '以一个主场景为中心，围绕它组织三到五个有触感的局部碎片：地标切片、街角物件、天气痕迹、交通或生活细节；层级清楚，不做平均宫格',
-    must: '撕纸边缘、胶带、半透明描图纸、印刷网点、铅笔标记和票据轮廓；所有碎片必须来自同一城市、同一天气、同一心情',
-    avoid: 'PPT拼版、整齐九宫格、随机素材堆砌、旅行攻略、可读英文或中文、品牌Logo',
+    direction: '有手作温度的 gathered-scenes 城市采集志与独立杂志 zine，采用暖奶油纸底、钴蓝结构色和真实印刷层次，像刚从城市步行中收集完成的一页',
+    composition: '一个占据约一半版面的主城市画面作为第一视觉中心，周围错落组织三到五块大小不同的同城碎片：地标局部、街角立面、交通、植被与天气痕迹；碎片允许遮叠和越界，拒绝平均分栏',
+    must: '撕纸毛边、局部胶带或订钉、半透明描图纸、印刷网点、铅笔圈线、票据或地图轮廓；主次反差明确，所有碎片来自同一城市、同一天气、同一心情',
+    avoid: 'PPT拼版、整齐九宫格、极简空白杂志、随机素材堆砌、旅行攻略、可读英文或中文、品牌Logo',
   },
 }
 
@@ -228,6 +234,12 @@ function isRateLimitError(error) {
   return /(?:^|\D)429(?:\D|$)|too many requests|rate.?limit|请求(?:频率|速率).*超|限流/i.test(detail)
 }
 
+function stableVariant(items, seed) {
+  if (!Array.isArray(items) || !items.length) return ''
+  const digest = crypto.createHash('sha256').update(seed).digest()
+  return items[digest[0] % items.length]
+}
+
 function buildPrompt(weather, mood, style) {
   const city = clean(weather.city, 40) || '一座中国城市'
   const district = clean(weather.district, 40)
@@ -237,6 +249,7 @@ function buildPrompt(weather, mood, style) {
   const weatherMetaphor = (WEATHER_METAPHORS.find((item) => item.test.test(condition)) || {}).text
     || '保留当前真实天气的核心视觉特征，并让它承担情绪表达'
   const cityAnchor = cityVisualAnchor(city)
+  const composition = stableVariant(style.compositions, `${location}|${condition}|${mood.label}`) || style.composition
   return [
     '任务：生成一张高级竖版 3:4“城市天气心情贴”的纯背景，最终会由小程序叠加准确中文排版。',
     '输入是硬约束，不得自行更换：',
@@ -254,7 +267,7 @@ function buildPrompt(weather, mood, style) {
     `色彩与光线：${mood.palette}。`,
     '',
     `画风执行：${style.direction}。`,
-    `构图规则：${style.composition}。`,
+    `构图规则：${composition}。`,
     `必须出现：${style.must}。`,
     `禁止出现：${style.avoid}。`,
     '',
@@ -294,9 +307,9 @@ function downloadImage(url, redirects = 0) {
 }
 
 async function generateBackground(key, keyHash, weather, mood, style) {
-  const imageModel = cloud.ai().createImageModel('hunyuan-image')
+  const imageModel = cloud.ai().createImageModel(GROWTH_PLAN_IMAGE_ROUTE)
   const result = await imageModel.generateImage({
-    model: MODEL,
+    model: GROWTH_PLAN_IMAGE_MODEL,
     prompt: buildPrompt(weather, mood, style),
     size: '768x1024',
     revise: { value: false },
@@ -311,7 +324,7 @@ async function generateBackground(key, keyHash, weather, mood, style) {
     fileContent: await downloadImage(url),
   })
   putCache(key, { fileID: upload.fileID })
-  return { ok: true, fileID: upload.fileID, cached: false, promptVersion: PROMPT_VERSION }
+  return { ok: true, fileID: upload.fileID, cached: false, promptVersion: PROMPT_VERSION, imageRoute: GROWTH_PLAN_IMAGE_ROUTE, imageModel: GROWTH_PLAN_IMAGE_MODEL }
 }
 
 exports.main = async (event = {}, context = {}) => {
@@ -329,7 +342,7 @@ exports.main = async (event = {}, context = {}) => {
   const key = JSON.stringify({ promptVersion: PROMPT_VERSION, moodKey, moodStyleKey, city: clean(weather.city, 40), district: clean(weather.district, 40), date: clean(weather.dateLabel, 30), kind: clean(weather.kindLabel, 16), temperature: clean(weather.temperature, 10) })
   const keyHash = crypto.createHash('sha256').update(key).digest('hex').slice(0, 32)
   const cached = getCached(key)
-  if (cached) return { ok: true, fileID: cached.fileID, cached: true, promptVersion: PROMPT_VERSION }
+  if (cached) return { ok: true, fileID: cached.fileID, cached: true, promptVersion: PROMPT_VERSION, imageRoute: GROWTH_PLAN_IMAGE_ROUTE, imageModel: GROWTH_PLAN_IMAGE_MODEL }
   const coolingSeconds = Math.ceil((serviceCooldownUntil - Date.now()) / 1000)
   if (coolingSeconds > 0) {
     return { ok: false, code: 'RATE_LIMITED', retryAfter: coolingSeconds, error: `生成服务正忙，请 ${coolingSeconds} 秒后再试` }
