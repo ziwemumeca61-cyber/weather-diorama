@@ -105,9 +105,89 @@ function fillPill(ctx, x, y, width, height, fill, stroke) {
   }
 }
 
+function seededUnit(seed, index) {
+  const text = `${seed}|${index}`
+  let hash = 2166136261
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i)
+    hash = Math.imul(hash, 16777619)
+  }
+  return (hash >>> 0) / 4294967295
+}
+
+// 预生成底图不绑定天气；实时雨雪雾等由本地 Canvas 绘制，不调用任何 AI。
+function drawWeatherLayer(ctx, weather) {
+  const condition = String(weather.kindLabel || '')
+  const seed = `${weather.city || weather.place || ''}|${condition}|${weather.dateLabel || ''}`
+  ctx.save()
+
+  if (/雷/.test(condition)) {
+    ctx.fillStyle = 'rgba(18, 29, 55, 0.2)'
+    ctx.fillRect(0, 0, OUTPUT_WIDTH, 610)
+    ctx.strokeStyle = 'rgba(239, 244, 255, 0.72)'
+    ctx.lineWidth = 5
+    ctx.beginPath()
+    ctx.moveTo(594, 80)
+    ctx.lineTo(540, 220)
+    ctx.lineTo(585, 216)
+    ctx.lineTo(502, 390)
+    ctx.stroke()
+  }
+
+  if (/雨/.test(condition)) {
+    ctx.strokeStyle = 'rgba(215, 235, 255, 0.42)'
+    ctx.lineWidth = 2
+    for (let i = 0; i < 96; i++) {
+      const x = seededUnit(seed, i) * (OUTPUT_WIDTH + 150) - 70
+      const y = seededUnit(seed, i + 130) * 650 - 90
+      const length = 22 + seededUnit(seed, i + 260) * 46
+      ctx.beginPath()
+      ctx.moveTo(x, y)
+      ctx.lineTo(x - 15, y + length)
+      ctx.stroke()
+    }
+  } else if (/雪/.test(condition)) {
+    ctx.fillStyle = 'rgba(250, 252, 255, 0.76)'
+    for (let i = 0; i < 86; i++) {
+      const x = seededUnit(seed, i) * OUTPUT_WIDTH
+      const y = seededUnit(seed, i + 120) * 650
+      const radius = 1.5 + seededUnit(seed, i + 240) * 4.5
+      ctx.beginPath()
+      ctx.arc(x, y, radius, 0, Math.PI * 2)
+      ctx.fill()
+    }
+  }
+
+  if (/雾|霾/.test(condition)) {
+    for (let i = 0; i < 5; i++) {
+      const y = 80 + i * 112
+      const fog = ctx.createLinearGradient(0, y, OUTPUT_WIDTH, y + 90)
+      fog.addColorStop(0, 'rgba(225, 235, 239, 0.1)')
+      fog.addColorStop(0.5, 'rgba(232, 239, 242, 0.34)')
+      fog.addColorStop(1, 'rgba(225, 235, 239, 0.08)')
+      ctx.fillStyle = fog
+      ctx.fillRect(0, y, OUTPUT_WIDTH, 110)
+    }
+  } else if (/阴|云/.test(condition)) {
+    const cloud = ctx.createLinearGradient(0, 0, 0, 480)
+    cloud.addColorStop(0, 'rgba(70, 83, 105, 0.28)')
+    cloud.addColorStop(1, 'rgba(105, 119, 139, 0)')
+    ctx.fillStyle = cloud
+    ctx.fillRect(0, 0, OUTPUT_WIDTH, 520)
+  } else if (/晴|阳光/.test(condition)) {
+    const sun = ctx.createRadialGradient(620, 80, 0, 620, 80, 310)
+    sun.addColorStop(0, 'rgba(255, 226, 155, 0.32)')
+    sun.addColorStop(1, 'rgba(255, 226, 155, 0)')
+    ctx.fillStyle = sun
+    ctx.fillRect(250, 0, 518, 430)
+  }
+
+  ctx.restore()
+}
+
 /**
- * 在本地把 AI 背景合成为完整天气海报。
- * 模型只负责城市画面；这里负责准确中文、天气、心情和 AI 标识。
+ * 在本地把预生成城市素材合成为完整天气海报。
+ * 素材库提供城市与画风；这里负责实时天气特效、准确中文和 AI 素材标识。
  */
 export async function makeWeatherMoodSticker(canvas, backgroundPath, weather, mood) {
   if (!canvas || !backgroundPath) throw new Error('请先准备一张背景图')
@@ -117,6 +197,7 @@ export async function makeWeatherMoodSticker(canvas, backgroundPath, weather, mo
   const image = await loadImage(canvas, backgroundPath)
   ctx.clearRect(0, 0, OUTPUT_WIDTH, OUTPUT_HEIGHT)
   coverImage(ctx, image)
+  drawWeatherLayer(ctx, weather)
 
   const topShade = ctx.createLinearGradient(0, 0, 0, 240)
   topShade.addColorStop(0, 'rgba(7, 14, 31, 0.66)')
@@ -144,10 +225,10 @@ export async function makeWeatherMoodSticker(canvas, backgroundPath, weather, mo
   ctx.fillText(styleLabel, OUTPUT_WIDTH - styleWidth - 21, 69)
 
   if (mood.generatedByAi) {
-    fillPill(ctx, OUTPUT_WIDTH - 180, 102, 140, 44, 'rgba(7,14,31,0.5)', null)
+    fillPill(ctx, OUTPUT_WIDTH - 224, 102, 184, 44, 'rgba(7,14,31,0.5)', null)
     ctx.fillStyle = 'rgba(255,255,255,0.82)'
     ctx.font = '500 18px sans-serif'
-    ctx.fillText('AI 生成背景', OUTPUT_WIDTH - 162, 131)
+    ctx.fillText('AI 预生成素材', OUTPUT_WIDTH - 205, 131)
   }
 
   // 半透明信息面板确保任何亮暗背景下文字都清楚可见。
