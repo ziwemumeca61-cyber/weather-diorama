@@ -1,5 +1,5 @@
 // 小程序元信息。版本号在每次提交审核前手动 +1，方便线上排查问题。
-export const VERSION = '1.0.0'
+export const VERSION = '1.1.0'
 
 // 已收录专属地标的城市数（新增地标时同步更新）
 export const CITY_COUNT = 53
@@ -11,6 +11,6 @@ export const WEATHER_CREDIT = {
   url: 'https://open-meteo.com',
 }
 
-// 生图只用于“天气心情贴”的受控创作流程，不提供开放式 AI 问答。
-// 上线前只需部署 moodSticker 云函数。
-export const MOOD_IMAGE_ENABLED = true
+// 正式端只读取预生成城市素材，不提供实时 AI 生图或开放式提示词。
+// 2226 张素材完成后部署 moodSticker；moodAssetBatch 仅在离线制备阶段临时使用。
+export const MOOD_ASSET_ENABLED = true
