@@ -32,10 +32,9 @@ Page({
     moodAssetEnabled: MOOD_ASSET_ENABLED,
     moodOpen: false,
     moodClosing: false,
-    moodTab: 'photo',
+    moodTab: 'official',
     moodKey: 'calm',
     moodText: '',
-    moodPhoto: '',
     moodPreview: '',
     moodBackground: '',
     moodBackgroundType: '',
@@ -158,7 +157,6 @@ Page({
       ...(resetLibraryMood ? { moodPreview: '', moodBackground: '', moodBackgroundType: '' } : {}),
     }, () => {
       this.refreshMoodArticle()
-      if (this.data.moodBackgroundType === 'photo' && this.data.moodBackground) this.recomposeMoodSticker()
     })
     if (districtLookupFailed) console.warn('[location] district lookup failed', d.locationLookup)
     if (sceneCity) wx.setStorage({ key: LAST_CITY, data: sceneCity })
@@ -394,32 +392,23 @@ Page({
   onMoodSheetTap() {},
 
   onMoodTab(e) {
-    const tab = e.currentTarget.dataset.tab || 'photo'
-    const background = tab === 'photo' ? this.data.moodPhoto : ''
-    this.setData({
-      moodTab: tab,
-      moodPreview: '',
-      moodBackground: background,
-      moodBackgroundType: background ? 'photo' : '',
-      moodScrollTop: 1,
-    }, () => {
+    const tab = e.currentTarget.dataset.tab || 'official'
+    if (!['official', 'poster'].includes(tab) || tab === this.data.moodTab) return
+    // 两条路径互不清空状态：查看官方已发内容后，返回时仍保留刚做好的城市画报。
+    this.setData({ moodTab: tab, moodScrollTop: 1 }, () => {
       this.setData({ moodScrollTop: 0 })
-      this.refreshMoodArticle()
-      if (background) this.recomposeMoodSticker()
     })
   },
 
   onMoodPick(e) {
-    const photoBackground = this.data.moodTab === 'photo' ? this.data.moodPhoto : ''
+    const moodKey = e.currentTarget.dataset.key || 'calm'
+    if (moodKey === this.data.moodKey) return
     this.setData({
-      moodKey: e.currentTarget.dataset.key || 'calm',
+      moodKey,
       moodPreview: '',
-      moodBackground: photoBackground,
-      moodBackgroundType: photoBackground ? 'photo' : '',
-    }, () => {
-      this.refreshMoodArticle()
-      if (photoBackground) this.recomposeMoodSticker()
-    })
+      moodBackground: '',
+      moodBackgroundType: '',
+    }, () => this.refreshMoodArticle())
   },
 
   onMoodStylePick(e) {
@@ -467,38 +456,6 @@ Page({
       })
   },
 
-  onChooseMoodPhoto() {
-    if (this.data.loading || !this.shareCity()) {
-      wx.showToast({ title: '天气加载完成后再制作', icon: 'none' })
-      return
-    }
-    wx.chooseImage({
-      count: 1,
-      sourceType: ['album', 'camera'],
-      sizeType: ['compressed'],
-      success: (res) => {
-        const photoPath = res && res.tempFilePaths && res.tempFilePaths[0]
-        if (!photoPath) return
-        this.setData({
-          moodLoading: true,
-          moodPhoto: photoPath,
-          moodPreview: '',
-          moodBackground: photoPath,
-          moodBackgroundType: 'photo',
-        }, () => {
-          this.refreshMoodArticle()
-          this.composeMoodSticker(photoPath)
-            .then((preview) => this.setData({ moodPreview: preview, moodLoading: false }))
-            .catch((error) => {
-              console.error('[mood] photo compose failed', error)
-              this.setData({ moodLoading: false })
-              wx.showToast({ title: '合成失败，请换一张照片', icon: 'none' })
-            })
-        })
-      },
-    })
-  },
-
   moodAssetCacheKey() {
     const d = this.data
     const signature = [MOOD_ASSET_VERSION, d.placeCity || d.place, d.moodKey, d.moodStyleKey, d.kindLabel].join('|')
@@ -507,12 +464,12 @@ Page({
 
   async onUseMoodAsset() {
     if (!this.data.moodAssetEnabled) {
-      wx.showToast({ title: '风格素材库暂不可用', icon: 'none' })
+      wx.showToast({ title: '城市画报暂不可用', icon: 'none' })
       return
     }
     if (this.data.loading || !this.shareCity()) return
     if (this._moodAssetRunning || this.data.moodLoading) {
-      wx.showToast({ title: '正在读取素材，请不要重复点击', icon: 'none' })
+      wx.showToast({ title: '正在制作画报，请不要重复点击', icon: 'none' })
       return
     }
 
@@ -546,7 +503,7 @@ Page({
         })
         const result = (res && res.result) || {}
         if (!result.ok || !result.fileID) {
-          const error = new Error(result.error || '风格素材读取失败')
+          const error = new Error(result.error || '城市画报素材读取失败')
           error.code = result.code || ''
           throw error
         }
@@ -556,7 +513,7 @@ Page({
       }
 
       const backgroundPath = download && download.tempFilePath
-      if (!backgroundPath) throw new Error('风格素材下载失败')
+      if (!backgroundPath) throw new Error('城市画报素材下载失败')
       this.setData({ moodBackground: backgroundPath, moodBackgroundType: 'library' }, () => this.refreshMoodArticle())
       const preview = await this.composeMoodSticker(backgroundPath, true)
       this.setData({ moodPreview: preview, moodLoading: false })
@@ -564,10 +521,10 @@ Page({
       console.error('[mood] library asset failed', error)
       this.setData({ moodLoading: false })
       const message = error.code === 'UNSUPPORTED_CITY'
-        ? '这座城市的素材还未收录'
+        ? '这座城市的画报还未收录'
         : error.code === 'ASSET_NOT_READY'
-          ? '这组素材尚在生成中'
-          : error.message || '风格素材读取失败'
+          ? '这款城市画报尚未准备好'
+          : error.message || '城市画报素材读取失败'
       wx.showToast({ title: message, icon: 'none' })
     } finally {
       this._moodAssetRunning = false
@@ -585,7 +542,7 @@ Page({
         if (error && /auth deny|authorize no response/.test(error.errMsg || '')) {
           wx.showModal({
             title: '需要相册权限',
-            content: '允许保存后，才能把心情贴保存在手机相册。',
+            content: '允许保存后，才能把城市画报保存在手机相册。',
             success: (res) => { if (res.confirm) wx.openSetting() },
           })
         }
@@ -602,32 +559,26 @@ Page({
     })
   },
 
-  onOfficialPublishMood(e) {
-    const source = e && e.currentTarget && e.currentTarget.dataset
-      ? e.currentTarget.dataset.source || this.data.moodTab
-      : this.data.moodTab
-    const expectedType = source === 'library' ? 'library' : 'photo'
-    if (!this.data.moodPreview || this.data.moodBackgroundType !== expectedType) {
-      wx.showToast({
-        title: expectedType === 'library' ? '请先制作风格心情贴' : '请先选择图片',
-        icon: 'none',
-      })
+  onOfficialPublishPoster() {
+    if (!this.data.moodPreview || this.data.moodBackgroundType !== 'library') {
+      wx.showToast({ title: '请先制作城市画报', icon: 'none' })
       return
     }
     this.openOfficialPublisher({
       image: this.data.moodPreview,
-      tags: expectedType === 'library'
-        ? ['天气心情贴', '风格素材', '心情']
-        : ['天气心情贴', '我的图片', '心情'],
-      recommendTitle: expectedType === 'library' ? '制作风格天气心情贴' : '制作我的天气心情贴',
+      tags: ['天气心情贴', '城市画报', '心情'],
+      recommendTitle: '制作我的城市天气画报',
     })
   },
 
   onOfficialPublishCommon() {
+    const weather = this.weatherForMood()
+    const city = weather.place && weather.place !== '—' ? weather.place : '这座城市'
+    const temperature = weather.temp === '—' || weather.temp == null ? '—' : `${weather.temp}°`
     this.openOfficialPublisher({
-      image: this.data.moodPreview,
-      tags: ['天气心情贴', '天气', '心情'],
-      recommendTitle: '制作我的天气心情贴',
+      article: `${city}${weather.kindLabel || '天气'} ${temperature}\n\n${weather.emoji || '☀️'} ${weather.kindLabel || '天气'} · ${temperature} · ${weather.dateLabel || '今天'}\n\n#天气 #城市生活 #天气心情贴`,
+      tags: ['天气心情贴', '天气', '城市生活'],
+      recommendTitle: '查看我的城市天气',
     })
   },
 
@@ -641,7 +592,7 @@ Page({
       return
     }
 
-    const article = this.data.moodArticle || this.buildMoodArticle()
+    const article = config.article || this.data.moodArticle || this.buildMoodArticle()
     const lines = article.split(/\n+/)
     const title = (lines.shift() || '天气心情贴').trim()
     const content = lines.join('\n').trim()
@@ -703,7 +654,6 @@ Page({
       ...(resetLibraryMood ? { moodPreview: '', moodBackground: '', moodBackgroundType: '' } : {}),
     }, () => {
       this.refreshMoodArticle()
-      if (this.data.moodBackgroundType === 'photo' && this.data.moodBackground) this.recomposeMoodSticker()
     })
     if (sceneApi) sceneApi.setWeather(k)
   },

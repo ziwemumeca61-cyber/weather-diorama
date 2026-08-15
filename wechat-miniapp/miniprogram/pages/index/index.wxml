@@ -11,7 +11,7 @@
     bindtouchcancel="onCanvasTouchEnd"
   ></canvas>
 
-  <!-- 用于把本地照片 / 预生成云素材与天气心情本地合成；不显示，不上传。 -->
+  <!-- 用于把预生成城市画面与实时天气、心情文案在本地合成为城市画报；不显示，不上传。 -->
   <canvas type="2d" id="weather-mood-canvas" class="mood-canvas"></canvas>
 
   <!-- 3D 初始化失败时的降级提示：天气信息仍可正常使用 -->
@@ -102,7 +102,7 @@
     </view>
   </view>
 
-  <!-- 独立制作层：避免把主页挤得很长，图片始终由用户主动选择或从素材库载入。 -->
+  <!-- 独立互动层：官方发布与城市画报分成两条清晰路径，避免混用。 -->
   <view class="mood-mask {{moodClosing ? 'mood-mask-closing' : ''}}" wx:if="{{moodOpen}}" bindtap="onMoodClose">
     <view class="mood-sheet {{moodClosing ? 'mood-sheet-closing' : 'mood-sheet-opening'}}" catchtap="onMoodSheetTap" bindanimationend="onMoodSheetAnimationEnd">
       <view class="mood-sheet-head" style="padding-top: {{moodSheetTopPx}}px;">
@@ -117,9 +117,9 @@
         <view class="mood-sheet-weather"><text>{{emoji}}</text></view>
       </view>
 
-      <view class="mood-tabs" aria-label="选择制作方式">
-        <view class="mood-tab {{moodTab === 'photo' ? 'mood-tab-on' : ''}}" data-tab="photo" bindtap="onMoodTab">我的图片</view>
-        <view class="mood-tab {{moodTab === 'library' ? 'mood-tab-on' : ''}}" data-tab="library" bindtap="onMoodTab">🎨 风格素材</view>
+      <view class="mood-tabs" aria-label="选择操作">
+        <view class="mood-tab {{moodTab === 'official' ? 'mood-tab-on' : ''}}" data-tab="official" bindtap="onMoodTab">发布动态</view>
+        <view class="mood-tab {{moodTab === 'poster' ? 'mood-tab-on' : ''}}" data-tab="poster" bindtap="onMoodTab">✨ 城市画报</view>
       </view>
 
       <scroll-view
@@ -129,138 +129,119 @@
         show-scrollbar="{{true}}"
         scroll-top="{{moodScrollTop}}"
       >
-
-      <view class="mood-section">
-        <view class="mood-section-head">
-          <text class="mood-section-title">此刻的心情</text>
-          <text class="mood-section-state">选择一种感觉</text>
-        </view>
-        <scroll-view class="mood-options" scroll-x enable-flex>
-          <view
-            wx:for="{{moodOptions}}"
-            wx:key="key"
-            class="mood-option {{moodKey === item.key ? 'mood-option-on' : ''}}"
-            data-key="{{item.key}}"
-            bindtap="onMoodPick"
-          ><text class="mood-option-emoji">{{item.emoji}}</text><text>{{item.label}}</text></view>
-        </scroll-view>
-      </view>
-
-      <view class="mood-mode-card" wx:if="{{moodTab === 'photo'}}">
-        <view class="mood-mode-copy">
-          <text class="mood-mode-title">我的图片</text>
-          <text class="mood-mode-sub">{{moodPhoto ? '图片已选好，可更换后重新合成' : '从相册或相机选择一张图片，本机完成合成'}}</text>
-        </view>
-        <view class="mood-mode-actions">
-          <view class="mood-source-action" bindtap="onChooseMoodPhoto">
-            <text>📷</text><text>{{moodPhoto ? '更换图片' : '选择图片'}}</text>
-          </view>
-          <view
-            class="mood-source-publish {{moodPreview && moodBackgroundType === 'photo' ? '' : 'mood-source-publish-disabled'}}"
-            data-source="photo"
-            bindtap="onOfficialPublishMood"
-          ><text>✎</text><text>发一条 · 我的图片</text></view>
-        </view>
-      </view>
-
-      <view wx:if="{{moodTab === 'library'}}">
-        <view class="mood-section-head mood-style-head">
-          <text class="mood-section-title">画面风格</text>
-          <text class="mood-section-tip">预生成底图 · 本地叠加天气</text>
-        </view>
-        <scroll-view class="mood-styles" scroll-x enable-flex>
-          <view
-            wx:for="{{moodStyles}}"
-            wx:key="key"
-            class="mood-style {{moodStyleKey === item.key ? 'mood-style-on' : ''}}"
-            data-key="{{item.key}}"
-            bindtap="onMoodStylePick"
-          >
-            <text class="mood-style-name">{{item.emoji}} {{item.label}}</text>
-            <text class="mood-style-sub">{{item.copy}}</text>
-          </view>
-        </scroll-view>
-        <view class="mood-main-action {{!moodAssetEnabled ? 'mood-main-disabled' : ''}}" bindtap="onUseMoodAsset">
-          <text class="mood-action-icon">{{moodLoading ? '◌' : '✦'}}</text>
-          <text>{{moodLoading ? '正在读取素材…' : moodAssetEnabled ? '制作风格天气心情贴' : '风格素材库暂不可用'}}</text>
-        </view>
-        <view class="mood-mode-card mood-library-publish">
-          <view class="mood-mode-copy">
-            <text class="mood-mode-title">风格素材</text>
-            <text class="mood-mode-sub">{{moodPreview && moodBackgroundType === 'library' ? '风格心情贴已准备好' : '先选择心情和画风，再制作心情贴'}}</text>
-          </view>
-          <view
-            class="mood-source-publish {{moodPreview && moodBackgroundType === 'library' ? '' : 'mood-source-publish-disabled'}}"
-            data-source="library"
-            bindtap="onOfficialPublishMood"
-          ><text>✎</text><text>发一条 · 风格素材</text></view>
-        </view>
-      </view>
-
-      <view class="mood-writing">
-        <view class="mood-writing-head"><text>写给今天的话</text><text>选填</text></view>
-        <textarea
-          class="mood-textarea"
-          value="{{moodText}}"
-          maxlength="80"
-          placeholder="例如：云散以后，也记得抬头看看。"
-          placeholder-class="mood-placeholder"
-          auto-height
-          bindinput="onMoodText"
-          bindblur="onMoodTextCommit"
-        />
-      </view>
-
-      <view class="mood-preview-wrap" wx:if="{{moodPreview || moodLoading}}">
-        <image class="mood-preview" wx:if="{{moodPreview}}" src="{{moodPreview}}" mode="aspectFill" />
-        <view class="mood-preview-empty" wx:else>
-          <text class="mood-preview-emoji">{{moodTab === 'photo' ? '📷' : '✨'}}</text>
-          <text class="mood-preview-title">{{moodTab === 'photo' ? '正在合成图片' : '正在载入城市风格素材'}}</text>
-          <text class="mood-preview-sub">{{moodTab === 'photo' ? '图片只在本地处理' : '载入后在本地叠加实时天气与文字'}}</text>
-        </view>
-      </view>
-
-      <text class="mood-ai-note" wx:if="{{moodTab === 'library' && moodPreview}}">背景来自预生成素材库；实时天气与文字只在本地叠加。</text>
-
-      <view class="mood-ready" wx:if="{{moodPreview}}">
-        <view class="mood-ready-title"><text>贴图已准备好</text><text>{{moodTab === 'photo' ? '我的图片' : '风格素材'}}</text></view>
-        <view class="mood-ready-row">
-          <view class="mood-secondary" bindtap="onSaveMoodSticker">保存图片</view>
-          <view class="mood-secondary" bindtap="onCopyMoodArticle">复制图文</view>
-        </view>
-      </view>
-
-      <view class="mood-publish-area">
-        <view class="mood-publish-head">
-          <view><text class="mood-publish-title">天气心情贴</text><text class="mood-publish-sub">微信官方发表入口</text></view>
-          <view class="mood-publish-head-right">
-            <view class="mood-publish-action" bindtap="onOfficialPublishCommon">
-              <text class="mood-publish-action-icon">✎</text><text>发一条</text>
+        <view wx:if="{{moodTab === 'official'}}">
+          <view class="mood-publish-area mood-publish-area-first">
+            <view class="mood-publish-head">
+              <view class="mood-publish-copy">
+                <text class="mood-publish-title">发布天气动态</text>
+                <text class="mood-publish-sub">从相册或相机添加照片 · 下方查看已发布内容</text>
+              </view>
+              <view class="mood-publish-head-right">
+                <view class="mood-publish-action" bindtap="onOfficialPublishCommon">
+                  <text class="mood-publish-action-icon">✎</text><text>发一条</text>
+                </view>
+                <text class="mood-publish-badge">官方</text>
+              </view>
             </view>
-            <text class="mood-publish-badge">官方</text>
+            <view class="mood-official-unavailable" wx:if="{{!officialPublishEnabled}}">
+              <text class="mood-official-unavailable-title">官方发表与已发内容仅支持手机微信</text>
+              <text class="mood-official-unavailable-sub">请用 Android 或 iPhone 真机打开「发一条」</text>
+            </view>
+            <official-account-publish
+              wx:elif="{{officialPublishEnabled}}"
+              topic="天气心情贴"
+              limit="4"
+              placeholder="说说此刻的天气和心情…"
+              background-color="#f6f8fc"
+              color-unity="{{true}}"
+              show-related="{{true}}"
+              recommend-path="/pages/index/index"
+              recommend-title="云上幻象天气 · 发布天气动态"
+              binderror="onMoodComponentError"
+              bindpublishsuccess="onMoodComponentPublishSuccess"
+              bindpublishfail="onMoodComponentPublishFail"
+            ></official-account-publish>
           </view>
         </view>
-        <view class="mood-official-unavailable" wx:if="{{!officialPublishEnabled}}">
-          <text class="mood-official-unavailable-title">官方发表预览仅支持手机微信</text>
-          <text class="mood-official-unavailable-sub">请用 Android 或 iPhone 真机打开「发一条」</text>
-        </view>
-        <official-account-publish
-          wx:elif="{{officialPublishEnabled}}"
-          topic="天气心情贴"
-          limit="4"
-          placeholder="说说此刻的天气和心情…"
-          background-color="#f6f8fc"
-          color-unity="{{true}}"
-          show-related="{{true}}"
-          recommend-path="/pages/index/index"
-          recommend-title="云上幻象天气 · 制作天气心情贴"
-          binderror="onMoodComponentError"
-          bindpublishsuccess="onMoodComponentPublishSuccess"
-          bindpublishfail="onMoodComponentPublishFail"
-        ></official-account-publish>
-      </view>
 
-      <text class="mood-privacy">照片、实时天气和文字仅在本机合成；风格背景从预生成云素材库读取。</text>
+        <view wx:if="{{moodTab === 'poster'}}">
+          <view class="mood-section">
+            <view class="mood-section-head">
+              <text class="mood-section-title">选择画报心情</text>
+              <text class="mood-section-state">第一步</text>
+            </view>
+            <scroll-view class="mood-options" scroll-x enable-flex>
+              <view
+                wx:for="{{moodOptions}}"
+                wx:key="key"
+                class="mood-option {{moodKey === item.key ? 'mood-option-on' : ''}}"
+                data-key="{{item.key}}"
+                bindtap="onMoodPick"
+              ><text class="mood-option-emoji">{{item.emoji}}</text><text>{{item.label}}</text></view>
+            </scroll-view>
+          </view>
+
+          <view class="mood-section-head mood-style-head">
+            <text class="mood-section-title">选择画面风格</text>
+            <text class="mood-section-tip">第二步 · 预生成城市画面</text>
+          </view>
+          <scroll-view class="mood-styles" scroll-x enable-flex>
+            <view
+              wx:for="{{moodStyles}}"
+              wx:key="key"
+              class="mood-style {{moodStyleKey === item.key ? 'mood-style-on' : ''}}"
+              data-key="{{item.key}}"
+              bindtap="onMoodStylePick"
+            >
+              <text class="mood-style-name">{{item.emoji}} {{item.label}}</text>
+              <text class="mood-style-sub">{{item.copy}}</text>
+            </view>
+          </scroll-view>
+
+          <view class="mood-writing">
+            <view class="mood-writing-head"><text>写给今天的话</text><text>第三步 · 选填</text></view>
+            <textarea
+              class="mood-textarea"
+              value="{{moodText}}"
+              maxlength="80"
+              placeholder="例如：云散以后，也记得抬头看看。"
+              placeholder-class="mood-placeholder"
+              auto-height
+              bindinput="onMoodText"
+              bindblur="onMoodTextCommit"
+            />
+          </view>
+
+          <view class="mood-main-action {{!moodAssetEnabled ? 'mood-main-disabled' : ''}}" bindtap="onUseMoodAsset">
+            <text class="mood-action-icon">{{moodLoading ? '◌' : '✦'}}</text>
+            <text>{{moodLoading ? '正在制作城市画报…' : moodAssetEnabled ? '制作城市画报' : '城市画报暂不可用'}}</text>
+          </view>
+
+          <view class="mood-preview-wrap" wx:if="{{moodPreview || moodLoading}}">
+            <image class="mood-preview" wx:if="{{moodPreview}}" src="{{moodPreview}}" mode="aspectFill" />
+            <view class="mood-preview-empty" wx:else>
+              <text class="mood-preview-emoji">✨</text>
+              <text class="mood-preview-title">正在制作城市画报</text>
+              <text class="mood-preview-sub">载入城市画面后，在本地叠加实时天气与文字</text>
+            </view>
+          </view>
+
+          <text class="mood-ai-note" wx:if="{{moodPreview}}">背景来自预生成城市画面；实时天气与文字只在本地叠加。</text>
+
+          <view class="mood-ready" wx:if="{{moodPreview}}">
+            <view class="mood-ready-title"><text>城市画报已准备好</text><text>保存或发布</text></view>
+            <view class="mood-ready-row">
+              <view class="mood-secondary" bindtap="onSaveMoodSticker">保存图片</view>
+              <view class="mood-secondary" bindtap="onCopyMoodArticle">复制图文</view>
+            </view>
+            <view class="mood-source-publish mood-poster-publish" bindtap="onOfficialPublishPoster">
+              <text>✎</text><text>发布城市画报</text>
+            </view>
+          </view>
+        </view>
+
+        <text class="mood-privacy" wx:if="{{moodTab === 'official'}}">照片选择、文字编辑与发布均在微信官方发表页完成。</text>
+        <text class="mood-privacy" wx:else>城市画面、实时天气和文字在本机合成为画报；背景从预生成云素材库读取。</text>
       </scroll-view>
     </view>
   </view>
