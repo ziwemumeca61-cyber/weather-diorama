@@ -394,7 +394,7 @@ Page({
   onMoodTab(e) {
     const tab = e.currentTarget.dataset.tab || 'official'
     if (!['official', 'poster'].includes(tab) || tab === this.data.moodTab) return
-    // 两条路径互不清空状态：查看官方已发内容后，返回时仍保留刚做好的城市画报。
+    // 两条路径互不清空状态：查看官方已发内容后，返回时仍保留刚做好的心情画报。
     this.setData({ moodTab: tab, moodScrollTop: 1 }, () => {
       this.setData({ moodScrollTop: 0 })
     })
@@ -464,12 +464,12 @@ Page({
 
   async onUseMoodAsset() {
     if (!this.data.moodAssetEnabled) {
-      wx.showToast({ title: '城市画报暂不可用', icon: 'none' })
+      wx.showToast({ title: '城市心情画报暂不可用', icon: 'none' })
       return
     }
     if (this.data.loading || !this.shareCity()) return
     if (this._moodAssetRunning || this.data.moodLoading) {
-      wx.showToast({ title: '正在制作画报，请不要重复点击', icon: 'none' })
+      wx.showToast({ title: '正在制作城市心情画报，请不要重复点击', icon: 'none' })
       return
     }
 
@@ -503,7 +503,7 @@ Page({
         })
         const result = (res && res.result) || {}
         if (!result.ok || !result.fileID) {
-          const error = new Error(result.error || '城市画报素材读取失败')
+          const error = new Error(result.error || '城市心情画报素材读取失败')
           error.code = result.code || ''
           throw error
         }
@@ -513,7 +513,7 @@ Page({
       }
 
       const backgroundPath = download && download.tempFilePath
-      if (!backgroundPath) throw new Error('城市画报素材下载失败')
+      if (!backgroundPath) throw new Error('城市心情画报素材下载失败')
       this.setData({ moodBackground: backgroundPath, moodBackgroundType: 'library' }, () => this.refreshMoodArticle())
       const preview = await this.composeMoodSticker(backgroundPath, true)
       this.setData({ moodPreview: preview, moodLoading: false })
@@ -521,10 +521,10 @@ Page({
       console.error('[mood] library asset failed', error)
       this.setData({ moodLoading: false })
       const message = error.code === 'UNSUPPORTED_CITY'
-        ? '这座城市的画报还未收录'
+        ? '这座城市的心情画报还未收录'
         : error.code === 'ASSET_NOT_READY'
-          ? '这款城市画报尚未准备好'
-          : error.message || '城市画报素材读取失败'
+          ? '这款城市心情画报尚未准备好'
+          : error.message || '城市心情画报素材读取失败'
       wx.showToast({ title: message, icon: 'none' })
     } finally {
       this._moodAssetRunning = false
@@ -542,7 +542,7 @@ Page({
         if (error && /auth deny|authorize no response/.test(error.errMsg || '')) {
           wx.showModal({
             title: '需要相册权限',
-            content: '允许保存后，才能把城市画报保存在手机相册。',
+            content: '允许保存后，才能把城市心情画报保存在手机相册。',
             success: (res) => { if (res.confirm) wx.openSetting() },
           })
         }
@@ -561,13 +561,13 @@ Page({
 
   onOfficialPublishPoster() {
     if (!this.data.moodPreview || this.data.moodBackgroundType !== 'library') {
-      wx.showToast({ title: '请先制作城市画报', icon: 'none' })
+      wx.showToast({ title: '请先制作城市心情画报', icon: 'none' })
       return
     }
     this.openOfficialPublisher({
       image: this.data.moodPreview,
-      tags: ['天气心情贴', '城市画报', '心情'],
-      recommendTitle: '制作我的城市天气画报',
+      tags: ['天气心情贴', '心情画报', '心情'],
+      recommendTitle: '制作我的城市心情画报',
     })
   },
 
@@ -578,7 +578,7 @@ Page({
     this.openOfficialPublisher({
       article: `${city}${weather.kindLabel || '天气'} ${temperature}\n\n${weather.emoji || '☀️'} ${weather.kindLabel || '天气'} · ${temperature} · ${weather.dateLabel || '今天'}\n\n#天气 #城市生活 #天气心情贴`,
       tags: ['天气心情贴', '天气', '城市生活'],
-      recommendTitle: '查看我的城市天气',
+      recommendTitle: '记录我的天气心情',
     })
   },
 
