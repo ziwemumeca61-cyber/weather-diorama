@@ -7,6 +7,25 @@ const LAND_Z1 = 9.2
 const MAX_BLOCK_Z = 8.2
 export const REGISTERED_SEED = 20251225
 
+// 烟台地标横向分散，原来用一个大圆整体避让会把市中心近半楼位清空。
+// 专属天际线参数只作用于烟台，不改变其他城市的高度和性能预算。
+const SKYLINE_PROFILES = {
+  yantai: {
+    heightScale: 1.18,
+    heightCapScale: 1.08,
+    absoluteHeightCap: 11.2,
+    densityScale: 1.45,
+    footprintScale: 0.94,
+    towerBias: 1.18,
+    distributedLandmarks: true,
+    heroClearRadius: 3.3,
+    heroCalmPadding: 2.2,
+    heroCalmHeight: 3,
+    calmPadding: 1.45,
+    calmHeight: 3.15,
+  },
+}
+
 // 顺序与 Web 端注册表一致，第一条命中即采用该城市的水景构图。
 const PROFILES = [
   ['beijing', /北京|beijing/i, { kind: 'river', z0: 9, boats: false, bridge: false }],
@@ -140,11 +159,12 @@ export function profileForCity(name) {
         seed: (signature ^ REGISTERED_SEED) >>> 0,
         hueShift: (rand() - 0.5) * 0.09,
         water: resolveWater(p[2]),
+        skyline: SKYLINE_PROFILES[p[0]] || null,
       }
     }
   }
   const variant = genericVariant(value)
-  return { id: 'generic', seed: variant.seed, hueShift: variant.hueShift, water: resolveWater(variant.water) }
+  return { id: 'generic', seed: variant.seed, hueShift: variant.hueShift, water: resolveWater(variant.water), skyline: null }
 }
 
 export function inLake(water, x, z, margin) {

@@ -47,9 +47,17 @@ const PALETTE = [
 ]
 const CORE = ['#82a6c1', '#6e91ad', '#94b5c8', '#7f9fb7', '#adc3cf', '#6f879e']
 
-export function generateCity(seed, clearZones, calmZones, maxZ, hueShift) {
+export function generateCity(seed, clearZones, calmZones, maxZ, hueShift, skylineProfile) {
   const rand = mulberry32(seed == null ? 20251225 : seed)
   const out = []
+  const skyline = skylineProfile || {}
+  const densityScale = THREE.MathUtils.clamp(Number(skyline.densityScale) || 1, 0.75, 1.6)
+  const heightScale = THREE.MathUtils.clamp(Number(skyline.heightScale) || 1, 0.85, 1.3)
+  const heightCapScale = THREE.MathUtils.clamp(Number(skyline.heightCapScale) || 1, 0.9, 1.2)
+  const absoluteHeightCap = Number(skyline.absoluteHeightCap) || Infinity
+  const footprintScale = THREE.MathUtils.clamp(Number(skyline.footprintScale) || 1, 0.88, 1.08)
+  const towerBias = THREE.MathUtils.clamp(Number(skyline.towerBias) || 1, 0.8, 1.35)
+  const splitThreshold = 0.86 - Math.max(0, densityScale - 1) * 0.09
   const clear = clearZones || [{ x: CITY.landmark.x, z: CITY.landmark.z, r: 1.5 }]
   const calm = calmZones || []
   // 多地标组合的视觉中心不一定等于旧版 CITY.landmark。楼群围绕第一块
@@ -72,20 +80,21 @@ export function generateCity(seed, clearZones, calmZones, maxZ, hueShift) {
           break
         }
       }
-      if (blocked || rand() < 0.015) continue
+      if (blocked || rand() < 0.015 / densityScale) continue
 
       const coreness = THREE.MathUtils.clamp(1 - dToCore / 11, 0, 1)
       const jitterX = (rand() - 0.5) * 0.5
       const jitterZ = (rand() - 0.5) * 0.5
-      let footprint = 0.74 + rand() * 0.48
-      // 一部分地块拆成主楼 + 附楼，形成街区层次；密度略降，给道路和地标留出呼吸。
-      const splitLot = footprint > 0.86 && rand() < 0.34
+      let footprint = (0.74 + rand() * 0.48) * footprintScale
+      // densityScale 主要提高主楼 + 附楼地块比例，仍沿用同一网格和 InstancedMesh，
+      // 烟台看起来更密，但不会按栋增加独立 draw call。
+      const splitLot = footprint > splitThreshold && rand() < Math.min(0.58, 0.34 * densityScale)
       if (splitLot) footprint *= 0.74
       const base = 0.82 + rand() * 1.05
       // 旧公式在极端随机值下会生成接近 30 单位的普通楼，而专属地标通常只有
       // 8–13 单位，随机楼反客为主。这里把背景天际线控制在地标之下。
-      let height = base + Math.pow(coreness, 1.22) * (4.8 + rand() * 10.4)
-      if (coreness > 0.5 && rand() < 0.3) {
+      let height = (base + Math.pow(coreness, 1.22) * (4.8 + rand() * 10.4)) * heightScale
+      if (coreness > 0.5 && rand() < Math.min(0.48, 0.3 * towerBias)) {
         footprint *= 0.68
         height *= 1.16 + rand() * 0.14
       }
@@ -98,7 +107,7 @@ export function generateCity(seed, clearZones, calmZones, maxZ, hueShift) {
           height = Math.min(height, zone.maxHeight + (height - zone.maxHeight) * t)
         }
       }
-      height = Math.max(0.82, Math.min(height, 10.2 + coreness * 2.1))
+      height = Math.max(0.82, Math.min(height, (10.2 + coreness * 2.1) * heightCapScale, absoluteHeightCap))
 
       const isCore = coreness > 0.5 && rand() < 0.66
       const palette = isCore ? CORE : PALETTE

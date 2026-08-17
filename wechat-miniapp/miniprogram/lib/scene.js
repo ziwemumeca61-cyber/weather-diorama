@@ -667,11 +667,45 @@ export function createScene(canvas, opts) {
       const bounds = new THREE.Box3().setFromObject(built.group)
       const center = bounds.getCenter(new THREE.Vector3())
       const size = bounds.getSize(new THREE.Vector3())
-      const district = createLandmarkDistrict(center, size, currentProfile.seed)
-      built.group.add(district.group)
-      const districtRadius = Math.max(district.radius + 0.28, Math.min(5.8, Math.max(1.7, Math.hypot(size.x, size.z) * 0.38 + 0.7)))
-      clearZones = [{ x: center.x, z: center.z, r: districtRadius }]
-      calmZones = [{ x: center.x, z: center.z, r: Math.min(8.4, districtRadius + 2.65), maxHeight: 2.5 }]
+      const skylineProfile = currentProfile.skyline || {}
+      const landmarkParts = skylineProfile.distributedLandmarks
+        ? built.group.children.filter((child) => child && child.isGroup)
+        : []
+      if (landmarkParts.length > 1) {
+        // 烟台山灯塔、蓬莱阁和张裕酒庄相距较远：逐个避让，而不是用一个
+        // 半径 6 左右的大圆挖空整片市中心。楼可以填进三处地标之间，但不会穿模。
+        clearZones = []
+        calmZones = []
+        landmarkParts.forEach((part, index) => {
+          part.updateMatrixWorld(true)
+          const partBounds = new THREE.Box3().setFromObject(part)
+          const partCenter = partBounds.getCenter(new THREE.Vector3())
+          const partSize = partBounds.getSize(new THREE.Vector3())
+          let partRadius = THREE.MathUtils.clamp(Math.hypot(partSize.x, partSize.z) * 0.34 + 0.45, 1.25, 3)
+          if (index === 0 && skylineProfile.heroClearRadius) {
+            partRadius = Math.max(partRadius, skylineProfile.heroClearRadius)
+          }
+          const calmPadding = index === 0
+            ? skylineProfile.heroCalmPadding || skylineProfile.calmPadding || 1.5
+            : skylineProfile.calmPadding || 1.5
+          const calmHeight = index === 0
+            ? skylineProfile.heroCalmHeight || skylineProfile.calmHeight || 2.8
+            : skylineProfile.calmHeight || 2.8
+          clearZones.push({ x: partCenter.x, z: partCenter.z, r: partRadius })
+          calmZones.push({
+            x: partCenter.x,
+            z: partCenter.z,
+            r: partRadius + calmPadding,
+            maxHeight: calmHeight,
+          })
+        })
+      } else {
+        const district = createLandmarkDistrict(center, size, currentProfile.seed)
+        built.group.add(district.group)
+        const districtRadius = Math.max(district.radius + 0.28, Math.min(5.8, Math.max(1.7, Math.hypot(size.x, size.z) * 0.38 + 0.7)))
+        clearZones = [{ x: center.x, z: center.z, r: districtRadius }]
+        calmZones = [{ x: center.x, z: center.z, r: Math.min(8.4, districtRadius + 2.65), maxHeight: 2.5 }]
+      }
       cameraTarget.set(
         center.x * 0.14,
         THREE.MathUtils.clamp(2.15 + size.y * 0.065, 2.35, 3.05),
@@ -699,6 +733,7 @@ export function createScene(canvas, opts) {
       calmZones,
       currentProfile.water.cityMaxZ,
       currentProfile.hueShift,
+      currentProfile.skyline,
     ).filter((b) => !inLake(currentProfile.water, b.x, b.z, 0.35))
     skyline = buildSkyline(buildings)
     cityMaterials = skyline.materials
