@@ -330,6 +330,9 @@ export function createWeatherEffects(scene) {
 
   let kind = 'clear'
   let rainTarget = 0
+  let rainSpeedScale = 1
+  let rainLengthScale = 1
+  let rainWindSpeed = 1.35
   let snowTarget = 0
   let flash = 0
   let cloudFlash = 0
@@ -342,6 +345,15 @@ export function createWeatherEffects(scene) {
     const level = rainLevel === 'light' || rainLevel === 'heavy' ? rainLevel : 'moderate'
     const rainOpacity = { light: 0.28, moderate: 0.62, heavy: 0.96 }
     const rainCloudCoverage = { light: 0.72, moderate: 0.88, heavy: 0.98 }
+    const rainMotion = {
+      light: { speed: 0.72, length: 0.68, wind: 0.82 },
+      moderate: { speed: 1, length: 1, wind: 1.35 },
+      heavy: { speed: 1.38, length: 1.42, wind: 1.82 },
+    }
+    const motion = rainMotion[level]
+    rainSpeedScale = motion.speed
+    rainLengthScale = motion.length
+    rainWindSpeed = motion.wind
     rainTarget = kind === 'rain'
       ? rainOpacity[level]
       : kind === 'thunder'
@@ -419,8 +431,8 @@ export function createWeatherEffects(scene) {
     if (rain.mesh.visible) {
       for (let i = 0; i < rain.drops.length; i++) {
         const drop = rain.drops[i]
-        drop.y -= drop.speed * dt
-        drop.x += dt * 1.35
+        drop.y -= drop.speed * rainSpeedScale * dt
+        drop.x += dt * rainWindSpeed
         if (drop.y < 0) {
           drop.y = 19 + ((i * 17) % 40) * 0.1
           drop.x = ((i * 43) % 300) / 10 - 15
@@ -431,7 +443,7 @@ export function createWeatherEffects(scene) {
         rain.positions[p + 1] = drop.y
         rain.positions[p + 2] = drop.z
         rain.positions[p + 3] = drop.x - 0.08
-        rain.positions[p + 4] = drop.y - drop.length
+        rain.positions[p + 4] = drop.y - drop.length * rainLengthScale
         rain.positions[p + 5] = drop.z + 0.025
       }
       rain.geometry.attributes.position.needsUpdate = true
