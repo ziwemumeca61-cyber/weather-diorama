@@ -54,6 +54,8 @@ Page({
     moodLoading: false,
     moodSaving: false,
     officialPublishEnabled: false,
+    // hidden 切换时保持官方组件挂载；发布成功后短暂重挂以刷新社区列表。
+    officialFeedMounted: true,
     moodScrollTop: 0,
     moodSheetTopPx: 56,
     moodOptions: [
@@ -683,6 +685,22 @@ Page({
     })
   },
 
+  refreshOfficialFeedAfterPublish() {
+    clearTimeout(this._officialFeedRefreshTimer)
+    this._officialFeedRefreshTimer = null
+    // 先切回社区，再短暂重挂原生组件，既保留发布时的实时联动，也绕过列表缓存。
+    this.setData({
+      moodTab: 'official',
+      officialFeedMounted: false,
+      moodScrollTop: 1,
+    }, () => {
+      this._officialFeedRefreshTimer = setTimeout(() => {
+        this._officialFeedRefreshTimer = null
+        this.setData({ officialFeedMounted: true, moodScrollTop: 0 })
+      }, 1200)
+    })
+  },
+
   onOfficialPublishPoster() {
     if (!this.data.moodPreview || this.data.moodBackgroundType !== 'library') {
       wx.showToast({ title: '请先制作城市心情画报', icon: 'none' })
@@ -727,10 +745,15 @@ Page({
       recommendPath: '/pages/index/index',
       recommendTitle: config.recommendTitle,
       success: (result) => {
+        const published = !!(result && result.postUrl)
         wx.showToast({
-          title: result && result.postUrl ? '贴图已发布' : '已打开官方发表页',
+          title: published ? '贴图已发布，正在刷新' : '已打开官方发表页',
           icon: 'none',
         })
+        if (published) {
+          console.log('[mood] official post published', result.postUrl)
+          this.refreshOfficialFeedAfterPublish()
+        }
       },
       fail: (error) => {
         const message = error && error.errMsg ? error.errMsg : ''
@@ -843,6 +866,8 @@ Page({
 
   onUnload() {
     clearTimeout(this._moodCloseTimer)
+    clearTimeout(this._officialFeedRefreshTimer)
+    this._officialFeedRefreshTimer = null
     if (sceneApi) sceneApi.dispose()
     sceneApi = null
     this._moodCanvas = null

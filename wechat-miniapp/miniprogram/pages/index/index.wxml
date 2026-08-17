@@ -136,7 +136,7 @@
         show-scrollbar="{{true}}"
         scroll-top="{{moodScrollTop}}"
       >
-        <view wx:if="{{moodTab === 'official'}}">
+        <view hidden="{{moodTab !== 'official'}}">
           <view class="mood-publish-area mood-publish-area-first">
             <view class="mood-publish-head">
               <view class="mood-publish-copy">
@@ -154,10 +154,14 @@
               <text class="mood-official-unavailable-title">官方发表与已发内容仅支持手机微信</text>
               <text class="mood-official-unavailable-sub">请用 Android 或 iPhone 真机打开「发一条」</text>
             </view>
+            <view class="mood-official-unavailable" wx:elif="{{!officialFeedMounted}}">
+              <text class="mood-official-unavailable-title">贴图已发布，正在刷新社区</text>
+              <text class="mood-official-unavailable-sub">稍等片刻即可查看刚发布的心情画报</text>
+            </view>
             <official-account-publish
-              wx:elif="{{officialPublishEnabled}}"
+              wx:else
               topic="天气心情贴"
-              limit="4"
+              limit="10"
               placeholder="说说此刻的天气和心情…"
               background-color="#f6f8fc"
               color-unity="{{true}}"
