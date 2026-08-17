@@ -49,42 +49,85 @@ function rect(data, width, height, x0, y0, x1, y1, rgb) {
 function makeGroundTexture(z1) {
   const size = 512
   const data = new Uint8Array(size * size * 4)
-  fill(data, size, size, 196, 194, 187)
+  fill(data, size, size, 190, 191, 187)
   const wx = GROUND_X1 - GROUND_X0
   const wz = z1 - GROUND_Z0
   const pxX = (x) => ((x - GROUND_X0) / wx) * size
   const pxZ = (z) => ((z - GROUND_Z0) / wz) * size
-  const rand = mulberry32(12345)
+  const lines = streetLines()
+  const roadWorldW = 0.78
+  const sidewalkWorldW = 1.2
+  const blockPalette = [
+    [208, 204, 195],
+    [199, 207, 199],
+    [215, 209, 198],
+    [194, 202, 204],
+    [211, 202, 190],
+  ]
+  const parkPalette = [
+    [132, 166, 124],
+    [144, 175, 134],
+  ]
 
-  // Web 端相同的散落绿地。
-  for (let i = 0; i < 60; i++) {
-    const gx = GROUND_X0 + rand() * wx
-    const gz = GROUND_Z0 + rand() * wz
-    const w = (0.4 + rand() * 0.8) * (size / wx)
-    const alpha = 0.5 + rand() * 0.4
-    const base = [196, 194, 187]
-    const park = [143, 179, 126]
-    const mixed = [
-      Math.round(base[0] + (park[0] - base[0]) * alpha),
-      Math.round(base[1] + (park[1] - base[1]) * alpha),
-      Math.round(base[2] + (park[2] - base[2]) * alpha),
-    ]
-    rect(data, size, size, pxX(gx), pxZ(gz), pxX(gx) + w, pxZ(gz) + w, mixed)
+  // 把随机散落色块改为连续街区：道路之间先铺不同材质的地块，再在部分
+  // 地块内嵌成片绿地。俯视镜头下能直接读出“道路—人行道—街坊”的层级。
+  const xCuts = [GROUND_X0].concat(lines.xs.filter((x) => x > GROUND_X0 && x < GROUND_X1), [GROUND_X1])
+  const zCuts = [GROUND_Z0].concat(lines.zs.filter((z) => z > GROUND_Z0 && z < z1), [z1])
+  for (let ix = 0; ix < xCuts.length - 1; ix++) {
+    for (let iz = 0; iz < zCuts.length - 1; iz++) {
+      const x0 = xCuts[ix] + (ix === 0 ? 0.16 : sidewalkWorldW * 0.5)
+      const x1 = xCuts[ix + 1] - (ix === xCuts.length - 2 ? 0.16 : sidewalkWorldW * 0.5)
+      const z0 = zCuts[iz] + (iz === 0 ? 0.16 : sidewalkWorldW * 0.5)
+      const zz1 = zCuts[iz + 1] - (iz === zCuts.length - 2 ? 0.16 : sidewalkWorldW * 0.5)
+      if (x1 <= x0 || zz1 <= z0) continue
+      const color = blockPalette[(ix * 3 + iz * 5) % blockPalette.length]
+      rect(data, size, size, pxX(x0), pxZ(z0), pxX(x1), pxZ(zz1), color)
+      if ((ix + iz * 2) % 5 === 1 && x1 - x0 > 1.4 && zz1 - z0 > 1.4) {
+        const inset = 0.24
+        rect(
+          data,
+          size,
+          size,
+          pxX(x0 + inset),
+          pxZ(z0 + inset),
+          pxX(x1 - inset),
+          pxZ(zz1 - inset),
+          parkPalette[(ix + iz) % parkPalette.length],
+        )
+      }
+    }
   }
 
-  const lines = streetLines()
-  const roadW = (0.85 / wx) * size
+  const sidewalk = [222, 217, 207]
+  const asphalt = [62, 69, 77]
+  const lane = [226, 214, 169]
+  const sidewalkX = (sidewalkWorldW / wx) * size
+  const roadX = (roadWorldW / wx) * size
   lines.xs.forEach((x) => {
     const px = pxX(x)
-    rect(data, size, size, px - roadW / 2, 0, px + roadW / 2, size, [74, 75, 80])
-    for (let y = 0; y < size; y += 22) rect(data, size, size, px - 1, y, px + 1, y + 10, [232, 228, 208])
+    rect(data, size, size, px - sidewalkX / 2, 0, px + sidewalkX / 2, size, sidewalk)
+    rect(data, size, size, px - roadX / 2, 0, px + roadX / 2, size, asphalt)
+    for (let y = 0; y < size; y += 24) rect(data, size, size, px - 1, y, px + 1, y + 11, lane)
   })
-  const roadH = (0.85 / wz) * size
+  const sidewalkZ = (sidewalkWorldW / wz) * size
+  const roadZ = (roadWorldW / wz) * size
   lines.zs.forEach((z) => {
     if (z > z1) return
     const pz = pxZ(z)
-    rect(data, size, size, 0, pz - roadH / 2, size, pz + roadH / 2, [74, 75, 80])
-    for (let x = 0; x < size; x += 22) rect(data, size, size, x, pz - 1, x + 10, pz + 1, [232, 228, 208])
+    rect(data, size, size, 0, pz - sidewalkZ / 2, size, pz + sidewalkZ / 2, sidewalk)
+    rect(data, size, size, 0, pz - roadZ / 2, size, pz + roadZ / 2, asphalt)
+    for (let x = 0; x < size; x += 24) rect(data, size, size, x, pz - 1, x + 11, pz + 1, lane)
+  })
+
+  // 交叉口斑马线是手机尺寸下最有效的尺度参照之一，只增加贴图像素，不增加 draw call。
+  lines.xs.forEach((x) => {
+    lines.zs.forEach((z) => {
+      if (z > z1) return
+      for (let i = -2; i <= 2; i++) {
+        const dz = i * 0.13
+        rect(data, size, size, pxX(x - 0.34), pxZ(z + dz - 0.025), pxX(x + 0.34), pxZ(z + dz + 0.025), [231, 232, 227])
+      }
+    })
   })
   return dataTexture(data, size, size)
 }
@@ -503,6 +546,8 @@ export function createEnvironment(water) {
   let rainbowLeft = 0
   let previousWeather = 'clear'
   let skyCloudTarget = 0
+  let groundRoughnessTarget = 0.9
+  let groundMetalnessTarget = 0
   let waterFrame = 0
   const cloudTint = new THREE.Color(0xf2f6fd)
 
@@ -518,6 +563,9 @@ export function createEnvironment(water) {
               : 0
     // 晴天完全隐藏城市上空云层，保留底盘下方云托。
     if (weather === 'clear') skyCloudTarget = 0
+    const wet = weather === 'rain' || weather === 'thunder'
+    groundRoughnessTarget = wet ? 0.42 : weather === 'fog' || weather === 'overcast' ? 0.78 : 0.9
+    groundMetalnessTarget = wet ? 0.14 : 0
     if ((previousWeather === 'rain' || previousWeather === 'thunder') && (weather === 'clear' || weather === 'cloudy')) rainbowLeft = 25
   }
 
@@ -564,6 +612,9 @@ export function createEnvironment(water) {
       }
     })
 
+    const groundDamping = 1 - Math.exp(-2.4 * dt)
+    groundMaterial.roughness += (groundRoughnessTarget - groundMaterial.roughness) * groundDamping
+    groundMaterial.metalness += (groundMetalnessTarget - groundMaterial.metalness) * groundDamping
     snowMat.opacity += (snowTarget - snowMat.opacity) * (1 - Math.exp(-2.2 * dt))
     snow.visible = snowMat.opacity > 0.01
     extras.snowman.visible = weather === 'snow'

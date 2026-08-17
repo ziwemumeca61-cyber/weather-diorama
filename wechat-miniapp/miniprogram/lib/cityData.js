@@ -42,16 +42,19 @@ export function streetLines() {
 }
 
 const PALETTE = [
-  '#c9d3dd', '#b7c2cf', '#d8cdbf', '#e3d8c8', '#a9b6c4',
-  '#cbb8a6', '#9fb0bd', '#d5c3b0', '#8fa0af', '#e6ddd0',
+  '#d8d0c3', '#c9d4dc', '#d9c1aa', '#bcc9c2', '#dfd8c8',
+  '#b9c5d2', '#cbb6a2', '#aebcc6', '#d6c8b5', '#c6c0b6',
 ]
-const CORE = ['#8ea6bd', '#7f97b4', '#9fb8cf', '#aebfce', '#c0cad6']
+const CORE = ['#82a6c1', '#6e91ad', '#94b5c8', '#7f9fb7', '#adc3cf', '#6f879e']
 
 export function generateCity(seed, clearZones, calmZones, maxZ, hueShift) {
   const rand = mulberry32(seed == null ? 20251225 : seed)
   const out = []
   const clear = clearZones || [{ x: CITY.landmark.x, z: CITY.landmark.z, r: 1.5 }]
   const calm = calmZones || []
+  // 多地标组合的视觉中心不一定等于旧版 CITY.landmark。楼群围绕第一块
+  // 地标净空区生长，核心高度梯度才会真正衬托当前城市的主角。
+  const focus = clear[0] || CITY.landmark
   const zEnd = maxZ == null ? CITY.maxZ : maxZ
   const shift = hueShift || 0
   const hsl = { h: 0, s: 0, l: 0 }
@@ -60,7 +63,7 @@ export function generateCity(seed, clearZones, calmZones, maxZ, hueShift) {
     let iz = 0
     for (let z = CITY.minZ; z <= zEnd; z += GRID.step, iz++) {
       if (ix % GRID.roadEvery === 0 || iz % GRID.roadEvery === 0) continue
-      const dToCore = Math.hypot(x - CITY.landmark.x, z - CITY.landmark.z)
+      const dToCore = Math.hypot(x - focus.x, z - focus.z)
       let blocked = false
       for (let i = 0; i < clear.length; i++) {
         const zone = clear[i]
@@ -74,16 +77,19 @@ export function generateCity(seed, clearZones, calmZones, maxZ, hueShift) {
       const coreness = THREE.MathUtils.clamp(1 - dToCore / 11, 0, 1)
       const jitterX = (rand() - 0.5) * 0.5
       const jitterZ = (rand() - 0.5) * 0.5
-      let footprint = 0.72 + rand() * 0.5
-      // 一部分地块拆成主楼 + 附楼，补足城区密度而不挤占道路。
-      const splitLot = footprint > 0.84 && rand() < 0.44
-      if (splitLot) footprint *= 0.72
-      const base = 0.82 + rand() * 1.2
-      let height = base + Math.pow(coreness, 1.46) * (5.25 + rand() * 11.8)
-      if (coreness > 0.48 && rand() < 0.36) {
-        footprint *= 0.6
-        height *= 1.62
+      let footprint = 0.74 + rand() * 0.48
+      // 一部分地块拆成主楼 + 附楼，形成街区层次；密度略降，给道路和地标留出呼吸。
+      const splitLot = footprint > 0.86 && rand() < 0.34
+      if (splitLot) footprint *= 0.74
+      const base = 0.82 + rand() * 1.05
+      // 旧公式在极端随机值下会生成接近 30 单位的普通楼，而专属地标通常只有
+      // 8–13 单位，随机楼反客为主。这里把背景天际线控制在地标之下。
+      let height = base + Math.pow(coreness, 1.22) * (4.8 + rand() * 10.4)
+      if (coreness > 0.5 && rand() < 0.3) {
+        footprint *= 0.68
+        height *= 1.16 + rand() * 0.14
       }
+      const skylineHeight = height
       for (let i = 0; i < calm.length; i++) {
         const zone = calm[i]
         const d = Math.hypot(x - zone.x, z - zone.z)
@@ -92,6 +98,7 @@ export function generateCity(seed, clearZones, calmZones, maxZ, hueShift) {
           height = Math.min(height, zone.maxHeight + (height - zone.maxHeight) * t)
         }
       }
+      height = Math.max(0.82, Math.min(height, 10.2 + coreness * 2.1))
 
       const isCore = coreness > 0.5 && rand() < 0.66
       const palette = isCore ? CORE : PALETTE
@@ -104,14 +111,20 @@ export function generateCity(seed, clearZones, calmZones, maxZ, hueShift) {
       let roof = 'flat'
       const rr = rand()
       let style = isCore ? 'office' : 'residential'
-      if (height > 7.0 || (coreness > 0.56 && footprint < 0.88)) style = 'tower'
+      if (skylineHeight > 7.0 || (coreness > 0.56 && footprint < 0.88)) style = 'tower'
       if (height <= 5.5) {
         if (coreness < 0.42 && height < 2.4) roof = rr < 0.22 ? 'gable' : rr < 0.4 ? 'hip' : 'flat'
         else roof = rr < 0.12 ? 'hip' : 'flat'
       } else if (style === 'tower' && rr < 0.76) {
-        // 与 Web 版 City 的高层退台同源：让核心区天际线有可读的高低层次。
         roof = 'setback'
       }
+      // 主体不再全部使用 BoxGeometry：高层混入收分塔、八边塔和菱形塔，
+      // 仍然按类型 InstancedMesh 合批，不用外部模型也能打破“灰盒阵列”。
+      const formRoll = rand()
+      let form = 'box'
+      if (style === 'tower') form = formRoll < 0.34 ? 'taper' : formRoll < 0.62 ? 'octagon' : formRoll < 0.78 ? 'diamond' : 'box'
+      else if (style === 'office') form = formRoll < 0.22 ? 'octagon' : formRoll < 0.32 ? 'diamond' : 'box'
+      const yaw = form === 'diamond' ? Math.PI / 4 : (rand() < 0.18 ? Math.PI / 2 : 0)
       const px = x + jitterX
       const pz = z + jitterZ
       out.push({
@@ -124,6 +137,8 @@ export function generateCity(seed, clearZones, calmZones, maxZ, hueShift) {
         core: coreness,
         roof,
         style,
+        form,
+        yaw,
       })
       if (splitLot) {
         const alongX = rand() < 0.5
@@ -144,6 +159,8 @@ export function generateCity(seed, clearZones, calmZones, maxZ, hueShift) {
           core: Math.max(0, coreness - 0.18),
           roof: annexH < 2.1 && coreness < 0.45 ? (rand() < 0.45 ? 'hip' : 'gable') : 'flat',
           style: annexH > 4.4 ? 'office' : 'residential',
+          form: annexH > 4.4 && rand() < 0.3 ? 'octagon' : 'box',
+          yaw: rand() < 0.22 ? Math.PI / 2 : 0,
         })
       }
     }
@@ -159,22 +176,22 @@ export function generateTrees(seed) {
     if (Math.hypot(x - CITY.landmark.x, z - CITY.landmark.z) < 2) return
     trees.push({ x, z, scale, kind: rand() < 0.55 ? 'broad' : 'pine' })
   }
-  for (let i = 0; i < 70; i++) {
+  for (let i = 0; i < 54; i++) {
     push(
       THREE.MathUtils.lerp(CITY.minX - 0.5, CITY.maxX + 0.5, rand()),
       THREE.MathUtils.lerp(CITY.minZ - 0.5, zMax, rand()),
-      0.7 + rand() * 0.7,
+      0.58 + rand() * 0.58,
     )
   }
   const inner = CITY.maxX - 1.5
   const outer = CITY.trayHalf - 0.5
-  for (let i = 0; i < 55; i++) {
+  for (let i = 0; i < 40; i++) {
     const angle = rand() * Math.PI * 2
     const radius = inner + rand() * (outer - inner)
     const x = Math.cos(angle) * radius
     const z = Math.sin(angle) * radius
     if (z > zMax || x < CITY.minX - 0.8 || x > CITY.maxX + 0.8) continue
-    push(x, z, 0.85 + rand() * 0.9)
+    push(x, z, 0.72 + rand() * 0.66)
   }
   return trees
 }

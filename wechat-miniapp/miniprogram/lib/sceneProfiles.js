@@ -130,7 +130,17 @@ export function profileForCity(name) {
   for (let i = 0; i < PROFILES.length; i++) {
     const p = PROFILES[i]
     if (p[1].test(value)) {
-      return { id: p[0], seed: REGISTERED_SEED, hueShift: 0, water: resolveWater(p[2]) }
+      // 登记城市过去全部共用 REGISTERED_SEED，除了地标和水面外楼群几乎一模一样。
+      // 用规范城市 id 派生稳定种子和轻微色相偏移，让每城拥有自己的街区密度、
+      // 高低轮廓与材质气质，同时保持同一城市每次进入都完全一致。
+      const signature = hashName(p[0])
+      const rand = mulberry32((signature ^ REGISTERED_SEED) >>> 0)
+      return {
+        id: p[0],
+        seed: (signature ^ REGISTERED_SEED) >>> 0,
+        hueShift: (rand() - 0.5) * 0.09,
+        water: resolveWater(p[2]),
+      }
     }
   }
   const variant = genericVariant(value)

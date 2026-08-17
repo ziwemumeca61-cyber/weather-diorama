@@ -1,6 +1,6 @@
 // Web 端 Props.tsx / People.tsx 的小程序原生实现：树、车辆、桥和人物均批量实例化。
 import * as THREE from './three.core.js'
-import { generatePedestrians, generateTrees } from './cityData'
+import { generatePedestrians, generateTrees, hashName } from './cityData'
 import { inLake, pathCrossesLake } from './sceneProfiles'
 
 const CAR_COLORS = [0xe0d24f, 0xe05b5b, 0x5fbf7a, 0x4f8fe0, 0xececec, 0xe0a24f]
@@ -118,8 +118,9 @@ export function createProps(cityName, opts) {
     return true
   }
 
-  /* ---------------- 树木：与 Web 端相同的 70 棵城区树 + 外圈绿带 ---------------- */
-  const trees = generateTrees(77).filter((tree) => {
+  /* ---------------- 树木：疏密有序的城区树 + 外圈绿带 ---------------- */
+  // 每城使用稳定但不同的绿化种子，避免换城市时树阵仍完全复制。
+  const trees = generateTrees((hashName(cityName || 'City') ^ 77) >>> 0).filter((tree) => {
     if (!clearOfLandmark(tree.x, tree.z) || inLake(water, tree.x, tree.z)) return false
     return water.riverZ0 == null || tree.z < water.riverZ0 - 0.35
   })

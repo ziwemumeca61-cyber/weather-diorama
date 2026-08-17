@@ -14,9 +14,10 @@ const WEATHER_LOOK = {
   cloudy: { sun: 0.82, grey: 0.15, darken: 0.05 },
   overcast: { sun: 0.4, grey: 0.5, darken: 0.18 },
   fog: { sun: 0.5, grey: 0.55, darken: 0.1 },
-  rain: { sun: 0.42, grey: 0.45, darken: 0.28 },
-  snow: { sun: 0.72, grey: 0.35, darken: 0.05 },
-  thunder: { sun: 0.32, grey: 0.4, darken: 0.4 },
+  // 保留阴雨氛围，但不再把建筑整体压成一片无色灰；雨幕和湿地面负责天气感。
+  rain: { sun: 0.46, grey: 0.34, darken: 0.2 },
+  snow: { sun: 0.72, grey: 0.3, darken: 0.04 },
+  thunder: { sun: 0.34, grey: 0.36, darken: 0.32 },
 }
 
 function makeGableGeometry() {
@@ -131,10 +132,13 @@ function addBuildingMesh(root, geometry, material, list) {
   const matrix = new THREE.Matrix4()
   const position = new THREE.Vector3()
   const quaternion = new THREE.Quaternion()
+  const axisY = new THREE.Vector3(0, 1, 0)
   const scale = new THREE.Vector3()
   const color = new THREE.Color()
   list.forEach((building, i) => {
     position.set(building.x, building.h / 2, building.z)
+    if (building.yaw) quaternion.setFromAxisAngle(axisY, building.yaw)
+    else quaternion.identity()
     scale.set(building.w, building.h, building.d)
     matrix.compose(position, quaternion, scale)
     mesh.setMatrixAt(i, matrix)
@@ -148,13 +152,29 @@ function addBuildingMesh(root, geometry, material, list) {
 
 function buildSkyline(buildings) {
   const root = new THREE.Group()
-  const box = new THREE.BoxGeometry(1, 1, 1)
+  const geometries = {
+    box: new THREE.BoxGeometry(1, 1, 1),
+    taper: new THREE.CylinderGeometry(0.36, 0.52, 1, 6),
+    octagon: new THREE.CylinderGeometry(0.5, 0.5, 1, 8),
+    diamond: new THREE.CylinderGeometry(0.5, 0.5, 1, 4),
+  }
+  const box = geometries.box
   const glass = buildings.filter((b) => b.core > 0.5)
   const concrete = buildings.filter((b) => b.core <= 0.5)
   const glassMat = makeFacadeMaterial(true)
   const concreteMat = makeFacadeMaterial(false)
-  addBuildingMesh(root, box, glassMat, glass)
-  addBuildingMesh(root, box, concreteMat, concrete)
+  const clusters = {}
+  buildings.forEach((building) => {
+    const family = building.core > 0.5 ? 'glass' : 'concrete'
+    const form = geometries[building.form] ? building.form : 'box'
+    const key = family + ':' + form
+    if (!clusters[key]) clusters[key] = []
+    clusters[key].push(building)
+  })
+  Object.keys(clusters).forEach((key) => {
+    const parts = key.split(':')
+    addBuildingMesh(root, geometries[parts[1]], parts[0] === 'glass' ? glassMat : concreteMat, clusters[key])
+  })
 
   const matrix = new THREE.Matrix4()
   const position = new THREE.Vector3()
@@ -243,6 +263,7 @@ function buildSkyline(buildings) {
       podiums.push({
         x: b.x, y: podiumH / 2, z: b.z,
         sx: b.w * 1.17, sy: podiumH, sz: b.d * 1.17,
+        color: new THREE.Color(b.color).offsetHSL(0, -0.04, -0.08).getHex(),
       })
     }
 
@@ -252,17 +273,19 @@ function buildSkyline(buildings) {
       const first = {
         x: b.x, y: b.h + firstH / 2, z: b.z,
         sx: b.w * 0.72, sy: firstH, sz: b.d * 0.72,
+        color: b.color,
       }
       ;(isGlass ? glassTiers : concreteTiers).push(first)
       if (secondH) {
         ;(isGlass ? glassTiers : concreteTiers).push({
           x: b.x, y: b.h + firstH + secondH / 2, z: b.z,
           sx: b.w * 0.46, sy: secondH, sz: b.d * 0.46,
+          color: b.color,
         })
       }
     }
 
-    if (isGlass && b.h > 2.6) {
+    if (isGlass && b.h > 2.6 && (!b.form || b.form === 'box')) {
       const sheenH = Math.max(1.7, b.h * 0.7)
       const sheenW = Math.max(0.1, b.w * 0.22)
       const sheenD = Math.max(0.1, b.d * 0.22)
@@ -275,7 +298,7 @@ function buildSkyline(buildings) {
       )
     }
 
-    if (b.h > 2.5 && (b.style === 'office' || b.style === 'tower')) {
+    if (b.h > 2.5 && (b.style === 'office' || b.style === 'tower') && (!b.form || b.form === 'box')) {
       const finH = Math.max(1.4, b.h - 0.16)
       const finW = Math.min(0.055, b.w * 0.08)
       const finD = Math.min(0.055, b.d * 0.08)
@@ -303,7 +326,7 @@ function buildSkyline(buildings) {
       }
     }
   })
-  const podiumMat = new THREE.MeshStandardMaterial({ color: 0x6f7984, roughness: 0.65, metalness: 0.18 })
+  const podiumMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.68, metalness: 0.14 })
   const glassFrameMat = new THREE.MeshStandardMaterial({ color: 0xc5d6e5, roughness: 0.24, metalness: 0.78, envMapIntensity: 1.25 })
   const concreteFrameMat = new THREE.MeshStandardMaterial({ color: 0x75808b, roughness: 0.52, metalness: 0.28 })
   const officeBeltMat = new THREE.MeshStandardMaterial({ color: 0x506473, roughness: 0.32, metalness: 0.62, envMapIntensity: 1.1 })
@@ -377,6 +400,70 @@ function buildSkyline(buildings) {
   return { root, materials: [glassMat, concreteMat], reflectionMaterials: [glassSheenMat] }
 }
 
+function createLandmarkDistrict(center, size, seed) {
+  const group = new THREE.Group()
+  const palette = [0x2f8090, 0xb66a4f, 0x4f729c, 0x8b7043, 0x77619a, 0x4e8a72]
+  const accent = palette[Math.abs(seed || 0) % palette.length]
+  const radius = THREE.MathUtils.clamp(Math.hypot(size.x, size.z) * 0.46 + 0.85, 2.35, 5.8)
+  const stoneMat = new THREE.MeshStandardMaterial({ color: 0xe5dfd3, roughness: 0.82, metalness: 0.02 })
+  const pathMat = new THREE.MeshStandardMaterial({ color: 0xc7d0cd, roughness: 0.76, metalness: 0.06 })
+  const accentMat = new THREE.MeshStandardMaterial({
+    color: accent,
+    emissive: new THREE.Color(accent).multiplyScalar(0.32),
+    emissiveIntensity: 0.08,
+    roughness: 0.46,
+    metalness: 0.22,
+  })
+  const greenMat = new THREE.MeshStandardMaterial({ color: 0x6f9f70, roughness: 0.9, flatShading: true })
+
+  const plaza = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.06, 48), stoneMat)
+  plaza.scale.set(radius, 1, radius * 0.88)
+  plaza.position.set(center.x, 0.035, center.z)
+  plaza.receiveShadow = true
+  group.add(plaza)
+
+  const avenueX = new THREE.Mesh(new THREE.BoxGeometry(radius * 2.28, 0.026, 0.34), pathMat)
+  avenueX.position.set(center.x, 0.078, center.z)
+  avenueX.receiveShadow = true
+  const avenueZ = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.026, radius * 2.02), pathMat)
+  avenueZ.position.set(center.x, 0.079, center.z)
+  avenueZ.receiveShadow = true
+  group.add(avenueX, avenueZ)
+
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(radius * 0.82, 0.045, 6, 56), accentMat)
+  ring.position.set(center.x, 0.1, center.z)
+  ring.rotation.x = Math.PI / 2
+  group.add(ring)
+
+  // 一圈低矮花池给地标提供尺度参照，完全合批，不会像大树一样遮挡主体。
+  const count = 10
+  const planters = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.13, 0.15, 0.13, 8), accentMat, count)
+  const shrubs = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.16, 1), greenMat, count)
+  const matrix = new THREE.Matrix4()
+  const position = new THREE.Vector3()
+  const quaternion = new THREE.Quaternion()
+  const scale = new THREE.Vector3(1, 1, 1)
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2
+    const rx = radius * 0.91
+    const rz = radius * 0.8
+    position.set(center.x + Math.cos(angle) * rx, 0.14, center.z + Math.sin(angle) * rz)
+    matrix.compose(position, quaternion, scale)
+    planters.setMatrixAt(i, matrix)
+    position.y = 0.31
+    scale.setScalar(0.82 + (i % 3) * 0.08)
+    matrix.compose(position, quaternion, scale)
+    shrubs.setMatrixAt(i, matrix)
+    scale.set(1, 1, 1)
+  }
+  planters.instanceMatrix.needsUpdate = true
+  shrubs.instanceMatrix.needsUpdate = true
+  planters.castShadow = planters.receiveShadow = true
+  shrubs.castShadow = true
+  group.add(planters, shrubs)
+  return { group, radius }
+}
+
 export function createScene(canvas, opts) {
   const width = opts.width
   const height = opts.height
@@ -401,10 +488,10 @@ export function createScene(canvas, opts) {
   scene.environment = reflectionEnvironment
   scene.background = new THREE.Color(0xbcd9ec)
   scene.fog = new THREE.FogExp2(0xbcd9ec, 0.003)
-  const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 200)
-  // 下方固定天气面板会占用视觉重量；把观察目标抬高约 0.45 个世界单位，
-  // 城市模型在画布中整体下移一点，缩放和旋转中心保持不变。
-  const cameraTarget = new THREE.Vector3(0, 0.45, 0)
+  const camera = new THREE.PerspectiveCamera(38, width / height, 0.1, 200)
+  // 旧默认镜头相对目标只高约 3 单位，几乎平视，街区和地标广场全部被楼挡住。
+  // 改成俯看微缩沙盘的观察中心；切城时会按地标高度再做轻量自适应。
+  const cameraTarget = new THREE.Vector3(0, 2.35, 0)
 
   // 可见太阳、方向光和阴影都使用同一个世界坐标，避免“太阳在一边、光从另一边来”。
   const daySunPosition = new THREE.Vector3(-26, 15, 2)
@@ -570,6 +657,7 @@ export function createScene(canvas, opts) {
     world.add(environment.group)
 
     const built = buildLandmark(key)
+    cameraTarget.set(0, 2.35, 0)
     let clearZones = [{ x: CITY.landmark.x, z: CITY.landmark.z, r: 1.7 }]
     let calmZones = [{ x: CITY.landmark.x, z: CITY.landmark.z, r: 4.6, maxHeight: 2.8 }]
     if (built && built.group) {
@@ -579,9 +667,20 @@ export function createScene(canvas, opts) {
       const bounds = new THREE.Box3().setFromObject(built.group)
       const center = bounds.getCenter(new THREE.Vector3())
       const size = bounds.getSize(new THREE.Vector3())
-      const radius = Math.min(5.8, Math.max(1.7, Math.hypot(size.x, size.z) * 0.38 + 0.7))
-      clearZones = [{ x: center.x, z: center.z, r: radius }]
-      calmZones = [{ x: center.x, z: center.z, r: Math.min(8.5, radius + 3), maxHeight: 2.5 }]
+      const district = createLandmarkDistrict(center, size, currentProfile.seed)
+      built.group.add(district.group)
+      const districtRadius = Math.max(district.radius + 0.28, Math.min(5.8, Math.max(1.7, Math.hypot(size.x, size.z) * 0.38 + 0.7)))
+      clearZones = [{ x: center.x, z: center.z, r: districtRadius }]
+      calmZones = [{ x: center.x, z: center.z, r: Math.min(8.4, districtRadius + 2.65), maxHeight: 2.5 }]
+      cameraTarget.set(
+        center.x * 0.14,
+        THREE.MathUtils.clamp(2.15 + size.y * 0.065, 2.35, 3.05),
+        center.z * 0.1,
+      )
+      if (!userInteracted) {
+        radius = 34 + Math.max(0, 0.9 - camera.aspect) * 8
+        polar = Math.PI * 0.37
+      }
       built.group.traverse((object) => { if (object.isMesh) object.castShadow = true })
       landmark = built.group
       landmarkGlow = built.glow || []
@@ -627,15 +726,15 @@ export function createScene(canvas, opts) {
     refreshLook()
   }
 
-  // 与 Web 端 OrbitControls 对齐：radius 是相机到目标点的真实距离，
-  // polar 是从正上方量起的轨道角，允许越过地平线看到悬浮底盘底部。
-  let angle = Math.atan2(21, 19)
-  let polar = Math.acos(3 / Math.sqrt(19 * 19 + 3 * 3 + 21 * 21))
-  let radius = Math.sqrt(19 * 19 + 3 * 3 + 21 * 21)
-  const MIN_POLAR = 0.15
-  const MAX_POLAR = Math.PI * 0.62
-  const MIN_RADIUS = 8.5
-  const MAX_RADIUS = 82
+  // 默认采用约 67° 的俯视微缩构图，同时保留单指旋转、双指缩放。
+  // 不再允许镜头钻到托盘下方，避免用户旋转后只看到灰色底座。
+  let angle = Math.atan2(20, 19)
+  let polar = Math.PI * 0.37
+  let radius = 34
+  const MIN_POLAR = Math.PI * 0.2
+  const MAX_POLAR = Math.PI * 0.49
+  const MIN_RADIUS = 14
+  const MAX_RADIUS = 72
   let dragging = false
   let userInteracted = false
   let lastTouches = []
@@ -789,9 +888,9 @@ export function createScene(canvas, opts) {
     if (landmarkAnimate) landmarkAnimate(t, current.landmarkGlow, current.night)
     sky.update(current.night, currentWeather, camera, t, current.sunPosition)
 
-    world.position.y = Math.sin(t * 0.5) * 0.18
-    world.rotation.z = Math.sin(t * 0.4) * 0.012
-    world.rotation.x = Math.sin(t * 0.33 + 1.1) * 0.01
+    world.position.y = Math.sin(t * 0.5) * 0.08
+    world.rotation.z = Math.sin(t * 0.4) * 0.005
+    world.rotation.x = Math.sin(t * 0.33 + 1.1) * 0.004
     renderer.render(scene, camera)
     raf = canvas.requestAnimationFrame(frame)
   }
