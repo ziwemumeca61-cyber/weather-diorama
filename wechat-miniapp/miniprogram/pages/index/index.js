@@ -48,6 +48,8 @@ Page({
     moodPreview: '',
     moodBackground: '',
     moodBackgroundType: '',
+    moodAssetFallback: false,
+    moodBackgroundStyleLabel: '',
     moodLoading: false,
     moodSaving: false,
     officialPublishEnabled: false,
@@ -171,7 +173,13 @@ Page({
       forecast: buildForecast(d.daily),
       loading: false,
       errMsg: '',
-      ...(resetLibraryMood ? { moodPreview: '', moodBackground: '', moodBackgroundType: '' } : {}),
+      ...(resetLibraryMood ? {
+        moodPreview: '',
+        moodBackground: '',
+        moodBackgroundType: '',
+        moodAssetFallback: false,
+        moodBackgroundStyleLabel: '',
+      } : {}),
     }, () => {
       this.refreshMoodArticle()
     })
@@ -478,6 +486,8 @@ Page({
       moodPreview: '',
       moodBackground: '',
       moodBackgroundType: '',
+      moodAssetFallback: false,
+      moodBackgroundStyleLabel: '',
     }, () => this.refreshMoodArticle())
   },
 
@@ -489,6 +499,8 @@ Page({
       moodPreview: '',
       moodBackground: '',
       moodBackgroundType: '',
+      moodAssetFallback: false,
+      moodBackgroundStyleLabel: '',
     }, () => this.refreshMoodArticle())
   },
 
@@ -508,7 +520,7 @@ Page({
     return makeWeatherMoodSticker(this._moodCanvas, backgroundPath, this.weatherForMood(), {
       ...this.moodOption(),
       text: this.data.moodText,
-      styleLabel: this.moodStyle().label,
+      styleLabel: this.data.moodBackgroundStyleLabel || this.moodStyle().label,
       generatedByAi: usesAiAsset,
     })
   },
@@ -529,7 +541,7 @@ Page({
   moodAssetCacheKey() {
     const d = this.data
     const signature = [MOOD_ASSET_VERSION, d.sceneCity || d.placeCity || d.place, d.moodKey, d.moodStyleKey, d.kindLabel].join('|')
-    return `moodAsset:v1:${encodeURIComponent(signature).slice(0, 220)}`
+    return `moodAsset:v2:${encodeURIComponent(signature).slice(0, 220)}`
   },
 
   async onUseMoodAsset() {
@@ -544,10 +556,31 @@ Page({
     }
 
     this._moodAssetRunning = true
+    const requestedCity = this.data.sceneCity || this.data.placeCity || this.data.place
+    const requestedMoodKey = this.data.moodKey
+    const requestedStyleKey = this.data.moodStyleKey
     const cacheKey = this.moodAssetCacheKey()
     const cached = wx.getStorageSync(cacheKey)
-    let fileID = cached && cached.fileID ? cached.fileID : ''
-    this.setData({ moodLoading: true, moodPreview: '', moodBackground: '', moodBackgroundType: '' })
+    const cacheMatches = !!(
+      cached &&
+      cached.fileID &&
+      cached.assetVersion === MOOD_ASSET_VERSION &&
+      cached.city === requestedCity &&
+      cached.moodKey === requestedMoodKey &&
+      cached.styleKey === requestedStyleKey
+    )
+    let fileID = cacheMatches ? cached.fileID : ''
+    let fallbackKind = ''
+    let backgroundStyleLabel = this.moodStyle().label
+    if (cached && !cacheMatches) wx.removeStorageSync(cacheKey)
+    this.setData({
+      moodLoading: true,
+      moodPreview: '',
+      moodBackground: '',
+      moodBackgroundType: '',
+      moodAssetFallback: false,
+      moodBackgroundStyleLabel: '',
+    })
 
     try {
       let download
@@ -565,9 +598,9 @@ Page({
         const res = await wx.cloud.callFunction({
           name: 'moodSticker',
           data: {
-            moodKey: this.data.moodKey,
-            moodStyleKey: this.data.moodStyleKey,
-            city: this.data.sceneCity || this.data.placeCity || this.data.place,
+            moodKey: requestedMoodKey,
+            moodStyleKey: requestedStyleKey,
+            city: requestedCity,
             weatherKind: this.data.kindLabel,
           },
         })
@@ -578,15 +611,32 @@ Page({
           throw error
         }
         fileID = result.fileID
-        wx.setStorageSync(cacheKey, { fileID, assetVersion: result.assetVersion || MOOD_ASSET_VERSION })
+        fallbackKind = result.fallbackKind || ''
+        if (fallbackKind === 'city-base') backgroundStyleLabel = '城市基础画面'
+        if (!result.fallback) {
+          wx.setStorageSync(cacheKey, {
+            fileID,
+            assetVersion: result.assetVersion || MOOD_ASSET_VERSION,
+            city: requestedCity,
+            moodKey: requestedMoodKey,
+            styleKey: requestedStyleKey,
+          })
+        }
         download = await wx.cloud.downloadFile({ fileID })
       }
 
       const backgroundPath = download && download.tempFilePath
       if (!backgroundPath) throw new Error('城市心情画报素材下载失败')
-      this.setData({ moodBackground: backgroundPath, moodBackgroundType: 'library' }, () => this.refreshMoodArticle())
+      const usesCityBase = fallbackKind === 'city-base'
+      this.setData({
+        moodBackground: backgroundPath,
+        moodBackgroundType: 'library',
+        moodAssetFallback: usesCityBase,
+        moodBackgroundStyleLabel: backgroundStyleLabel,
+      }, () => this.refreshMoodArticle())
       const preview = await this.composeMoodSticker(backgroundPath, true)
       this.setData({ moodPreview: preview, moodLoading: false })
+      if (usesCityBase) wx.showToast({ title: '已使用同城基础画面', icon: 'none' })
     } catch (error) {
       console.error('[mood] library asset failed', error)
       this.setData({ moodLoading: false })
@@ -721,7 +771,13 @@ Page({
       curKind: k,
       kindLabel: KIND_LABEL[k],
       emoji: KIND_EMOJI[k],
-      ...(resetLibraryMood ? { moodPreview: '', moodBackground: '', moodBackgroundType: '' } : {}),
+      ...(resetLibraryMood ? {
+        moodPreview: '',
+        moodBackground: '',
+        moodBackgroundType: '',
+        moodAssetFallback: false,
+        moodBackgroundStyleLabel: '',
+      } : {}),
     }, () => {
       this.refreshMoodArticle()
     })

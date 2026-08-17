@@ -100,6 +100,12 @@ for (const city of CITIES) {
   }
 }
 
+// 完整素材库耗时较长，先为每座城市准备一张可兜底的基础画面。
+// 烟台作为当前重点城市优先生成；基础画面完成后，定时任务继续原有 2226 项进度。
+const COVERAGE_STYLE = STYLE_VARIANTS.find((style) => style.variantKey === 'cinematic')
+const COVERAGE_CITIES = ['烟台', ...CITIES.filter((city) => city !== '烟台')]
+const COVERAGE_TASKS = COVERAGE_CITIES.map((city) => ({ city, moodKey: 'calm', style: COVERAGE_STYLE }))
+
 function clean(value, limit) {
   return String(value == null ? '' : value).replace(/[\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, limit)
 }
@@ -237,6 +243,70 @@ async function runTick() {
   const now = Date.now()
   if (Number(job.leaseUntil) > now) return { ok: true, busy: true, nextIndex: job.nextIndex || 0, total: TASKS.length }
 
+  const coverageStart = Math.max(0, Number(job.coverageNextIndex) || 0)
+  if (coverageStart < COVERAGE_TASKS.length) {
+    const coverageEnd = Math.min(COVERAGE_TASKS.length, coverageStart + BATCH_SIZE)
+    await writeJob({
+      ...job,
+      status: 'running',
+      coverageNextIndex: coverageStart,
+      coverageTotal: COVERAGE_TASKS.length,
+      leaseUntil: now + LEASE_MS,
+      lastMode: 'coverage',
+      lastStartedAt: new Date().toISOString(),
+      lastError: '',
+    })
+
+    try {
+      const results = await mapLimit(COVERAGE_TASKS.slice(coverageStart, coverageEnd), CONCURRENCY, generateAsset)
+      await writeJob({
+        ...job,
+        status: 'running',
+        coverageNextIndex: coverageEnd,
+        coverageTotal: COVERAGE_TASKS.length,
+        coverageGeneratedCount: coverageEnd,
+        leaseUntil: 0,
+        lastMode: 'coverage',
+        lastFinishedAt: new Date().toISOString(),
+        lastError: '',
+      })
+      return {
+        ok: true,
+        done: false,
+        mode: 'coverage',
+        coverageStart,
+        coverageNextIndex: coverageEnd,
+        coverageTotal: COVERAGE_TASKS.length,
+        nextIndex: Math.max(0, Number(job.nextIndex) || 0),
+        total: TASKS.length,
+        results,
+      }
+    } catch (error) {
+      const message = clean(error && (error.errMsg || error.message || error), 500)
+      await writeJob({
+        ...job,
+        status: 'running',
+        coverageNextIndex: coverageStart,
+        coverageTotal: COVERAGE_TASKS.length,
+        leaseUntil: 0,
+        lastMode: 'coverage',
+        lastError: message,
+        lastFailedAt: new Date().toISOString(),
+      })
+      console.error('[moodAssetBatch coverage]', error)
+      return {
+        ok: false,
+        mode: 'coverage',
+        coverageStart,
+        coverageNextIndex: coverageStart,
+        coverageTotal: COVERAGE_TASKS.length,
+        nextIndex: Math.max(0, Number(job.nextIndex) || 0),
+        total: TASKS.length,
+        error: message || '城市基础画面生成失败，下次定时任务会重试',
+      }
+    }
+  }
+
   const start = Math.max(0, Number(job.nextIndex) || 0)
   if (start >= TASKS.length) {
     await writeJob({ ...job, status: 'complete', nextIndex: TASKS.length, total: TASKS.length, leaseUntil: 0, completedAt: new Date().toISOString() })
@@ -276,15 +346,45 @@ exports.main = async (event = {}) => {
 
     const action = clean(event.action, 20) || 'status'
     const current = await readJob()
-    if (action === 'status') return { ok: true, job: current || { status: 'not-started', nextIndex: 0, total: TASKS.length } }
+    if (action === 'status') {
+      const job = current || { status: 'not-started', nextIndex: 0, total: TASKS.length }
+      return {
+        ok: true,
+        job: {
+          ...job,
+          coverageNextIndex: Math.max(0, Number(job.coverageNextIndex) || 0),
+          coverageTotal: COVERAGE_TASKS.length,
+        },
+      }
+    }
     if (action === 'pause') {
       await writeJob({ ...(current || {}), status: 'paused', nextIndex: Number(current && current.nextIndex) || 0, total: TASKS.length, leaseUntil: 0, pausedAt: new Date().toISOString() })
       return { ok: true, status: 'paused' }
     }
     if (action === 'start') {
       const nextIndex = event.reset ? 0 : Math.max(0, Number(current && current.nextIndex) || 0)
-      await writeJob({ ...(current || {}), status: 'running', nextIndex, total: TASKS.length, leaseUntil: 0, startedAt: new Date().toISOString(), completedAt: '', lastError: '' })
-      return { ok: true, status: 'running', nextIndex, total: TASKS.length, expectedAssets: CITIES.length * Object.keys(MOODS).length * STYLE_VARIANTS.length }
+      const coverageNextIndex = event.reset ? 0 : Math.max(0, Number(current && current.coverageNextIndex) || 0)
+      await writeJob({
+        ...(current || {}),
+        status: 'running',
+        nextIndex,
+        total: TASKS.length,
+        coverageNextIndex,
+        coverageTotal: COVERAGE_TASKS.length,
+        leaseUntil: 0,
+        startedAt: new Date().toISOString(),
+        completedAt: '',
+        lastError: '',
+      })
+      return {
+        ok: true,
+        status: 'running',
+        nextIndex,
+        total: TASKS.length,
+        coverageNextIndex,
+        coverageTotal: COVERAGE_TASKS.length,
+        expectedAssets: CITIES.length * Object.keys(MOODS).length * STYLE_VARIANTS.length,
+      }
     }
     if (action === 'tick') return runTick()
     return { ok: false, error: '未知操作' }

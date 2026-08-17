@@ -39,6 +39,22 @@ async function findAsset(id) {
   }
 }
 
+function isReadyAsset(asset, city, moodKey, variantKey) {
+  return !!(
+    asset &&
+    asset.fileID &&
+    asset.assetVersion === ASSET_VERSION &&
+    asset.city === city &&
+    asset.moodKey === moodKey &&
+    asset.variantKey === variantKey
+  )
+}
+
+async function findReadyAsset(city, moodKey, variantKey) {
+  const asset = await findAsset(assetId(city, moodKey, variantKey))
+  return isReadyAsset(asset, city, moodKey, variantKey) ? asset : null
+}
+
 exports.main = async (event = {}) => {
   const moodKey = clean(event.moodKey, 20)
   const styleKey = clean(event.moodStyleKey, 20)
@@ -48,16 +64,33 @@ exports.main = async (event = {}) => {
   if (!city) return { ok: false, code: 'UNSUPPORTED_CITY', error: '这座城市的风格素材还未收录' }
 
   const variantKey = selectVariant(styleKey, event.weatherKind)
-  let asset = await findAsset(assetId(city, moodKey, variantKey))
+  let sourceMoodKey = moodKey
+  let sourceStyleKey = styleKey
+  let sourceVariantKey = variantKey
+  let fallbackKind = ''
+  let asset = await findReadyAsset(city, moodKey, variantKey)
 
-  // 东方意境任一构图暂缺时，可先使用另一款；不会在正式端调用生图模型。
+  // 东方意境任一构图暂缺时，可先使用同城的另一款东方构图。
   if (!asset && styleKey === 'oriental') {
     const alternate = variantKey === 'oriental-scroll' ? 'oriental-raincity' : 'oriental-scroll'
-    asset = await findAsset(assetId(city, moodKey, alternate))
+    asset = await findReadyAsset(city, moodKey, alternate)
+    if (asset) {
+      sourceVariantKey = alternate
+      fallbackKind = 'variant'
+    }
   }
 
-  if (!asset || !asset.fileID) {
-    return { ok: false, code: 'ASSET_NOT_READY', error: '这组风格素材尚在生成中，请稍后再试' }
+  // 精确组合尚未完成时，只允许降级到同一城市的基础画面，绝不跨城。
+  if (!asset) {
+    sourceMoodKey = 'calm'
+    sourceStyleKey = 'cinematic'
+    sourceVariantKey = 'cinematic'
+    asset = await findReadyAsset(city, sourceMoodKey, sourceVariantKey)
+    if (asset) fallbackKind = 'city-base'
+  }
+
+  if (!asset) {
+    return { ok: false, code: 'ASSET_NOT_READY', error: '这座城市的基础画面正在优先准备，请稍后再试' }
   }
 
   return {
@@ -67,7 +100,12 @@ exports.main = async (event = {}) => {
     city,
     moodKey,
     styleKey,
-    variantKey: asset.variantKey || variantKey,
+    variantKey,
+    sourceMoodKey,
+    sourceStyleKey,
+    sourceVariantKey,
+    fallback: !!fallbackKind,
+    fallbackKind,
     aiGeneratedAsset: true,
     realtimeGeneration: false,
   }
