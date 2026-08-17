@@ -337,14 +337,21 @@ export function createWeatherEffects(scene) {
   let nextBolt = 0.7
   let boltSeed = 4001
 
-  function setWeather(value) {
+  function setWeather(value, rainLevel) {
     kind = value || 'clear'
-    rainTarget = kind === 'rain' || kind === 'thunder' ? 0.82 : 0
+    const level = rainLevel === 'light' || rainLevel === 'heavy' ? rainLevel : 'moderate'
+    const rainOpacity = { light: 0.28, moderate: 0.62, heavy: 0.96 }
+    const rainCloudCoverage = { light: 0.72, moderate: 0.88, heavy: 0.98 }
+    rainTarget = kind === 'rain'
+      ? rainOpacity[level]
+      : kind === 'thunder'
+        ? Math.max(0.78, rainOpacity[level])
+        : 0
     snowTarget = kind === 'snow' ? 0.96 : 0
     fog.targetOpacity = kind === 'fog' ? 0.28 : 0
     if (kind === 'cloudy') setWeatherClouds(high, 0.66, false)
     else if (kind === 'overcast') setWeatherClouds(high, 0.96, false)
-    else if (kind === 'rain') setWeatherClouds(high, 0.92, true)
+    else if (kind === 'rain') setWeatherClouds(high, rainCloudCoverage[level], level !== 'light')
     else if (kind === 'thunder') setWeatherClouds(high, 0.98, true)
     else setWeatherClouds(high, 0, false)
   }

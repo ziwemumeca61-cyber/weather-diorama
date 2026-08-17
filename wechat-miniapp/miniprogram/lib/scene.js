@@ -551,6 +551,7 @@ export function createScene(canvas, opts) {
   let currentCity = null
   let currentProfile = null
   let currentWeather = 'clear'
+  let currentRainLevel = ''
   let isNight = false
 
   const current = {
@@ -748,9 +749,12 @@ export function createScene(canvas, opts) {
     applyGlow()
   }
 
-  function setWeather(kind) {
+  function setWeather(kind, rainLevel) {
     currentWeather = WEATHER_LOOK[kind] ? kind : 'clear'
-    weatherFx.setWeather(currentWeather)
+    currentRainLevel = currentWeather === 'rain' || currentWeather === 'thunder'
+      ? (rainLevel === 'light' || rainLevel === 'heavy' ? rainLevel : 'moderate')
+      : ''
+    weatherFx.setWeather(currentWeather, currentRainLevel)
     if (environment) environment.setWeather(currentWeather)
     if (props) props.setWeather(currentWeather)
     refreshLook()

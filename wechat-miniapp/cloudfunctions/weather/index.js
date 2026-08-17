@@ -41,7 +41,7 @@ function kindFromCode(code) {
 }
 
 const LOCATION_REVISION = 2
-const WEATHER_REVISION = 2
+const WEATHER_REVISION = 3
 
 // Open-Meteo 的中文地名搜索可能把同名村镇排在城市前面，例如“烟台”曾被
 // 解析成辽宁鞍山的同名地点。项目已有专属城市全部优先使用明确坐标。
@@ -150,6 +150,39 @@ function correctedCurrentKind(current) {
   if (cloudCover <= 25) return 'clear'
   if (cloudCover <= 70) return 'cloudy'
   return 'overcast'
+}
+
+const RAIN_LEVEL_LABEL = {
+  light: '小雨',
+  moderate: '中雨',
+  heavy: '大雨',
+}
+
+function rainLevelFromCode(code) {
+  const value = Number(code)
+  if (value === 65 || value === 67 || value === 82) return 'heavy'
+  if (value === 63 || value === 81) return 'moderate'
+  if ((value >= 51 && value <= 61) || value === 66 || value === 80) return 'light'
+  return ''
+}
+
+function currentRainAmount(current) {
+  const values = [current && current.precipitation, current && current.rain, current && current.showers]
+    .map(Number)
+    .filter(Number.isFinite)
+  return values.length ? Math.max(...values) : null
+}
+
+function currentRainLevel(current, kind) {
+  if (kind !== 'rain' && kind !== 'thunder') return ''
+  const amount = currentRainAmount(current)
+  // 当前接口的降水量按小时刻度理解：≤2.5 小雨，2.6—8.0 中雨，>8 大雨。
+  if (amount != null && amount >= 0.2) {
+    if (amount > 8) return 'heavy'
+    if (amount > 2.5) return 'moderate'
+    return 'light'
+  }
+  return rainLevelFromCode(current && current.weather_code) || (kind === 'thunder' ? 'moderate' : 'light')
 }
 
 function getTencentMapConfig() {
@@ -332,8 +365,8 @@ exports.main = async (event = {}) => {
     const f = await getJSON(
       'https://api.open-meteo.com/v1/forecast?latitude=' + latitude + '&longitude=' + longitude +
         '&current=temperature_2m,weather_code,is_day,precipitation,rain,showers,snowfall,cloud_cover' +
-        '&hourly=temperature_2m,weather_code,precipitation_probability,is_day' +
-        '&daily=weather_code,temperature_2m_max,temperature_2m_min' +
+        '&hourly=temperature_2m,weather_code,precipitation,precipitation_probability,is_day' +
+        '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum' +
         '&timezone=auto&forecast_days=7&forecast_hours=24',
     )
     const cur = f.current || {}
@@ -342,6 +375,8 @@ exports.main = async (event = {}) => {
     }
     const rawKind = kindFromCode(cur.weather_code)
     const kind = correctedCurrentKind(cur)
+    const rainLevel = currentRainLevel(cur, kind)
+    const weatherLabel = kind === 'rain' ? (RAIN_LEVEL_LABEL[rainLevel] || '雨') : (kind === 'thunder' ? '雷阵雨' : '')
     return {
       ok: true,
       place: {
@@ -367,12 +402,15 @@ exports.main = async (event = {}) => {
       weatherCode: cur.weather_code,
       rawKind,
       kind,
+      rainLevel,
+      weatherLabel,
       currentObservation: {
         precipitation: Number.isFinite(Number(cur.precipitation)) ? Number(cur.precipitation) : null,
         rain: Number.isFinite(Number(cur.rain)) ? Number(cur.rain) : null,
         showers: Number.isFinite(Number(cur.showers)) ? Number(cur.showers) : null,
         snowfall: Number.isFinite(Number(cur.snowfall)) ? Number(cur.snowfall) : null,
         cloudCover: Number.isFinite(Number(cur.cloud_cover)) ? Number(cur.cloud_cover) : null,
+        rainLevel,
         corrected: kind !== rawKind,
       },
       isDay: cur.is_day === 1,

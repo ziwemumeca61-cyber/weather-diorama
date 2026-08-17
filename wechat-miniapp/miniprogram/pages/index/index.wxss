@@ -190,6 +190,12 @@
 .hourly-item {
   min-width: 112rpx;
 }
+.fc-weather {
+  min-height: 24rpx;
+  margin: 1rpx 0 3rpx;
+  color: #dce7f7;
+  font-size: 19rpx;
+}
 .fc-rain {
   margin-top: 3rpx;
   color: #79aee9;

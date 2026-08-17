@@ -1,5 +1,5 @@
 import { createScene } from '../../lib/scene'
-import { KIND_LABEL, KIND_EMOJI, KINDS, localTime, buildForecast, buildHourly } from '../../lib/weatherCode'
+import { KIND_LABEL, KIND_EMOJI, KINDS, localTime, buildForecast, buildHourly, weatherLabelForKind, weatherEmojiForKind } from '../../lib/weatherCode'
 import { nearestCity } from '../../lib/cityCoords'
 import { MOOD_ASSET_ENABLED } from '../../lib/meta'
 import { makeWeatherMoodSticker } from '../../lib/weatherMoodSticker'
@@ -31,6 +31,7 @@ Page({
     kinds: KINDS,
     labels: KIND_LABEL,
     curKind: 'clear',
+    rainLevel: '',
     night: false,
     forecastMode: 'hourly',
     hourly: [],
@@ -122,7 +123,7 @@ Page({
           sceneApi = createScene(canvas, { width: cssW, height: cssH, dpr, city: '上海' })
           if (this._pendingCity) sceneApi.setCity(this._pendingCity)
           if (this._pendingNight != null) sceneApi.setNight(this._pendingNight)
-          if (this._pendingKind) sceneApi.setWeather(this._pendingKind)
+          if (this._pendingKind) sceneApi.setWeather(this._pendingKind, this._pendingRainLevel)
         } catch (e) {
           // 设备不支持 WebGL 时不让整页作废：标记降级，天气信息照常可看
           console.error('[scene] init failed', e)
@@ -154,6 +155,7 @@ Page({
       ''
     const sceneCity = normalizeCityName(actualCity) || (hit && hit.name) || displayName
     const districtLookupFailed = d.locationLookup && d.locationLookup.ok === false
+    const rainLevel = d.rainLevel || ''
     const resetLibraryMood = this.data.moodBackgroundType === 'library'
     this.setData({
       place: displayName,
@@ -165,8 +167,9 @@ Page({
       sceneCity,
       temp: d.temperature,
       curKind: d.kind,
-      kindLabel: KIND_LABEL[d.kind],
-      emoji: KIND_EMOJI[d.kind],
+      rainLevel,
+      kindLabel: d.weatherLabel || weatherLabelForKind(d.kind, rainLevel),
+      emoji: weatherEmojiForKind(d.kind, rainLevel, d.isDay),
       dateLabel: lt.dateLabel,
       night: !d.isDay,
       hourly: buildHourly(d.hourly),
@@ -190,10 +193,11 @@ Page({
     if (sceneApi) {
       sceneApi.setCity(sceneCity)
       sceneApi.setNight(!d.isDay)
-      sceneApi.setWeather(d.kind)
+      sceneApi.setWeather(d.kind, rainLevel)
     } else {
       this._pendingCity = sceneCity
       this._pendingKind = d.kind
+      this._pendingRainLevel = rainLevel
       this._pendingNight = !d.isDay
     }
   },
@@ -766,11 +770,13 @@ Page({
   // 手动切换天气特效（演示 / 不联网）
   onChip(e) {
     const k = e.currentTarget.dataset.k
+    const rainLevel = k === 'rain' ? 'moderate' : ''
     const resetLibraryMood = this.data.moodBackgroundType === 'library'
     this.setData({
       curKind: k,
-      kindLabel: KIND_LABEL[k],
-      emoji: KIND_EMOJI[k],
+      rainLevel,
+      kindLabel: weatherLabelForKind(k, rainLevel),
+      emoji: weatherEmojiForKind(k, rainLevel, !this.data.night),
       ...(resetLibraryMood ? {
         moodPreview: '',
         moodBackground: '',
@@ -781,7 +787,7 @@ Page({
     }, () => {
       this.refreshMoodArticle()
     })
-    if (sceneApi) sceneApi.setWeather(k)
+    if (sceneApi) sceneApi.setWeather(k, rainLevel)
   },
 
   // 手动昼夜切换
