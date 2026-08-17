@@ -6,7 +6,15 @@ import { makeWeatherMoodSticker } from '../../lib/weatherMoodSticker'
 
 let sceneApi = null
 const LAST_CITY = 'lastCity'
+const LAST_PLACE = 'lastWeatherPlace'
+const LOCATION_REVISION = 2
 const MOOD_ASSET_VERSION = 'city-mood-library-v1'
+
+function normalizeCityName(name) {
+  return String(name || '')
+    .trim()
+    .replace(/(?:市|地区|盟|自治州)$/, '')
+}
 
 Page({
   data: {
@@ -14,6 +22,7 @@ Page({
     placeMeta: '',
     placeCity: '',
     placeDistrict: '',
+    sceneCity: '',
     emoji: '☀️',
     temp: '—',
     kindLabel: '',
@@ -27,6 +36,7 @@ Page({
     hourly: [],
     forecast: [],
     loading: true,
+    locating: false,
     errMsg: '',
     glFailed: false,
     moodAssetEnabled: MOOD_ASSET_ENABLED,
@@ -72,7 +82,7 @@ Page({
       this.load(shared)
       return
     }
-    const last = wx.getStorageSync(LAST_CITY) || ''
+    const last = wx.getStorageSync(LAST_PLACE) || wx.getStorageSync(LAST_CITY) || ''
     // 已授权过定位就静默自动定位；没授权则不弹窗打扰，先显示上次看的城市
     wx.getSetting({
       success: (res) => {
@@ -131,10 +141,16 @@ Page({
   applyWeather(d) {
     const lt = localTime(d.utcOffsetSeconds, d.currentTime)
     const place = d.place || {}
-    const displayName = place.name || '当前位置'
-    const hit = nearestCity(place.latitude, place.longitude, 220)
-    const sceneCity = (hit && hit.name) || place.city || displayName
+    // 展示名称、真实行政城市、3D 注册城市分开保存，避免“最近的模型城市”覆盖区县。
+    const displayName = place.district || place.name || place.city || '当前位置'
     const districtLocated = !!place.district
+    const hit = nearestCity(place.latitude, place.longitude)
+    const actualCity =
+      place.city ||
+      (!districtLocated && displayName !== '当前位置' ? displayName : '') ||
+      (hit && hit.name) ||
+      ''
+    const sceneCity = normalizeCityName(actualCity) || (hit && hit.name) || displayName
     const districtLookupFailed = d.locationLookup && d.locationLookup.ok === false
     const resetLibraryMood = this.data.moodBackgroundType === 'library'
     this.setData({
@@ -142,8 +158,9 @@ Page({
       placeMeta: districtLocated
         ? ((place.city ? place.city + ' · ' : '') + '区县定位')
         : (districtLookupFailed ? '区县定位暂不可用' : '城市天气'),
-      placeCity: sceneCity,
+      placeCity: actualCity,
       placeDistrict: districtLocated ? place.district : '',
+      sceneCity,
       temp: d.temperature,
       curKind: d.kind,
       kindLabel: KIND_LABEL[d.kind],
@@ -159,7 +176,9 @@ Page({
       this.refreshMoodArticle()
     })
     if (districtLookupFailed) console.warn('[location] district lookup failed', d.locationLookup)
-    if (sceneCity) wx.setStorage({ key: LAST_CITY, data: sceneCity })
+    const lastPlace = districtLocated ? place.district : (!districtLookupFailed ? displayName : '')
+    if (lastPlace && lastPlace !== '当前位置') wx.setStorage({ key: LAST_PLACE, data: lastPlace })
+    if (actualCity) wx.setStorage({ key: LAST_CITY, data: actualCity })
     if (sceneApi) {
       sceneApi.setCity(sceneCity)
       sceneApi.setNight(!d.isDay)
@@ -171,8 +190,10 @@ Page({
     }
   },
 
-  callWeather(payload) {
+  callWeather(payload, options) {
+    const requestOptions = options || {}
     this._lastPayload = payload // 供「重试」用
+    this._lastWeatherOptions = requestOptions
     const requestId = (this._weatherRequestId || 0) + 1
     this._weatherRequestId = requestId
     this.setData({ loading: true, errMsg: '' })
@@ -185,9 +206,11 @@ Page({
           // 城市查不到属于输入问题，提示即可，不摆重试条
           wx.showToast({ title: d.error || '加载失败', icon: 'none' })
           this.setData({ loading: false })
+          this.finishLocationAttempt(null, requestOptions, d.error || '天气服务暂不可用')
           return
         }
         this.applyWeather(d)
+        this.finishLocationAttempt(d, requestOptions)
       })
       .catch((e) => {
         if (requestId !== this._weatherRequestId) return
@@ -203,12 +226,47 @@ Page({
           },
           fail: () => this.setData({ loading: false, errMsg: '加载失败，请稍后重试' }),
         })
+        this.finishLocationAttempt(null, requestOptions, '天气云函数调用失败，请稍后重试')
       })
   },
 
+  finishLocationAttempt(d, options, requestError) {
+    if (!options || !options.locationAttempt) return
+    this.setData({ locating: false })
+    if (!options.silent && wx.hideLoading) wx.hideLoading()
+
+    const district = d && d.place && d.place.district
+    if (district) {
+      if (!options.silent) wx.showToast({ title: '已定位到' + district, icon: 'success' })
+      return
+    }
+    if (options.silent) return
+
+    const lookup = d && d.locationLookup
+    const backendOutdated = !d || !lookup || Number(d.locationRevision || 0) < LOCATION_REVISION
+    let content = ''
+    if (requestError) {
+      content = requestError
+    } else if (backendOutdated) {
+      content = '手机坐标已获取，但云端 weather 函数仍是旧版本。请重新部署 weather 云函数。'
+    } else if (lookup.code === 'MAP_KEY_MISSING') {
+      content = 'weather 云函数没有读取到腾讯位置 Key。请检查环境变量 TENCENT_MAP_KEY。'
+    } else if (lookup.code === 'DISTRICT_EMPTY') {
+      content = '腾讯位置服务没有返回区县，请稍后重新定位。'
+    } else {
+      content = '腾讯位置区县反查失败。请检查 WebService Key 权限和 weather 函数环境变量。'
+    }
+    wx.showModal({
+      title: '区县定位未完成',
+      content,
+      showCancel: false,
+      confirmText: '知道了',
+    })
+  },
+
   onRetry() {
-    if (this._lastPayload) this.callWeather(this._lastPayload)
-    else this.load(wx.getStorageSync(LAST_CITY) || '上海')
+    if (this._lastPayload) this.callWeather(this._lastPayload, this._lastWeatherOptions)
+    else this.load(wx.getStorageSync(LAST_PLACE) || wx.getStorageSync(LAST_CITY) || '上海')
   },
 
   onAbout() {
@@ -219,22 +277,34 @@ Page({
     this.callWeather({ query })
   },
 
-  /** silent=true 时失败不弹提示，静默退回上次城市（用于启动自动定位） */
+  /** silent=true 时失败不弹提示，静默退回上次区县或城市（用于启动自动定位） */
   locate(silent) {
+    if (this.data.locating) return
+    this.setData({ locating: true })
+    if (!silent && wx.showLoading) wx.showLoading({ title: '正在定位区县', mask: true })
+
     wx.getLocation({
       type: 'gcj02',
+      isHighAccuracy: true,
+      highAccuracyExpireTime: 4000,
       success: (loc) => {
-        // 就近匹配已注册城市，好让地标是真的那座城，而不是通用塔
+        // 就近匹配已注册城市，好让地标是真的那座城，而不是通用塔。
+        // 区县名称仍以云函数的腾讯逆地理编码结果为准，不用最近城市覆盖。
         const hit = nearestCity(loc.latitude, loc.longitude)
         this.callWeather({
           latitude: loc.latitude,
           longitude: loc.longitude,
           name: hit ? hit.name : '当前位置',
+        }, {
+          locationAttempt: true,
+          silent: !!silent,
         })
       },
       fail: (error) => {
+        this.setData({ locating: false })
+        if (!silent && wx.hideLoading) wx.hideLoading()
         if (silent) {
-          this.load(wx.getStorageSync(LAST_CITY) || '上海')
+          this.load(wx.getStorageSync(LAST_PLACE) || wx.getStorageSync(LAST_CITY) || '上海')
           return
         }
         const message = String(error && error.errMsg || '')
@@ -248,7 +318,7 @@ Page({
               wx.openSetting({
                 success: (setting) => {
                   const allowed = setting && setting.authSetting && setting.authSetting['scope.userLocation']
-                  if (allowed) this.locate(true)
+                  if (allowed) this.locate(false)
                   else wx.showToast({ title: '位置权限仍未开启', icon: 'none' })
                 },
               })
@@ -458,7 +528,7 @@ Page({
 
   moodAssetCacheKey() {
     const d = this.data
-    const signature = [MOOD_ASSET_VERSION, d.placeCity || d.place, d.moodKey, d.moodStyleKey, d.kindLabel].join('|')
+    const signature = [MOOD_ASSET_VERSION, d.sceneCity || d.placeCity || d.place, d.moodKey, d.moodStyleKey, d.kindLabel].join('|')
     return `moodAsset:v1:${encodeURIComponent(signature).slice(0, 220)}`
   },
 
@@ -497,7 +567,7 @@ Page({
           data: {
             moodKey: this.data.moodKey,
             moodStyleKey: this.data.moodStyleKey,
-            city: this.data.placeCity || this.data.place,
+            city: this.data.sceneCity || this.data.placeCity || this.data.place,
             weatherKind: this.data.kindLabel,
           },
         })

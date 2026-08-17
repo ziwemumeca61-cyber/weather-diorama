@@ -33,7 +33,12 @@
           <text class="s-city">{{place}}</text>
           <text class="s-place-meta" wx:if="{{placeMeta}}">{{placeMeta}}</text>
         </view>
-        <text class="s-kind">{{emoji}} {{kindLabel}} · {{dateLabel}}</text>
+        <view class="s-kind-row">
+          <text class="s-kind">{{emoji}} {{kindLabel}} · {{dateLabel}}</text>
+          <view class="s-locate {{locating ? 'is-loading' : ''}}" catchtap="onLocate">
+            <text>{{locating ? '定位中…' : '📍 定位区县'}}</text>
+          </view>
+        </view>
       </view>
       <text class="s-temp">{{temp}}°</text>
     </view>
@@ -86,7 +91,7 @@
         bindconfirm="onSearch"
       />
       <view class="btn" bindtap="onSearch">搜索</view>
-      <view class="btn ghost" bindtap="onLocate">📍</view>
+      <view class="btn ghost locate-btn {{locating ? 'is-loading' : ''}}" bindtap="onLocate">{{locating ? '定位中' : '定位'}}</view>
     </view>
 
     <view class="hint" wx:if="{{loading}}">加载中…</view>

@@ -2,10 +2,12 @@
 // 小程序用 wx.cloud.callFunction({ name:'weather', data:{ query:'上海' } }) 调用即可。
 const https = require('https')
 
-function getJSON(url) {
+function getJSON(url, timeoutMs) {
   return new Promise((resolve, reject) => {
-    https
-      .get(url, { headers: { 'User-Agent': 'weather-diorama-miniapp' } }, (res) => {
+    const request = https.get(
+      url,
+      { headers: { 'User-Agent': 'weather-diorama-miniapp' } },
+      (res) => {
         let data = ''
         res.on('data', (c) => (data += c))
         res.on('end', () => {
@@ -19,8 +21,10 @@ function getJSON(url) {
             reject(e)
           }
         })
-      })
-      .on('error', reject)
+      },
+    )
+    request.setTimeout(timeoutMs || 9000, () => request.destroy(new Error('上游位置或天气服务超时')))
+    request.on('error', reject)
   })
 }
 
@@ -36,13 +40,27 @@ function kindFromCode(code) {
   return 'clear'
 }
 
+const LOCATION_REVISION = 2
+
+function getTencentMapConfig() {
+  // 兼容开发者工具中常见的变量命名；仍以 TENCENT_MAP_KEY 为推荐名称。
+  // 这里只读取云函数环境变量，Key 不会下发到小程序端。
+  const aliases = [
+    ['TENCENT_MAP_KEY', process.env.TENCENT_MAP_KEY],
+    ['QQ_MAP_KEY', process.env.QQ_MAP_KEY],
+    ['TENCENT_LOCATION_KEY', process.env.TENCENT_LOCATION_KEY],
+    ['key', process.env.key],
+    ['Key', process.env.Key],
+    ['KEY', process.env.KEY],
+  ]
+  const hit = aliases.find((item) => String(item[1] || '').trim())
+  return hit
+    ? { key: String(hit[1]).trim(), source: hit[0] }
+    : { key: '', source: '' }
+}
+
 function getTencentMapKey() {
-  return String(
-    process.env.TENCENT_MAP_KEY ||
-    process.env.QQ_MAP_KEY ||
-    process.env.TENCENT_LOCATION_KEY ||
-    '',
-  ).trim()
+  return getTencentMapConfig().key
 }
 
 function safeError(error) {
@@ -52,22 +70,43 @@ function safeError(error) {
 async function reverseDistrict(latitude, longitude) {
   const key = getTencentMapKey()
   if (!key) throw new Error('weather 云函数未配置 TENCENT_MAP_KEY')
-  const location = Number(latitude).toFixed(6) + ',' + Number(longitude).toFixed(6)
+  const lat = Number(latitude)
+  const lng = Number(longitude)
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+    throw new Error('定位坐标无效')
+  }
+  // wx.getLocation({ type: 'gcj02' }) 与腾讯地图坐标系一致，显式声明 coord_type=5。
+  const location = lat.toFixed(6) + ',' + lng.toFixed(6)
   const response = await getJSON(
     'https://apis.map.qq.com/ws/geocoder/v1/?location=' + location +
-      '&key=' + encodeURIComponent(key) + '&get_poi=0',
+      '&key=' + encodeURIComponent(key) + '&get_poi=0&coord_type=5&output=json',
+    9000,
   )
   if (response.status !== 0 || !response.result) {
     throw new Error(response.message || '腾讯位置服务区县反查失败')
   }
   const component = response.result.address_component || {}
+  const adInfo = response.result.ad_info || {}
+  const adTrail = String(adInfo.name || '')
+    .split(/[,，]/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+  const inferredDistrict = adTrail
+    .slice()
+    .reverse()
+    .find((item) =>
+      /(?:区|县|旗|自治县|市)$/.test(item) &&
+      item !== component.city &&
+      item !== component.province
+    ) || ''
+  const district = component.district || inferredDistrict
   return {
-    name: component.district || component.city || component.province || '',
+    name: district || component.city || component.province || '',
     city: component.city || component.province || '',
-    district: component.district || '',
+    district,
     province: component.province || '',
-    adcode: response.result.ad_info && response.result.ad_info.adcode,
-    precision: component.district ? 'district' : 'city',
+    adcode: adInfo.adcode,
+    precision: district ? 'district' : 'city',
   }
 }
 
@@ -77,11 +116,19 @@ exports.main = async (event = {}) => {
 
     // 云端测试入口：不返回 Key，只验证实际运行环境是否配置以及腾讯逆地址是否可用。
     if (event.action === 'diagnoseLocation') {
-      const keyConfigured = !!getTencentMapKey()
+      const mapConfig = getTencentMapConfig()
+      const keyConfigured = !!mapConfig.key
       const testLatitude = latitude == null ? 31.2304 : Number(latitude)
       const testLongitude = longitude == null ? 121.4737 : Number(longitude)
       if (!keyConfigured) {
-        return { ok: false, code: 'MAP_KEY_MISSING', keyConfigured: false, error: 'weather 云函数未配置 TENCENT_MAP_KEY' }
+        return {
+          ok: false,
+          code: 'MAP_KEY_MISSING',
+          keyConfigured: false,
+          keySource: '',
+          locationRevision: LOCATION_REVISION,
+          error: 'weather 云函数未配置 TENCENT_MAP_KEY',
+        }
       }
       try {
         const diagnosticPlace = await reverseDistrict(testLatitude, testLongitude)
@@ -89,11 +136,20 @@ exports.main = async (event = {}) => {
           ok: !!(diagnosticPlace && diagnosticPlace.district),
           code: diagnosticPlace && diagnosticPlace.district ? 'DISTRICT_OK' : 'DISTRICT_EMPTY',
           keyConfigured: true,
+          keySource: mapConfig.source,
+          locationRevision: LOCATION_REVISION,
           testedLocation: { latitude: testLatitude, longitude: testLongitude },
           place: diagnosticPlace,
         }
       } catch (error) {
-        return { ok: false, code: 'REVERSE_GEOCODER_FAILED', keyConfigured: true, error: safeError(error) }
+        return {
+          ok: false,
+          code: 'REVERSE_GEOCODER_FAILED',
+          keyConfigured: true,
+          keySource: mapConfig.source,
+          locationRevision: LOCATION_REVISION,
+          error: safeError(error),
+        }
       }
     }
 
@@ -120,11 +176,15 @@ exports.main = async (event = {}) => {
       }
     } else {
       let reverseError = ''
+      let reverseErrorCode = ''
       try {
         place = await reverseDistrict(latitude, longitude)
       } catch (e) {
         reverseError = safeError(e)
-        console.warn('[weather] reverse geocoder fallback', reverseError)
+        reverseErrorCode = /未配置.*(?:KEY|Key)/i.test(reverseError)
+          ? 'MAP_KEY_MISSING'
+          : 'REVERSE_GEOCODER_FAILED'
+        console.warn('[weather] reverse geocoder fallback', reverseErrorCode, reverseError)
       }
       if (!place) {
         place = {
@@ -133,6 +193,7 @@ exports.main = async (event = {}) => {
           district: '',
           province: '',
           precision: 'fallback',
+          locationErrorCode: reverseErrorCode || 'DISTRICT_EMPTY',
           locationError: reverseError || '腾讯位置服务未返回区县',
         }
       }
@@ -156,11 +217,14 @@ exports.main = async (event = {}) => {
         latitude: Number(latitude),
         longitude: Number(longitude),
       },
+      locationRevision: LOCATION_REVISION,
       locationLookup: isCoordinateLookup
         ? {
             ok: !!place.district,
             provider: 'tencent',
-            code: place.district ? 'DISTRICT_OK' : (place.precision === 'fallback' ? 'REVERSE_GEOCODER_FAILED' : 'DISTRICT_EMPTY'),
+            code: place.district
+              ? 'DISTRICT_OK'
+              : (place.locationErrorCode || (place.precision === 'fallback' ? 'REVERSE_GEOCODER_FAILED' : 'DISTRICT_EMPTY')),
             error: place.locationError || '',
           }
         : null,

@@ -91,10 +91,30 @@
   color: #ffffff;
   letter-spacing: 1rpx;
 }
-.s-kind {
-  font-size: 26rpx;
-  color: #9fb0c8;
+.s-kind-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
   margin-top: 8rpx;
+}
+.s-kind {
+  min-width: 0;
+  color: #9fb0c8;
+  font-size: 26rpx;
+}
+.s-locate {
+  flex: none;
+  margin-left: 14rpx;
+  padding: 7rpx 14rpx;
+  border: 2rpx solid rgba(153, 188, 255, 0.22);
+  border-radius: 999rpx;
+  color: #c8d9f7;
+  font-size: 20rpx;
+  background: rgba(91, 134, 230, 0.18);
+}
+.s-locate.is-loading,
+.locate-btn.is-loading {
+  opacity: 0.58;
 }
 .s-temp {
   font-size: 96rpx;
@@ -687,6 +707,11 @@
 .btn.ghost {
   background: rgba(255, 255, 255, 0.08);
   box-shadow: none;
+}
+.locate-btn {
+  min-width: 104rpx;
+  padding: 0 22rpx;
+  text-align: center;
 }
 
 .chips {
