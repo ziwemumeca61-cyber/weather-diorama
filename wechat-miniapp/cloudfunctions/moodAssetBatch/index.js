@@ -16,6 +16,10 @@ const BATCH_SIZE = 1
 const CONCURRENCY = 1
 const LEASE_MS = 90 * 1000
 const MAX_PROMPT_LENGTH = 480
+// 为60秒以内的云函数留出下载、入库和收尾时间，避免平台硬超时导致游标永久卡住。
+const AI_TIMEOUT_MS = 30000
+const MAX_TASK_ATTEMPTS = 3
+const MAX_FAILED_TASKS = 200
 
 const MOODS = {
   calm: { label: '暂时不想解释', story: '安静的城市边缘、独处空间和一束很淡但确定的光，克制、留有呼吸，不表现孤立无援', palette: '雾蓝、灰绿、珍珠白，低饱和且有细腻层次' },
@@ -164,19 +168,47 @@ async function getDocument(collection, id) {
   }
 }
 
+function withTimeout(promise, timeoutMs, message) {
+  let timer
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(message)), timeoutMs)
+  })
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
+}
+
+function retryCountFor(job, mode, index) {
+  if (clean(job && job.retryMode, 20) !== mode) return 0
+  if (Number(job && job.retryIndex) !== index) return 0
+  return Math.max(0, Number(job && job.retryCount) || 0)
+}
+
+function appendFailedTask(job, task, index, attempts, error) {
+  const previous = Array.isArray(job && job.failedTasks) ? job.failedTasks : []
+  const record = {
+    index,
+    city: clean(task && task.city, 40),
+    moodKey: clean(task && task.moodKey, 40),
+    variantKey: clean(task && task.style && task.style.variantKey, 60),
+    attempts,
+    error: clean(error, 500),
+    failedAt: new Date().toISOString(),
+  }
+  return previous.concat(record).slice(-MAX_FAILED_TASKS)
+}
+
 async function generateAsset(task) {
   const id = assetId(task)
   const existing = await getDocument(ASSET_COLLECTION, id)
   if (existing && existing.fileID && existing.assetVersion === ASSET_VERSION) return { id, reused: true }
 
   const imageModel = cloud.ai().createImageModel(IMAGE_ROUTE)
-  const result = await imageModel.generateImage({
+  const result = await withTimeout(imageModel.generateImage({
     model: IMAGE_MODEL,
     prompt: buildPrompt(task),
     size: '768x1024',
     revise: { value: false },
     enable_thinking: { value: false },
-  })
+  }), AI_TIMEOUT_MS, 'AI 图片生成超时（超过30秒），下次定时任务会重试')
   const url = result && result.data && result.data[0] && result.data[0].url
   if (!url) throw new Error('AI 图片返回为空')
 
@@ -223,8 +255,25 @@ function isAuthorized(event) {
   return a.length === b.length && crypto.timingSafeEqual(a, b)
 }
 
+function timerEventField(event, fields) {
+  for (const field of fields) {
+    if (event && event[field] != null) return event[field]
+  }
+  return ''
+}
+
+function timerEventSummary(event) {
+  return {
+    type: clean(timerEventField(event, ['Type', 'type', 'triggerType', 'TriggerType']), 40),
+    triggerName: clean(timerEventField(event, ['TriggerName', 'triggerName', 'trigger_name']), 120),
+  }
+}
+
 function isTimerEvent(event) {
-  return event && event.Type === 'Timer' && event.TriggerName === TRIGGER_NAME
+  const meta = timerEventSummary(event)
+  // 腾讯定时事件的字段在不同上传/版本入口可能略有差异；只要明确是Timer就继续执行，
+  // 不再因为TriggerName未回传或大小写不同而把定时任务误判为管理员调用。
+  return meta.type.toLowerCase() === 'timer' || meta.triggerName === TRIGGER_NAME
 }
 
 async function readJob() {
@@ -246,6 +295,46 @@ async function runTick() {
   const coverageStart = Math.max(0, Number(job.coverageNextIndex) || 0)
   if (coverageStart < COVERAGE_TASKS.length) {
     const coverageEnd = Math.min(COVERAGE_TASKS.length, coverageStart + BATCH_SIZE)
+    const previousAttempts = retryCountFor(job, 'coverage', coverageStart)
+    const attempt = previousAttempts + 1
+    const coverageTask = COVERAGE_TASKS[coverageStart]
+
+    // 如果上一次被平台硬超时，catch来不及落库；下次看到已达到上限时直接跳过，
+    // 让后续城市仍能继续生成，并把失败项留在job.failedTasks中。
+    if (previousAttempts >= MAX_TASK_ATTEMPTS) {
+      const message = clean(job.lastError, 500) || '城市基础画面连续超时，已跳过并继续后续任务'
+      const failedTasks = appendFailedTask(job, coverageTask, coverageStart, previousAttempts, message)
+      const failedCount = (Number(job.failedCount) || 0) + 1
+      await writeJob({
+        ...job,
+        status: 'running',
+        coverageNextIndex: coverageEnd,
+        coverageTotal: COVERAGE_TASKS.length,
+        coverageGeneratedCount: coverageEnd,
+        leaseUntil: 0,
+        lastMode: 'coverage',
+        lastError: message,
+        lastFailedAt: new Date().toISOString(),
+        failedCount,
+        failedTasks,
+        retryMode: '',
+        retryIndex: -1,
+        retryCount: 0,
+      })
+      return {
+        ok: true,
+        done: false,
+        skipped: true,
+        mode: 'coverage',
+        coverageStart,
+        coverageNextIndex: coverageEnd,
+        coverageTotal: COVERAGE_TASKS.length,
+        nextIndex: Math.max(0, Number(job.nextIndex) || 0),
+        total: TASKS.length,
+        error: message,
+      }
+    }
+
     await writeJob({
       ...job,
       status: 'running',
@@ -255,6 +344,9 @@ async function runTick() {
       lastMode: 'coverage',
       lastStartedAt: new Date().toISOString(),
       lastError: '',
+      retryMode: 'coverage',
+      retryIndex: coverageStart,
+      retryCount: attempt,
     })
 
     try {
@@ -269,6 +361,9 @@ async function runTick() {
         lastMode: 'coverage',
         lastFinishedAt: new Date().toISOString(),
         lastError: '',
+        retryMode: '',
+        retryIndex: -1,
+        retryCount: 0,
       })
       return {
         ok: true,
@@ -283,6 +378,40 @@ async function runTick() {
       }
     } catch (error) {
       const message = clean(error && (error.errMsg || error.message || error), 500)
+      if (attempt >= MAX_TASK_ATTEMPTS) {
+        const failedTasks = appendFailedTask(job, coverageTask, coverageStart, attempt, message)
+        const failedCount = (Number(job.failedCount) || 0) + 1
+        await writeJob({
+          ...job,
+          status: 'running',
+          coverageNextIndex: coverageEnd,
+          coverageTotal: COVERAGE_TASKS.length,
+          coverageGeneratedCount: coverageEnd,
+          leaseUntil: 0,
+          lastMode: 'coverage',
+          lastError: message,
+          lastFailedAt: new Date().toISOString(),
+          failedCount,
+          failedTasks,
+          retryMode: '',
+          retryIndex: -1,
+          retryCount: 0,
+        })
+        console.error('[moodAssetBatch coverage skipped]', error)
+        return {
+          ok: true,
+          done: false,
+          skipped: true,
+          mode: 'coverage',
+          coverageStart,
+          coverageNextIndex: coverageEnd,
+          coverageTotal: COVERAGE_TASKS.length,
+          nextIndex: Math.max(0, Number(job.nextIndex) || 0),
+          total: TASKS.length,
+          error: message || '城市基础画面连续失败，已跳过并继续后续任务',
+        }
+      }
+
       await writeJob({
         ...job,
         status: 'running',
@@ -292,6 +421,9 @@ async function runTick() {
         lastMode: 'coverage',
         lastError: message,
         lastFailedAt: new Date().toISOString(),
+        retryMode: 'coverage',
+        retryIndex: coverageStart,
+        retryCount: attempt,
       })
       console.error('[moodAssetBatch coverage]', error)
       return {
@@ -302,6 +434,7 @@ async function runTick() {
         coverageTotal: COVERAGE_TASKS.length,
         nextIndex: Math.max(0, Number(job.nextIndex) || 0),
         total: TASKS.length,
+        attempts: attempt,
         error: message || '城市基础画面生成失败，下次定时任务会重试',
       }
     }
@@ -309,12 +442,54 @@ async function runTick() {
 
   const start = Math.max(0, Number(job.nextIndex) || 0)
   if (start >= TASKS.length) {
-    await writeJob({ ...job, status: 'complete', nextIndex: TASKS.length, total: TASKS.length, leaseUntil: 0, completedAt: new Date().toISOString() })
+    await writeJob({ ...job, status: 'complete', nextIndex: TASKS.length, total: TASKS.length, leaseUntil: 0, completedAt: new Date().toISOString(), retryMode: '', retryIndex: -1, retryCount: 0 })
     return { ok: true, done: true, nextIndex: TASKS.length, total: TASKS.length }
   }
 
   const end = Math.min(TASKS.length, start + BATCH_SIZE)
-  await writeJob({ ...job, status: 'running', nextIndex: start, total: TASKS.length, leaseUntil: now + LEASE_MS, lastStartedAt: new Date().toISOString(), lastError: '' })
+  const previousAttempts = retryCountFor(job, 'assets', start)
+  const attempt = previousAttempts + 1
+  const task = TASKS[start]
+
+  // 对被平台硬超时的任务做有界重试，避免单张异常图片永久占住整个2226项队列。
+  if (previousAttempts >= MAX_TASK_ATTEMPTS) {
+    const message = clean(job.lastError, 500) || '素材连续超时，已跳过并继续后续任务'
+    const failedTasks = appendFailedTask(job, task, start, previousAttempts, message)
+    const failedCount = (Number(job.failedCount) || 0) + 1
+    const skippedCount = (Number(job.skippedCount) || 0) + 1
+    const completed = end >= TASKS.length
+    await writeJob({
+      ...job,
+      status: completed ? 'complete' : 'running',
+      nextIndex: end,
+      total: TASKS.length,
+      leaseUntil: 0,
+      generatedCount: end,
+      skippedCount,
+      failedCount,
+      failedTasks,
+      lastError: message,
+      lastFailedAt: new Date().toISOString(),
+      completedAt: completed ? new Date().toISOString() : '',
+      retryMode: '',
+      retryIndex: -1,
+      retryCount: 0,
+    })
+    return { ok: true, done: completed, skipped: true, start, nextIndex: end, total: TASKS.length, error: message }
+  }
+
+  await writeJob({
+    ...job,
+    status: 'running',
+    nextIndex: start,
+    total: TASKS.length,
+    leaseUntil: now + LEASE_MS,
+    lastStartedAt: new Date().toISOString(),
+    lastError: '',
+    retryMode: 'assets',
+    retryIndex: start,
+    retryCount: attempt,
+  })
 
   try {
     const results = await mapLimit(TASKS.slice(start, end), CONCURRENCY, generateAsset)
@@ -329,19 +504,79 @@ async function runTick() {
       lastFinishedAt: new Date().toISOString(),
       completedAt: completed ? new Date().toISOString() : '',
       lastError: '',
+      retryMode: '',
+      retryIndex: -1,
+      retryCount: 0,
     })
     return { ok: true, done: completed, start, nextIndex: end, total: TASKS.length, results }
   } catch (error) {
     const message = clean(error && (error.errMsg || error.message || error), 500)
-    await writeJob({ ...job, status: 'running', nextIndex: start, total: TASKS.length, leaseUntil: 0, lastError: message, lastFailedAt: new Date().toISOString() })
+    if (attempt >= MAX_TASK_ATTEMPTS) {
+      const failedTasks = appendFailedTask(job, task, start, attempt, message)
+      const failedCount = (Number(job.failedCount) || 0) + 1
+      const skippedCount = (Number(job.skippedCount) || 0) + 1
+      const completed = end >= TASKS.length
+      await writeJob({
+        ...job,
+        status: completed ? 'complete' : 'running',
+        nextIndex: end,
+        total: TASKS.length,
+        leaseUntil: 0,
+        generatedCount: end,
+        skippedCount,
+        failedCount,
+        failedTasks,
+        lastError: message,
+        lastFailedAt: new Date().toISOString(),
+        lastFinishedAt: new Date().toISOString(),
+        completedAt: completed ? new Date().toISOString() : '',
+        retryMode: '',
+        retryIndex: -1,
+        retryCount: 0,
+      })
+      console.error('[moodAssetBatch skipped]', error)
+      return {
+        ok: true,
+        done: completed,
+        skipped: true,
+        start,
+        nextIndex: end,
+        total: TASKS.length,
+        attempts: attempt,
+        error: message || '素材连续失败，已跳过并继续后续任务',
+      }
+    }
+
+    await writeJob({
+      ...job,
+      status: 'running',
+      nextIndex: start,
+      total: TASKS.length,
+      leaseUntil: 0,
+      lastError: message,
+      lastFailedAt: new Date().toISOString(),
+      retryMode: 'assets',
+      retryIndex: start,
+      retryCount: attempt,
+    })
     console.error('[moodAssetBatch]', error)
-    return { ok: false, start, nextIndex: start, total: TASKS.length, error: message || '批量生成失败，下次定时任务会重试' }
+    return {
+      ok: false,
+      start,
+      nextIndex: start,
+      total: TASKS.length,
+      attempts: attempt,
+      error: message || '批量生成失败，下次定时任务会重试',
+    }
   }
 }
 
 exports.main = async (event = {}) => {
   try {
-    if (isTimerEvent(event)) return runTick()
+    if (isTimerEvent(event)) {
+      console.log('[moodAssetBatch] timer tick', { ...timerEventSummary(event), at: new Date().toISOString() })
+      return runTick()
+    }
     if (!isAuthorized(event)) return { ok: false, code: 'UNAUTHORIZED', error: '管理员密钥不正确' }
 
     const action = clean(event.action, 20) || 'status'
