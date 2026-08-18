@@ -211,11 +211,12 @@ Page({
 
   callWeather(payload, options) {
     const requestOptions = options || {}
+    this.invalidateMoodAssetRequest()
     this._lastPayload = payload // 供「重试」用
     this._lastWeatherOptions = requestOptions
     const requestId = (this._weatherRequestId || 0) + 1
     this._weatherRequestId = requestId
-    this.setData({ loading: true, errMsg: '' })
+    this.setData({ loading: true, errMsg: '', moodLoading: false })
     wx.cloud
       .callFunction({ name: 'weather', data: payload })
       .then((r) => {
@@ -492,8 +493,10 @@ Page({
   onMoodPick(e) {
     const moodKey = e.currentTarget.dataset.key || 'calm'
     if (moodKey === this.data.moodKey) return
+    this.invalidateMoodAssetRequest()
     this.setData({
       moodKey,
+      moodLoading: false,
       moodPreview: '',
       moodBackground: '',
       moodBackgroundType: '',
@@ -505,8 +508,10 @@ Page({
   onMoodStylePick(e) {
     const moodStyleKey = e.currentTarget.dataset.key || 'cinematic'
     if (moodStyleKey === this.data.moodStyleKey) return
+    this.invalidateMoodAssetRequest()
     this.setData({
       moodStyleKey,
+      moodLoading: false,
       moodPreview: '',
       moodBackground: '',
       moodBackgroundType: '',
@@ -555,6 +560,30 @@ Page({
     return `moodAsset:${MOOD_ASSET_CACHE_VERSION}:${encodeURIComponent(signature).slice(0, 220)}`
   },
 
+  invalidateMoodAssetRequest() {
+    this._moodAssetRequestId = (this._moodAssetRequestId || 0) + 1
+    this._moodAssetRunning = false
+  },
+
+  moodAssetSnapshot() {
+    const d = this.data
+    return {
+      city: d.sceneCity || d.placeCity || d.place,
+      moodKey: d.moodKey,
+      styleKey: d.moodStyleKey,
+      kindLabel: d.kindLabel,
+    }
+  },
+
+  moodAssetRequestIsCurrent(requestId, snapshot) {
+    const current = this.moodAssetSnapshot()
+    return requestId === this._moodAssetRequestId &&
+      current.city === snapshot.city &&
+      current.moodKey === snapshot.moodKey &&
+      current.styleKey === snapshot.styleKey &&
+      current.kindLabel === snapshot.kindLabel
+  },
+
   async onUseMoodAsset() {
     if (!this.data.moodAssetEnabled) {
       wx.showToast({ title: '城市心情画报暂不可用', icon: 'none' })
@@ -567,9 +596,17 @@ Page({
     }
 
     this._moodAssetRunning = true
+    const requestId = (this._moodAssetRequestId || 0) + 1
+    this._moodAssetRequestId = requestId
     const requestedCity = this.data.sceneCity || this.data.placeCity || this.data.place
     const requestedMoodKey = this.data.moodKey
     const requestedStyleKey = this.data.moodStyleKey
+    const requestSnapshot = {
+      city: requestedCity,
+      moodKey: requestedMoodKey,
+      styleKey: requestedStyleKey,
+      kindLabel: this.data.kindLabel,
+    }
     const cacheKey = this.moodAssetCacheKey()
     const cached = wx.getStorageSync(cacheKey)
     const cacheMatches = !!(
@@ -622,6 +659,7 @@ Page({
           error.code = result.code || ''
           throw error
         }
+        if (!this.moodAssetRequestIsCurrent(requestId, requestSnapshot)) return
         const sourceStyleKey = result.sourceStyleKey || result.styleKey || requestedStyleKey
         if (sourceStyleKey !== requestedStyleKey || result.fallbackKind === 'city-base') {
           const error = new Error(`${this.moodStyle().label}素材尚未准备好，当前不会使用其他风格替代`)
@@ -645,6 +683,7 @@ Page({
         download = await wx.cloud.downloadFile({ fileID })
       }
 
+      if (!this.moodAssetRequestIsCurrent(requestId, requestSnapshot)) return
       const backgroundPath = download && download.tempFilePath
       if (!backgroundPath) throw new Error('城市心情画报素材下载失败')
       const usesCityBase = fallbackKind === 'city-base'
@@ -655,9 +694,11 @@ Page({
         moodBackgroundStyleLabel: backgroundStyleLabel,
       }, () => this.refreshMoodArticle())
       const preview = await this.composeMoodSticker(backgroundPath, true)
+      if (!this.moodAssetRequestIsCurrent(requestId, requestSnapshot)) return
       this.setData({ moodPreview: preview, moodLoading: false })
       if (usesCityBase) wx.showToast({ title: '已使用同城基础画面', icon: 'none' })
     } catch (error) {
+      if (!this.moodAssetRequestIsCurrent(requestId, requestSnapshot)) return
       console.error('[mood] library asset failed', error)
       this.setData({ moodLoading: false })
       const message = error.code === 'UNSUPPORTED_CITY'
@@ -667,7 +708,7 @@ Page({
           : error.message || '城市心情画报素材读取失败'
       wx.showToast({ title: message, icon: 'none' })
     } finally {
-      this._moodAssetRunning = false
+      if (requestId === this._moodAssetRequestId) this._moodAssetRunning = false
     }
   },
 
