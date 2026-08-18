@@ -8,6 +8,13 @@ const ASSET_COLLECTION = 'mood_assets'
 const SUPPORTED_CITIES = ['上海', '北京', '广州', '深圳', '天津', '杭州', '武汉', '西安', '南京', '开封', '苏州', '重庆', '成都', '台北', '哈尔滨', '拉萨', '香港', '郑州', '青岛', '昆明', '沈阳', '济南', '澳门', '呼和浩特', '兰州', '西宁', '乌鲁木齐', '合肥', '海口', '太原', '银川', '贵阳', '南昌', '长沙', '福州', '泰安', '曲阜', '烟台', '东营', '潍坊', '威海', '日照', '枣庄', '德州', '滨州', '菏泽', '淄博', '济宁', '临沂', '聊城', '石家庄', '长春', '南宁']
 const MOOD_KEYS = new Set(['calm', 'happy', 'tired', 'sad', 'missing', 'brave', 'healing'])
 const STYLE_KEYS = new Set(['cinematic', 'miniature', 'healing', 'oriental', 'zine'])
+const STYLE_LABELS = {
+  cinematic: '电影叙事',
+  miniature: '3D微缩',
+  healing: '治愈插画',
+  oriental: '东方意境',
+  zine: '城市采集志',
+}
 
 function clean(value, limit) {
   return String(value == null ? '' : value).replace(/[\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, limit)
@@ -80,17 +87,24 @@ exports.main = async (event = {}) => {
     }
   }
 
-  // 精确组合尚未完成时，只允许降级到同一城市的基础画面，绝不跨城。
+  // 不再把电影叙事基础图冒充成用户选择的风格；素材未就绪就明确返回，
+  // 由前端提示等待，避免“选了3D微缩却得到电影风格”的误导。
   if (!asset) {
-    sourceMoodKey = 'calm'
-    sourceStyleKey = 'cinematic'
-    sourceVariantKey = 'cinematic'
-    asset = await findReadyAsset(city, sourceMoodKey, sourceVariantKey)
-    if (asset) fallbackKind = 'city-base'
-  }
-
-  if (!asset) {
-    return { ok: false, code: 'ASSET_NOT_READY', error: '这座城市的基础画面正在优先准备，请稍后再试' }
+    const label = STYLE_LABELS[styleKey] || '所选'
+    const variantLabel = styleKey === 'oriental'
+      ? (variantKey === 'oriental-raincity' ? '东方意境·城市雨境' : '东方意境·疏朗卷轴')
+      : label
+    return {
+      ok: false,
+      code: 'ASSET_NOT_READY',
+      error: `${city}的${variantLabel}素材尚未准备好，当前不会使用其他风格替代`,
+      city,
+      moodKey,
+      styleKey,
+      variantKey,
+      sourceStyleKey: styleKey,
+      sourceVariantKey: variantKey,
+    }
   }
 
   return {

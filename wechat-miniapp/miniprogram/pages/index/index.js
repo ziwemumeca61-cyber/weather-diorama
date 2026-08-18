@@ -9,6 +9,11 @@ const LAST_CITY = 'lastCity'
 const LAST_PLACE = 'lastWeatherPlace'
 const LOCATION_REVISION = 2
 const MOOD_ASSET_VERSION = 'city-mood-library-v1'
+const MOOD_ASSET_CACHE_VERSION = 'v3'
+const MOOD_STYLE_VARIANT_LABELS = {
+  'oriental-scroll': '东方意境·疏朗卷轴',
+  'oriental-raincity': '东方意境·城市雨境',
+}
 
 function normalizeCityName(name) {
   return String(name || '')
@@ -547,7 +552,7 @@ Page({
   moodAssetCacheKey() {
     const d = this.data
     const signature = [MOOD_ASSET_VERSION, d.sceneCity || d.placeCity || d.place, d.moodKey, d.moodStyleKey, d.kindLabel].join('|')
-    return `moodAsset:v2:${encodeURIComponent(signature).slice(0, 220)}`
+    return `moodAsset:${MOOD_ASSET_CACHE_VERSION}:${encodeURIComponent(signature).slice(0, 220)}`
   },
 
   async onUseMoodAsset() {
@@ -573,11 +578,12 @@ Page({
       cached.assetVersion === MOOD_ASSET_VERSION &&
       cached.city === requestedCity &&
       cached.moodKey === requestedMoodKey &&
-      cached.styleKey === requestedStyleKey
+      cached.styleKey === requestedStyleKey &&
+      (!cached.sourceStyleKey || cached.sourceStyleKey === requestedStyleKey)
     )
     let fileID = cacheMatches ? cached.fileID : ''
     let fallbackKind = ''
-    let backgroundStyleLabel = this.moodStyle().label
+    let backgroundStyleLabel = MOOD_STYLE_VARIANT_LABELS[cacheMatches ? cached.sourceVariantKey : ''] || this.moodStyle().label
     if (cached && !cacheMatches) wx.removeStorageSync(cacheKey)
     this.setData({
       moodLoading: true,
@@ -616,9 +622,15 @@ Page({
           error.code = result.code || ''
           throw error
         }
+        const sourceStyleKey = result.sourceStyleKey || result.styleKey || requestedStyleKey
+        if (sourceStyleKey !== requestedStyleKey || result.fallbackKind === 'city-base') {
+          const error = new Error(`${this.moodStyle().label}素材尚未准备好，当前不会使用其他风格替代`)
+          error.code = 'STYLE_MISMATCH'
+          throw error
+        }
         fileID = result.fileID
         fallbackKind = result.fallbackKind || ''
-        if (fallbackKind === 'city-base') backgroundStyleLabel = '城市基础画面'
+        backgroundStyleLabel = MOOD_STYLE_VARIANT_LABELS[result.sourceVariantKey || result.variantKey] || backgroundStyleLabel
         if (!result.fallback) {
           wx.setStorageSync(cacheKey, {
             fileID,
@@ -626,6 +638,8 @@ Page({
             city: requestedCity,
             moodKey: requestedMoodKey,
             styleKey: requestedStyleKey,
+            sourceStyleKey,
+            sourceVariantKey: result.sourceVariantKey || result.variantKey || '',
           })
         }
         download = await wx.cloud.downloadFile({ fileID })
@@ -648,8 +662,8 @@ Page({
       this.setData({ moodLoading: false })
       const message = error.code === 'UNSUPPORTED_CITY'
         ? '这座城市的心情画报还未收录'
-        : error.code === 'ASSET_NOT_READY'
-          ? '这款城市心情画报尚未准备好'
+        : error.code === 'STYLE_MISMATCH' || error.code === 'ASSET_NOT_READY'
+          ? error.message || `${this.moodStyle().label}素材尚未准备好`
           : error.message || '城市心情画报素材读取失败'
       wx.showToast({ title: message, icon: 'none' })
     } finally {

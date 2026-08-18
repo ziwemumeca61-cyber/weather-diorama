@@ -194,7 +194,7 @@
 
           <view class="mood-section-head mood-style-head">
             <text class="mood-section-title">选择画面风格</text>
-            <text class="mood-section-tip">第二步 · 预生成城市画面</text>
+            <text class="mood-section-tip">第二步 · 只匹配所选风格</text>
           </view>
           <scroll-view class="mood-styles" scroll-x enable-flex>
             <view
@@ -237,7 +237,7 @@
             </view>
           </view>
 
-          <text class="mood-ai-note" wx:if="{{moodPreview}}">{{moodAssetFallback ? '所选精细风格正在制作，当前使用本城市基础画面；' : '背景来自预生成城市画面；'}}实时天气与文字只在本地叠加。</text>
+          <text class="mood-ai-note" wx:if="{{moodPreview}}">背景来自已匹配的城市与画面风格；实时天气与文字只在本地叠加。</text>
 
           <view class="mood-ready" wx:if="{{moodPreview}}">
             <view class="mood-ready-title"><text>城市心情画报已准备好</text><text>保存或发布</text></view>
