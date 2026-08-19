@@ -1909,6 +1909,7 @@ function proceduralLandmark(name) {
 function set(parts) {
   const g = new THREE.Group()
   const glow = []
+  const landmarkNodes = []
   let spin = null
   const anims = []
   parts.forEach((p) => {
@@ -1917,11 +1918,13 @@ function set(parts) {
     if (p.s) r.group.scale.setScalar(p.s)
     if (p.ry) r.group.rotation.y = p.ry
     g.add(r.group)
+    landmarkNodes.push(r.group)
     if (r.glow && r.glow.length) for (let i = 0; i < r.glow.length; i++) glow.push(r.glow[i])
     if (r.spin) spin = r.spin
     if (typeof r.animate === 'function') anims.push(r.animate)
   })
-  g.userData.landmarkCount = parts.length
+  g.userData.landmarkCount = landmarkNodes.length
+  g.userData.landmarkNodes = landmarkNodes
   const out = { group: g, glow: glow, spin: spin }
   if (anims.length) {
     out.animate = (t, base, nf) => {
@@ -1931,6 +1934,9 @@ function set(parts) {
   return out
 }
 
+/* ================= 地标组合 + 各城市的次要地标 =================
+ * web 版每座大城市是“一组”地标；小程序也必须保持独立、可辨识的地标层次。
+ */
 /** 通用玻璃板楼（广州西塔 / 武汉绿地 / 南京紫峰等复用） */
 function slabTower(opts) {
   opts = opts || {}
@@ -2433,7 +2439,43 @@ export function hasOwnWater(name) {
 // 去掉「市/区/县」等后缀，做包含匹配，提升命中率。
 // 没有专属造型的城市不再退回同一根通用主塔，而是按城市名哈希生成一座
 // 程序化地标（4 种原型 × 8 种配色 × 随机朝向），让每座陌生城市各不相同。
-const TOURIST_CITY_KEYS = ['北京', '上海', '杭州', '苏州', '西安', '成都', '重庆', '青岛', '烟台', '威海', '哈尔滨', '香港', '澳门', '台北']
+const TOURIST_CITY_KEYS = [
+  '北京', '上海', '广州', '天津', '杭州', '武汉', '南京', '苏州', '西安', '成都', '重庆',
+  '深圳', '青岛', '烟台', '威海', '哈尔滨', '拉萨', '昆明', '香港', '澳门', '台北',
+  '济南', '长沙', '南昌', '海口', '福州', '兰州', '贵阳', '长春', '乌鲁木齐',
+]
+const TOURIST_EXTRA_SIGHTS = {
+  北京: ['故宫', 'hall'],
+  上海: ['外滩万国建筑群', 'civic'],
+  广州: ['沙面历史街区', 'civic'],
+  天津: ['五大道', 'civic'],
+  杭州: ['西湖三潭印月', 'pavilion'],
+  武汉: ['东湖听涛', 'pavilion'],
+  南京: ['夫子庙', 'hall'],
+  苏州: ['拙政园', 'pavilion'],
+  西安: ['兵马俑', 'hall'],
+  成都: ['宽窄巷子', 'gate'],
+  重庆: ['洪崖洞', 'pavilion'],
+  深圳: ['世界之窗', 'civic'],
+  青岛: ['五四广场', 'sail'],
+  烟台: ['养马岛灯塔', 'lighthouse'],
+  威海: ['刘公岛灯塔', 'lighthouse'],
+  哈尔滨: ['冰雪大世界', 'civic'],
+  拉萨: ['大昭寺', 'hall'],
+  昆明: ['石林', 'civic'],
+  香港: ['天坛大佛', 'stupa'],
+  澳门: ['大三巴牌坊', 'paifang'],
+  台北: ['九份老街', 'civic'],
+  济南: ['千佛山', 'pavilion'],
+  长沙: ['橘子洲', 'pavilion'],
+  南昌: ['滕王阁', 'pavilion'],
+  海口: ['骑楼老街', 'civic'],
+  福州: ['三坊七巷', 'hall'],
+  兰州: ['黄河母亲雕塑', 'sail'],
+  贵阳: ['青岩古镇', 'gate'],
+  长春: ['净月潭', 'civic'],
+  乌鲁木齐: ['国际大巴扎', 'civic'],
+}
 
 // 副地标不再按城市哈希随机拼造；每个登记城市都使用实名景点，
 // 再由一组轻量低多边形原型表达轮廓，兼顾辨识度与小程序性能。
@@ -2493,8 +2535,7 @@ const NAMED_SECONDARY_SIGHTS = {
   南宁: [['青秀山龙象塔', 'pagoda'], ['广西民族博物馆', 'civic']],
 }
 
-function namedSecondarySight(key, index) {
-  const spec = (NAMED_SECONDARY_SIGHTS[key] || [])[index]
+function buildNamedSight(spec) {
   if (!spec) return null
   const name = spec[0]
   const type = spec[1]
@@ -2515,11 +2556,30 @@ function namedSecondarySight(key, index) {
     case 'sail': result = sailSculpture(); break
     case 'hall': result = dachengHall(); break
     case 'mountain': result = mountTai(); break
-    case 'civic': result = genDomedCivic(accent, rand); break
-    default: result = slabTower({ h: 8.2, w: 0.82, color: accent, taper: 0.2 })
+    case 'tower': result = slabTower({ h: 8.2, w: 0.82, color: accent, taper: 0.2 }); break
+    case 'civic':
+    default: result = genDomedCivic(accent, rand); break
   }
   result.group.userData.landmarkName = name
   result.group.userData.landmarkRole = 'secondary'
+  return result
+}
+
+function namedSecondarySight(key, index) {
+  const spec = (NAMED_SECONDARY_SIGHTS[key] || [])[index]
+  return buildNamedSight(spec)
+}
+
+function generatedSecondarySight(key, index) {
+  const safeKey = key || '城市'
+  const types = ['pavilion', 'bridge', 'civic', 'pagoda', 'gate', 'tower']
+  const type = types[hashName(safeKey + ':' + index) % types.length]
+  return buildNamedSight([safeKey + '地标' + (index + 1), type])
+}
+
+function touristExtraSight(key) {
+  const result = buildNamedSight(TOURIST_EXTRA_SIGHTS[key])
+  if (result && result.group) result.group.userData.landmarkRole = 'tourist'
   return result
 }
 
@@ -2568,29 +2628,94 @@ function polishLandmark(key, result) {
   return result
 }
 
+function findLandmarkBuilderKey(value) {
+  const key = ('' + (value || '')).replace(/[市区县省]/g, '').trim()
+  const keys = Object.keys(BUILDERS).sort((a, b) => b.length - a.length)
+  for (let i = 0; i < keys.length; i++) {
+    if (key.indexOf(keys[i]) !== -1) return keys[i]
+  }
+  return ''
+}
+
 function ensureLandmarkSet(key, result) {
   if (!result || !result.group) return result
-  // 53 个已登记城市统一至少 3 处；重点旅游城市至少 4 处。
-  const target = TOURIST_CITY_KEYS.indexOf(key) >= 0 ? 4 : 3
-  const count = result.group.userData.landmarkCount || 1
-  result.glow = result.glow || []
-  const names = result.group.userData.secondaryLandmarks || []
-  const positions = [[-3.75, 2.7], [3.55, -2.7], [-3.5, -2.6], [3.6, 2.55]]
-  let added = 0
-  for (let i = count; i < target; i++) {
-    const extra = namedSecondarySight(key, i - count)
-    if (!extra) continue
-    const at = positions[added % positions.length]
-    extra.group.position.set(at[0], 0, at[1])
-    extra.group.scale.setScalar(0.29 + (i % 2) * 0.055)
-    result.group.add(extra.group)
-    names.push(extra.group.userData.landmarkName)
-    ;(extra.glow || []).forEach((material) => result.glow.push(material))
-    added++
+  const canonicalKey = findLandmarkBuilderKey(key) || key
+  const tourist = TOURIST_CITY_KEYS.indexOf(canonicalKey) >= 0
+  const target = tourist ? 4 : 3
+  let root = result.group
+  let nodes = Array.isArray(root.userData.landmarkNodes)
+    ? root.userData.landmarkNodes.filter(Boolean)
+    : []
+
+  // 单体 builder（例如天津之眼、单塔城市）先包成一个可计算的主地标节点。
+  if (!nodes.length) {
+    const hero = root
+    root = new THREE.Group()
+    root.userData = Object.assign({}, hero.userData)
+    root.add(hero)
+    nodes = [hero]
+    result.group = root
   }
-  result.group.userData.secondaryLandmarks = names
-  result.group.userData.landmarkCount = count + added
-  return polishLandmark(key, result)
+
+  result.glow = result.glow || []
+  const names = Array.isArray(root.userData.secondaryLandmarks)
+    ? root.userData.secondaryLandmarks.slice()
+    : []
+  root.userData.landmarkNodes = nodes
+  let count = nodes.length
+  const positions = [
+    [-4.25, 3.15],
+    [4.15, -3.35],
+    [-4.05, -3.55],
+    [4.0, 3.05],
+  ]
+  let positionIndex = 0
+
+  function addSight(extra) {
+    if (!extra || !extra.group || count >= target) return false
+    const at = positions[positionIndex % positions.length]
+    positionIndex++
+    extra.group.position.set(at[0], 0, at[1])
+    // 让副地标在手机视距下仍然有轮廓，旅游加景点略大一档。
+    const scale = extra.group.userData.landmarkRole === 'tourist'
+      ? 0.64
+      : 0.56 + (positionIndex % 2) * 0.06
+    extra.group.scale.setScalar(scale)
+    root.add(extra.group)
+    nodes.push(extra.group)
+    const name = extra.group.userData.landmarkName
+    if (name && names.indexOf(name) < 0) names.push(name)
+    ;(extra.glow || []).forEach((material) => result.glow.push(material))
+    count++
+    return true
+  }
+
+  if (tourist && count < target) {
+    const extra = touristExtraSight(canonicalKey)
+    if (extra && names.indexOf(extra.group.userData.landmarkName) < 0) addSight(extra)
+  }
+
+  const specs = NAMED_SECONDARY_SIGHTS[canonicalKey] || []
+  let secondaryIndex = 0
+  while (count < target) {
+    let extra = null
+    while (secondaryIndex < specs.length && !extra) {
+      const spec = specs[secondaryIndex++]
+      if (names.indexOf(spec[0]) >= 0) continue
+      extra = namedSecondarySight(canonicalKey, secondaryIndex - 1)
+    }
+    if (!extra) {
+      extra = generatedSecondarySight(canonicalKey, count)
+    }
+    if (!addSight(extra)) break
+  }
+
+  root.userData.secondaryLandmarks = names
+  root.userData.landmarkNodes = nodes
+  root.userData.landmarkCount = count
+  root.userData.landmarkTarget = target
+  root.userData.landmarkCoverage = count >= target ? 'complete' : 'fallback'
+  return polishLandmark(canonicalKey, result)
 }
 
 // 这些城市在旧库中已有可辨识的专属地标组合，优先使用，避免被通用玻璃塔替代。
@@ -2602,24 +2727,11 @@ const LEGACY_FIRST_CITIES = [
 
 export function buildLandmark(name) {
   const key = ('' + (name || '')).replace(/[市区县省]/g, '').trim()
-  const preferLegacy = LEGACY_FIRST_CITIES.indexOf(key) >= 0
-  // 对没有旧版专属组合的城市，继续使用增强地标；重点城市反过来优先用具体旧模型。
-  if (!preferLegacy) {
+  const canonicalKey = findLandmarkBuilderKey(key)
+  if (canonicalKey) {
     try {
-      const enhanced = buildEnhancedLandmark(name)
-      if (enhanced && enhanced.group) return ensureLandmarkSet(key, enhanced)
+      return ensureLandmarkSet(canonicalKey, BUILDERS[canonicalKey]())
     } catch (e) {}
-  }
-  // 长键优先，避免「南京」被「南宁」之类的短键误伤（当前无此冲突，作为防御）
-  const keys = Object.keys(BUILDERS).sort((a, b) => b.length - a.length)
-  for (let i = 0; i < keys.length; i++) {
-    if (key.indexOf(keys[i]) !== -1) {
-      try {
-        return ensureLandmarkSet(keys[i], BUILDERS[keys[i]]())
-      } catch (e) {
-        break
-      }
-    }
   }
   try {
     const enhanced = buildEnhancedLandmark(name)

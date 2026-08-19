@@ -669,9 +669,16 @@ export function createScene(canvas, opts) {
       const center = bounds.getCenter(new THREE.Vector3())
       const size = bounds.getSize(new THREE.Vector3())
       const skylineProfile = currentProfile.skyline || {}
-      const landmarkParts = skylineProfile.distributedLandmarks
-        ? built.group.children.filter((child) => child && child.isGroup)
+      // 优先使用地标 builder 声明的独立节点；这样每座城市的主楼、古建、
+      // 桥/塔/景点都能分别留出净空，不会被一圈随机楼群吞掉。
+      const registeredLandmarkNodes = Array.isArray(built.group.userData.landmarkNodes)
+        ? built.group.userData.landmarkNodes.filter(Boolean)
         : []
+      const landmarkParts = registeredLandmarkNodes.length > 1
+        ? registeredLandmarkNodes
+        : skylineProfile.distributedLandmarks
+          ? built.group.children.filter((child) => child && child.isGroup)
+          : []
       if (landmarkParts.length > 1) {
         // 烟台山灯塔、蓬莱阁和张裕酒庄相距较远：逐个避让，而不是用一个
         // 半径 6 左右的大圆挖空整片市中心。楼可以填进三处地标之间，但不会穿模。
