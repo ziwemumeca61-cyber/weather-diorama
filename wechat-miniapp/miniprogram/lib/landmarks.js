@@ -1912,11 +1912,15 @@ function set(parts) {
   const landmarkNodes = []
   let spin = null
   const anims = []
-  parts.forEach((p) => {
+  parts.forEach((p, i) => {
     const r = p.b()
     r.group.position.set(p.x || 0, 0, p.z || 0)
     if (p.s) r.group.scale.setScalar(p.s)
     if (p.ry) r.group.rotation.y = p.ry
+    r.group.userData.landmarkRole = p.role || (i === 0 ? 'hero' : 'secondary')
+    r.group.userData.landmarkPriority = p.priority == null ? (i === 0 ? 100 : 80 - i) : p.priority
+    r.group.userData.landmarkIndex = i
+    r.group.userData.landmarkVisible = true
     g.add(r.group)
     landmarkNodes.push(r.group)
     if (r.glow && r.glow.length) for (let i = 0; i < r.glow.length; i++) glow.push(r.glow[i])
@@ -1925,6 +1929,8 @@ function set(parts) {
   })
   g.userData.landmarkCount = landmarkNodes.length
   g.userData.landmarkNodes = landmarkNodes
+  g.userData.landmarkFocusNode = landmarkNodes[0] || null
+  g.userData.landmarkVisibility = 'foreground'
   const out = { group: g, glow: glow, spin: spin }
   if (anims.length) {
     out.animate = (t, base, nf) => {
@@ -2458,7 +2464,7 @@ const TOURIST_EXTRA_SIGHTS = {
   重庆: ['洪崖洞', 'pavilion'],
   深圳: ['世界之窗', 'civic'],
   青岛: ['五四广场', 'sail'],
-  烟台: ['养马岛灯塔', 'lighthouse'],
+  烟台: ['烟台市博物馆', 'civic'],
   威海: ['刘公岛灯塔', 'lighthouse'],
   哈尔滨: ['冰雪大世界', 'civic'],
   拉萨: ['大昭寺', 'hall'],
@@ -2661,25 +2667,66 @@ function ensureLandmarkSet(key, result) {
   const names = Array.isArray(root.userData.secondaryLandmarks)
     ? root.userData.secondaryLandmarks.slice()
     : []
+  nodes.forEach((node, index) => {
+    node.userData = node.userData || {}
+    node.userData.landmarkRole = node.userData.landmarkRole || (index === 0 ? 'hero' : 'secondary')
+    node.userData.landmarkPriority = node.userData.landmarkPriority == null
+      ? (index === 0 ? 100 : 80 - index)
+      : node.userData.landmarkPriority
+    node.userData.landmarkIndex = index
+    node.userData.landmarkVisible = true
+  })
   root.userData.landmarkNodes = nodes
   let count = nodes.length
   const positions = [
-    [-4.25, 3.15],
-    [4.15, -3.35],
-    [-4.05, -3.55],
-    [4.0, 3.05],
+    [-4.2, 3.4],
+    [4.15, 3.1],
+    [-4.05, -3.65],
+    [4.0, -3.45],
+    [0.1, 4.25],
+    [0.1, -4.15],
   ]
+  const occupied = nodes.map((node) => [
+    Number(node.position && node.position.x) || 0,
+    Number(node.position && node.position.z) || 0,
+  ])
+  const pickPosition = () => {
+    let best = positions[0]
+    let bestScore = -Infinity
+    for (let i = 0; i < positions.length; i++) {
+      const candidate = positions[i]
+      if (candidate._used) continue
+      let score = Infinity
+      for (let j = 0; j < occupied.length; j++) {
+        score = Math.min(
+          score,
+          Math.hypot(candidate[0] - occupied[j][0], candidate[1] - occupied[j][1]),
+        )
+      }
+      score += candidate[1] > 0 ? 0.45 : 0
+      if (score > bestScore) {
+        bestScore = score
+        best = candidate
+      }
+    }
+    best._used = true
+    occupied.push(best)
+    return best
+  }
   let positionIndex = 0
 
   function addSight(extra) {
     if (!extra || !extra.group || count >= target) return false
-    const at = positions[positionIndex % positions.length]
+    const at = pickPosition()
     positionIndex++
     extra.group.position.set(at[0], 0, at[1])
-    // 让副地标在手机视距下仍然有轮廓，旅游加景点略大一档。
+    // 副地标统一放进前景展示带，并为楼群避让留下更大的底座净空。
     const scale = extra.group.userData.landmarkRole === 'tourist'
-      ? 0.64
-      : 0.56 + (positionIndex % 2) * 0.06
+      ? 0.72
+      : 0.64 + (positionIndex % 2) * 0.04
+    extra.group.userData.landmarkPriority = 50 - positionIndex
+    extra.group.userData.landmarkIndex = nodes.length
+    extra.group.userData.landmarkVisible = true
     extra.group.scale.setScalar(scale)
     root.add(extra.group)
     nodes.push(extra.group)

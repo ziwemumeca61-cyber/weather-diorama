@@ -658,19 +658,18 @@ export function createScene(canvas, opts) {
     world.add(environment.group)
 
     const built = buildLandmark(key)
-    cameraTarget.set(0, 2.35, 0)
+    cameraTarget.set(0, 2.5, 0)
     let clearZones = [{ x: CITY.landmark.x, z: CITY.landmark.z, r: 1.7 }]
-    let calmZones = [{ x: CITY.landmark.x, z: CITY.landmark.z, r: 4.6, maxHeight: 2.8 }]
+    let calmZones = [{ x: CITY.landmark.x, z: CITY.landmark.z, r: 4.9, maxHeight: 2.6 }]
     if (built && built.group) {
-      // 各城市地标组合已经按 Web 组件的局部坐标排布，不再整体套用楼群核心偏移。
+      // 地标组保持独立排布，但每个节点都要有自己的净空和低楼缓冲区。
+      // 这样主地标不会被随机楼群、树木或路灯从前景切掉。
       built.group.position.set(0, 0, 0)
       built.group.updateMatrixWorld(true)
       const bounds = new THREE.Box3().setFromObject(built.group)
       const center = bounds.getCenter(new THREE.Vector3())
       const size = bounds.getSize(new THREE.Vector3())
       const skylineProfile = currentProfile.skyline || {}
-      // 优先使用地标 builder 声明的独立节点；这样每座城市的主楼、古建、
-      // 桥/塔/景点都能分别留出净空，不会被一圈随机楼群吞掉。
       const registeredLandmarkNodes = Array.isArray(built.group.userData.landmarkNodes)
         ? built.group.userData.landmarkNodes.filter(Boolean)
         : []
@@ -679,9 +678,10 @@ export function createScene(canvas, opts) {
         : skylineProfile.distributedLandmarks
           ? built.group.children.filter((child) => child && child.isGroup)
           : []
+
+      let focusPart = landmarkParts[0] || null
+      let focusRank = -Infinity
       if (landmarkParts.length > 1) {
-        // 烟台山灯塔、蓬莱阁和张裕酒庄相距较远：逐个避让，而不是用一个
-        // 半径 6 左右的大圆挖空整片市中心。楼可以填进三处地标之间，但不会穿模。
         clearZones = []
         calmZones = []
         landmarkParts.forEach((part, index) => {
@@ -689,16 +689,46 @@ export function createScene(canvas, opts) {
           const partBounds = new THREE.Box3().setFromObject(part)
           const partCenter = partBounds.getCenter(new THREE.Vector3())
           const partSize = partBounds.getSize(new THREE.Vector3())
-          let partRadius = THREE.MathUtils.clamp(Math.hypot(partSize.x, partSize.z) * 0.34 + 0.45, 1.25, 3)
-          if (index === 0 && skylineProfile.heroClearRadius) {
-            partRadius = Math.max(partRadius, skylineProfile.heroClearRadius)
+          const metadata = part.userData || {}
+          const role = metadata.landmarkRole || (index === 0 ? 'hero' : 'secondary')
+          const rank = Number(metadata.landmarkPriority)
+          if (role === 'hero' || (isFinite(rank) && rank > focusRank)) {
+            focusPart = part
+            focusRank = isFinite(rank) ? rank : focusRank
           }
-          const calmPadding = index === 0
-            ? skylineProfile.heroCalmPadding || skylineProfile.calmPadding || 1.5
-            : skylineProfile.calmPadding || 1.5
-          const calmHeight = index === 0
-            ? skylineProfile.heroCalmHeight || skylineProfile.calmHeight || 2.8
-            : skylineProfile.calmHeight || 2.8
+
+          // 用真实地标底座的外接尺寸计算半径，再额外留一圈净空；
+          // 旧版固定上限 3 会让宽体建筑的边缘仍被楼脚/树冠贴住。
+          const footprintRadius = Math.hypot(partSize.x, partSize.z) * 0.52
+          const visibilityPadding = Number(skylineProfile.landmarkVisibilityPadding)
+          const padding = isFinite(visibilityPadding)
+            ? THREE.MathUtils.clamp(visibilityPadding, 0.55, 1.35)
+            : 0.86
+          let partRadius = THREE.MathUtils.clamp(footprintRadius + padding, 1.55, 4.6)
+          if (role === 'hero' || index === 0) {
+            const heroRadius = Number(skylineProfile.heroClearRadius)
+            partRadius = Math.max(partRadius, isFinite(heroRadius) ? heroRadius : 2.45)
+          }
+
+          const configuredCalmPadding = Number(
+            role === 'hero' || index === 0
+              ? skylineProfile.heroCalmPadding
+              : skylineProfile.calmPadding,
+          )
+          const calmPadding = Math.max(
+            role === 'hero' || index === 0 ? 2.2 : 1.85,
+            isFinite(configuredCalmPadding) ? configuredCalmPadding : 0,
+          )
+          const configuredCalmHeight = Number(
+            role === 'hero' || index === 0
+              ? skylineProfile.heroCalmHeight
+              : skylineProfile.calmHeight,
+          )
+          const calmLimit = role === 'hero' || index === 0 ? 2.75 : 2.95
+          const calmHeight = Math.min(
+            calmLimit,
+            isFinite(configuredCalmHeight) ? configuredCalmHeight : calmLimit,
+          )
           clearZones.push({ x: partCenter.x, z: partCenter.z, r: partRadius })
           calmZones.push({
             x: partCenter.x,
@@ -710,18 +740,41 @@ export function createScene(canvas, opts) {
       } else {
         const district = createLandmarkDistrict(center, size, currentProfile.seed)
         built.group.add(district.group)
-        const districtRadius = Math.max(district.radius + 0.28, Math.min(5.8, Math.max(1.7, Math.hypot(size.x, size.z) * 0.38 + 0.7)))
+        const districtRadius = Math.max(
+          district.radius + 0.42,
+          Math.min(6.2, Math.max(2.05, Math.hypot(size.x, size.z) * 0.42 + 0.85)),
+        )
         clearZones = [{ x: center.x, z: center.z, r: districtRadius }]
-        calmZones = [{ x: center.x, z: center.z, r: Math.min(8.4, districtRadius + 2.65), maxHeight: 2.5 }]
+        calmZones = [{ x: center.x, z: center.z, r: Math.min(9.2, districtRadius + 2.85), maxHeight: 2.35 }]
+        focusPart = built.group
       }
+
+      const focusBounds = focusPart
+        ? new THREE.Box3().setFromObject(focusPart)
+        : bounds
+      const focusCenter = focusBounds.getCenter(new THREE.Vector3())
+      const focusWeightValue = Number(skylineProfile.heroFocusWeight)
+      const focusWeight = THREE.MathUtils.clamp(
+        isFinite(focusWeightValue) ? focusWeightValue : 0.56,
+        0.42,
+        0.72,
+      )
+      const focusX = center.x * (1 - focusWeight) + focusCenter.x * focusWeight
+      const focusZ = center.z * (1 - focusWeight) + focusCenter.z * focusWeight
       cameraTarget.set(
-        center.x * 0.14,
-        THREE.MathUtils.clamp(2.15 + size.y * 0.065, 2.35, 3.05),
-        center.z * 0.1,
+        focusX,
+        THREE.MathUtils.clamp(2.25 + Math.min(size.y, 14) * 0.075, 2.4, 3.2),
+        focusZ,
       )
       if (!userInteracted) {
-        radius = 34 + Math.max(0, 0.9 - camera.aspect) * 8
-        polar = Math.PI * 0.37
+        const span = Math.max(size.x, size.z)
+        radius = THREE.MathUtils.clamp(
+          25.5 + span * 0.62 + Math.max(0, 0.9 - camera.aspect) * 7,
+          28.5,
+          34,
+        )
+        // 初始镜头提高俯视角，让地标广场、主体轮廓和屋顶不再被前排楼群吞掉。
+        polar = Math.PI * 0.30
       }
       built.group.traverse((object) => { if (object.isMesh) object.castShadow = true })
       landmark = built.group

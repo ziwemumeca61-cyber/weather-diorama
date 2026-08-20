@@ -57,6 +57,7 @@ export function generateCity(seed, clearZones, calmZones, maxZ, hueShift, skylin
   const absoluteHeightCap = Number(skyline.absoluteHeightCap) || Infinity
   const footprintScale = THREE.MathUtils.clamp(Number(skyline.footprintScale) || 1, 0.88, 1.08)
   const towerBias = THREE.MathUtils.clamp(Number(skyline.towerBias) || 1, 0.8, 1.35)
+  const clearPadding = THREE.MathUtils.clamp(Number(skyline.clearPadding) || 0.82, 0.35, 1.5)
   const splitThreshold = 0.86 - Math.max(0, densityScale - 1) * 0.09
   const clear = clearZones || [{ x: CITY.landmark.x, z: CITY.landmark.z, r: 1.5 }]
   const calm = calmZones || []
@@ -75,7 +76,9 @@ export function generateCity(seed, clearZones, calmZones, maxZ, hueShift, skylin
       let blocked = false
       for (let i = 0; i < clear.length; i++) {
         const zone = clear[i]
-        if (Math.hypot(x - zone.x, z - zone.z) < zone.r) {
+        // clearZones 是地标中心的净空半径；再加一圈 lot padding，避免
+        // 楼体底座和 splitLot 附楼从圆边缘探进广场。
+        if (Math.hypot(x - zone.x, z - zone.z) < zone.r + clearPadding) {
           blocked = true
           break
         }
