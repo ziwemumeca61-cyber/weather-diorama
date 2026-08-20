@@ -2262,33 +2262,99 @@ function leaningPagoda() {
 
 // 烟台专属补景：蓬莱阁的多层海边阁楼，以及张裕酒文化的红砖酒庄。
 function penglaiPavilion() {
-  return pavilion({ tiers: 4, w: 3.25, d: 2.45, tierH: 1.05, body: 0xc5a56e, roof: 0x3f5e71, platform: 0.82 })
+  const group = new THREE.Group()
+  const glow = []
+  const cliff = std(0x9a8d7a, { roughness: 0.96, metalness: 0.02 })
+  const stone = std(0xd8cdb8, { roughness: 0.88 })
+  const wall = glowMat(0xb78b58, 0xffd39a)
+  const roofMat = tiledRoof(0x36596b, 7, 2, { roughness: 0.55, metalness: 0.22 })
+  glow.push(wall)
+
+  // 蓬莱阁不再只是通用亭子：海蚀台地、主阁、偏阁、城墙和临海长廊共同形成轮廓。
+  const headland = new THREE.Mesh(new THREE.CylinderGeometry(3.0, 3.45, 0.62, 10), cliff)
+  headland.position.y = 0.31
+  group.add(headland)
+
+  const main = pavilion({
+    tiers: 4, w: 3.35, d: 2.5, tierH: 1.02,
+    body: 0xc3a06b, roof: 0x36596b, platform: 0.7,
+  })
+  main.group.position.set(-0.45, 0.58, -0.05)
+  main.group.scale.setScalar(0.88)
+  group.add(main.group)
+  ;(main.glow || []).forEach((material) => glow.push(material))
+
+  const sideHall = new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.15, 1.35), wall)
+  sideHall.position.set(2.0, 1.16, 0.35)
+  const sideRoof = new THREE.Mesh(makeHipRoof(2.05, 1.65, 0.62, 0.7, 0.05), roofMat)
+  sideRoof.position.set(2.0, 1.73, 0.35)
+  const wallWalk = new THREE.Mesh(new THREE.BoxGeometry(5.7, 0.48, 0.34), stone)
+  wallWalk.position.set(0.15, 0.86, 1.88)
+  group.add(sideHall, sideRoof, wallWalk)
+
+  const merlonGeo = new THREE.BoxGeometry(0.22, 0.22, 0.4)
+  const merlons = new THREE.InstancedMesh(merlonGeo, stone, 11)
+  const matrix = new THREE.Matrix4()
+  for (let i = 0; i < 11; i++) {
+    matrix.makeTranslation(-2.35 + i * 0.5, 1.2, 1.88)
+    merlons.setMatrixAt(i, matrix)
+  }
+  merlons.instanceMatrix.needsUpdate = true
+  group.add(merlons)
+  return { group, glow }
 }
 
 function zhangyuChateau() {
   const group = new THREE.Group()
-  const brick = std(0xa5553c, { roughness: 0.86 })
-  const stone = std(0xd2c0a6, { roughness: 0.78 })
-  const roof = std(0x4d5f6d, { roughness: 0.7, metalness: 0.12 })
-  const dark = std(0x392d2a, { roughness: 0.92 })
-  const main = new THREE.Mesh(new THREE.BoxGeometry(2.65, 1.35, 1.38), brick)
-  main.position.y = 0.86
-  const side = new THREE.Mesh(new THREE.BoxGeometry(1.05, 1.06, 1.2), stone)
-  side.position.set(1.55, 0.7, 0)
-  const roofMain = new THREE.Mesh(new THREE.ConeGeometry(1.18, 0.72, 4), roof)
-  roofMain.position.set(-0.1, 1.88, 0)
+  const glow = []
+  const brick = std(0x9f4d36, { roughness: 0.8 })
+  const stone = std(0xd8c5aa, { roughness: 0.72 })
+  const roof = std(0x405463, { roughness: 0.56, metalness: 0.2, envMapIntensity: 0.9 })
+  const dark = std(0x352b29, { roughness: 0.86 })
+  const windowMat = glowMat(0x49657a, 0xffd08a)
+  glow.push(windowMat)
+
+  // 张裕酒文化建筑群：砖石主楼、双塔楼、坡屋顶、石带和成排拱窗。
+  const main = new THREE.Mesh(new THREE.BoxGeometry(3.3, 1.75, 1.55), brick)
+  main.position.y = 1.05
+  const wing = new THREE.Mesh(new THREE.BoxGeometry(1.25, 1.28, 1.36), stone)
+  wing.position.set(2.05, 0.8, 0)
+  const roofMain = new THREE.Mesh(new THREE.ConeGeometry(1.48, 0.82, 4), roof)
+  roofMain.position.set(-0.15, 2.34, 0)
   roofMain.rotation.y = Math.PI * 0.25
-  const roofSide = new THREE.Mesh(new THREE.ConeGeometry(0.66, 0.52, 4), roof)
-  roofSide.position.set(1.55, 1.48, 0)
-  roofSide.rotation.y = Math.PI * 0.25
-  const door = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.72, 0.025), dark)
-  door.position.set(-0.28, 0.42, 0.7)
+  group.add(main, wing, roofMain)
+
+  for (const sx of [-1, 1]) {
+    const turret = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.48, 2.18, 10), sx < 0 ? brick : stone)
+    turret.position.set(sx * 1.82, 1.25, 0.02)
+    const cap = new THREE.Mesh(new THREE.ConeGeometry(0.62, 0.78, 10), roof)
+    cap.position.set(sx * 1.82, 2.73, 0.02)
+    group.add(turret, cap)
+  }
+
+  const band = new THREE.Mesh(new THREE.BoxGeometry(3.45, 0.12, 1.62), stone)
+  band.position.set(-0.05, 1.42, 0)
+  const entry = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.86, 0.06), dark)
+  entry.position.set(-0.25, 0.48, 0.805)
+  group.add(band, entry)
+
+  const windows = new THREE.InstancedMesh(new THREE.BoxGeometry(0.28, 0.38, 0.035), windowMat, 10)
+  const matrix = new THREE.Matrix4()
+  let wi = 0
+  for (const y of [0.72, 1.28]) {
+    for (const x of [-1.35, -0.78, 0.35, 0.92, 1.46]) {
+      matrix.makeTranslation(x, y, 0.805)
+      windows.setMatrixAt(wi++, matrix)
+    }
+  }
+  windows.instanceMatrix.needsUpdate = true
+  group.add(windows)
+
   const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.42, 10), dark)
-  barrel.position.set(0.7, 0.3, 0.82)
+  barrel.position.set(0.66, 0.28, 0.92)
   barrel.rotation.z = Math.PI * 0.5
-  group.add(main, side, roofMain, roofSide, door, barrel)
-  group.traverse((object) => { if (object.isMesh) object.castShadow = object.receiveShadow = true })
-  return { group, glow: [] }
+  group.add(barrel)
+  return { group, glow }
 }
 
 const BUILDERS = {
@@ -2452,34 +2518,34 @@ const TOURIST_CITY_KEYS = [
 ]
 const TOURIST_EXTRA_SIGHTS = {
   北京: ['故宫', 'hall'],
-  上海: ['外滩万国建筑群', 'civic'],
-  广州: ['沙面历史街区', 'civic'],
-  天津: ['五大道', 'civic'],
-  杭州: ['西湖三潭印月', 'pavilion'],
-  武汉: ['东湖听涛', 'pavilion'],
+  上海: ['外滩万国建筑群', 'heritage'],
+  广州: ['沙面历史街区', 'heritage'],
+  天津: ['五大道', 'heritage'],
+  杭州: ['西湖三潭印月', 'water'],
+  武汉: ['东湖听涛', 'water'],
   南京: ['夫子庙', 'hall'],
   苏州: ['拙政园', 'pavilion'],
   西安: ['兵马俑', 'hall'],
-  成都: ['宽窄巷子', 'gate'],
+  成都: ['宽窄巷子', 'heritage'],
   重庆: ['洪崖洞', 'pavilion'],
-  深圳: ['世界之窗', 'civic'],
+  深圳: ['世界之窗', 'monument'],
   青岛: ['五四广场', 'sail'],
-  烟台: ['烟台市博物馆', 'civic'],
+  烟台: ['烟台市博物馆', 'museum'],
   威海: ['刘公岛灯塔', 'lighthouse'],
-  哈尔滨: ['冰雪大世界', 'civic'],
+  哈尔滨: ['冰雪大世界', 'ice'],
   拉萨: ['大昭寺', 'hall'],
-  昆明: ['石林', 'civic'],
+  昆明: ['石林', 'rock'],
   香港: ['天坛大佛', 'stupa'],
   澳门: ['大三巴牌坊', 'paifang'],
-  台北: ['九份老街', 'civic'],
+  台北: ['九份老街', 'heritage'],
   济南: ['千佛山', 'pavilion'],
-  长沙: ['橘子洲', 'pavilion'],
+  长沙: ['橘子洲', 'water'],
   南昌: ['滕王阁', 'pavilion'],
-  海口: ['骑楼老街', 'civic'],
-  福州: ['三坊七巷', 'hall'],
+  海口: ['骑楼老街', 'heritage'],
+  福州: ['三坊七巷', 'heritage'],
   兰州: ['黄河母亲雕塑', 'sail'],
   贵阳: ['青岩古镇', 'gate'],
-  长春: ['净月潭', 'civic'],
+  长春: ['净月潭', 'water'],
   乌鲁木齐: ['国际大巴扎', 'civic'],
 }
 
@@ -2541,10 +2607,236 @@ const NAMED_SECONDARY_SIGHTS = {
   南宁: [['青秀山龙象塔', 'pagoda'], ['广西民族博物馆', 'civic']],
 }
 
+function modernMuseum(accent, rand) {
+  const group = new THREE.Group()
+  const glow = []
+  const concrete = std(0xe4dfd5, { roughness: 0.78, metalness: 0.08 })
+  const stone = std(0xb9b3aa, { roughness: 0.88 })
+  const glass = curtainWall(shade(accent, -0.08), 3, 3)
+  const trim = glowMat(shade(accent, 0.1), shade(accent, 0.22))
+  glow.push(glass, trim)
+
+  const plaza = new THREE.Mesh(new THREE.CylinderGeometry(2.75, 3.05, 0.18, 18), stone)
+  plaza.position.y = 0.09
+  group.add(plaza)
+
+  const center = new THREE.Mesh(new THREE.BoxGeometry(1.55, 2.45, 1.55), glass)
+  center.position.y = 1.4
+  group.add(center)
+  const wings = [
+    [-1.65, 0.88, 0.12, 2.1, 1.45, 1.45, -0.12],
+    [1.62, 0.72, -0.18, 1.95, 1.18, 1.32, 0.16],
+  ]
+  wings.forEach((item) => {
+    const wing = new THREE.Mesh(new THREE.BoxGeometry(item[3], item[4], item[5]), concrete)
+    wing.position.set(item[0], item[1], item[2])
+    wing.rotation.y = item[6]
+    group.add(wing)
+  })
+  const canopy = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.16, 1.72), trim)
+  canopy.position.set(0, 1.92, 0.1)
+  canopy.rotation.y = (rand() - 0.5) * 0.12
+  group.add(canopy)
+
+  const columns = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.055, 0.07, 1.25, 6), concrete, 6)
+  const matrix = new THREE.Matrix4()
+  for (let i = 0; i < 6; i++) {
+    matrix.makeTranslation(-1.25 + i * 0.5, 0.76, 0.92)
+    columns.setMatrixAt(i, matrix)
+  }
+  columns.instanceMatrix.needsUpdate = true
+  group.add(columns)
+  group.userData.sightArchetype = 'museum'
+  return { group, glow }
+}
+
+function heritageBlock(accent, rand) {
+  const group = new THREE.Group()
+  const glow = []
+  const wall = glowMat(shade(accent, 0.28), 0xffd39a)
+  const wallAlt = std(0xe5d7c1, { roughness: 0.86 })
+  const roof = tiledRoof(shade(accent, -0.25), 4, 1, { roughness: 0.66 })
+  const stone = std(0xbeb4a4, { roughness: 0.92 })
+  glow.push(wall)
+
+  const plaza = new THREE.Mesh(new THREE.BoxGeometry(5.9, 0.14, 3.5), stone)
+  plaza.position.y = 0.07
+  group.add(plaza)
+
+  const bodyGeo = new THREE.BoxGeometry(1, 1, 1)
+  const roofGeo = makeHipRoof(1, 1, 0.42, 0.72, 0.05)
+  const blocks = [
+    [-2.05, 0.72, -0.45, 1.25, 1.3, 1.18],
+    [-0.72, 0.86, 0.18, 1.18, 1.58, 1.34],
+    [0.62, 0.7, -0.28, 1.25, 1.28, 1.16],
+    [1.92, 0.82, 0.28, 1.18, 1.5, 1.3],
+  ]
+  const bodiesA = new THREE.InstancedMesh(bodyGeo, wall, 2)
+  const bodiesB = new THREE.InstancedMesh(bodyGeo, wallAlt, 2)
+  const roofs = new THREE.InstancedMesh(roofGeo, roof, blocks.length)
+  const matrix = new THREE.Matrix4()
+  const quaternion = new THREE.Quaternion()
+  const scale = new THREE.Vector3()
+  blocks.forEach((b, i) => {
+    const yaw = (i % 2 ? -1 : 1) * (0.08 + rand() * 0.06)
+    quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw)
+    scale.set(b[3], b[4], b[5])
+    matrix.compose(new THREE.Vector3(b[0], b[1], b[2]), quaternion, scale)
+    ;(i % 2 ? bodiesB : bodiesA).setMatrixAt(Math.floor(i / 2), matrix)
+    scale.set(b[3] * 1.13, 1, b[5] * 1.2)
+    matrix.compose(new THREE.Vector3(b[0], b[4] + 0.16, b[2]), quaternion, scale)
+    roofs.setMatrixAt(i, matrix)
+  })
+  bodiesA.instanceMatrix.needsUpdate = true
+  bodiesB.instanceMatrix.needsUpdate = true
+  roofs.instanceMatrix.needsUpdate = true
+  group.add(bodiesA, bodiesB, roofs)
+
+  const arch = cityGate()
+  arch.group.position.set(0, 0.14, 1.15)
+  arch.group.scale.setScalar(0.34)
+  group.add(arch.group)
+  ;(arch.glow || []).forEach((material) => glow.push(material))
+  group.userData.sightArchetype = 'heritage'
+  return { group, glow }
+}
+
+function watersideSight(accent, rand) {
+  const group = new THREE.Group()
+  const glow = []
+  const water = std(0x3f86a6, { roughness: 0.22, metalness: 0.4, envMapIntensity: 1.35 })
+  const bank = std(0xcfc7b7, { roughness: 0.9 })
+  const beacon = glowMat(shade(accent, 0.08), shade(accent, 0.2))
+  glow.push(beacon)
+
+  const pool = new THREE.Mesh(new THREE.CylinderGeometry(2.85, 3.05, 0.12, 28), water)
+  pool.position.y = 0.06
+  const island = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.5, 0.22, 14), bank)
+  island.position.y = 0.18
+  group.add(pool, island)
+
+  const pavilionPart = pavilion({
+    tiers: 2, w: 1.8, d: 1.55, tierH: 0.95,
+    body: shade(accent, 0.18), roof: shade(accent, -0.24), platform: 0.28,
+  })
+  pavilionPart.group.position.y = 0.25
+  pavilionPart.group.scale.setScalar(0.72)
+  group.add(pavilionPart.group)
+  ;(pavilionPart.glow || []).forEach((material) => glow.push(material))
+
+  const markers = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.12, 0.2, 0.78, 6), beacon, 3)
+  const matrix = new THREE.Matrix4()
+  ;[[-1.65, 0.48, 0.95], [1.55, 0.48, 0.85], [0.1, 0.48, -1.72]].forEach((p, i) => {
+    matrix.makeTranslation(p[0], p[1], p[2])
+    markers.setMatrixAt(i, matrix)
+  })
+  markers.instanceMatrix.needsUpdate = true
+  group.add(markers)
+  group.userData.sightArchetype = 'waterside'
+  return { group, glow }
+}
+
+function rockLandscape(accent, rand) {
+  const group = new THREE.Group()
+  const glow = []
+  const earth = std(0xbca98d, { roughness: 0.96 })
+  const rockMat = std(shade(accent, -0.12), { roughness: 0.9, metalness: 0.04 })
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(2.8, 3.15, 0.28, 14), earth)
+  base.position.y = 0.14
+  group.add(base)
+
+  const rocks = new THREE.InstancedMesh(new THREE.ConeGeometry(0.55, 2.4, 5), rockMat, 9)
+  const matrix = new THREE.Matrix4()
+  const q = new THREE.Quaternion()
+  const scale = new THREE.Vector3()
+  for (let i = 0; i < 9; i++) {
+    const a = (i / 9) * Math.PI * 2 + rand() * 0.32
+    const radius = 0.65 + (i % 3) * 0.56
+    const h = 0.72 + rand() * 0.75
+    q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), rand() * Math.PI)
+    scale.set(0.55 + rand() * 0.5, h, 0.48 + rand() * 0.42)
+    matrix.compose(new THREE.Vector3(Math.cos(a) * radius, 0.28 + 1.2 * h, Math.sin(a) * radius), q, scale)
+    rocks.setMatrixAt(i, matrix)
+  }
+  rocks.instanceMatrix.needsUpdate = true
+  group.add(rocks)
+  group.userData.sightArchetype = 'rock'
+  return { group, glow }
+}
+
+function iceMonument(accent, rand) {
+  const group = new THREE.Group()
+  const glow = []
+  const ice = glowMat(0xbfe9ff, 0x8fdcff)
+  ice.transparent = true
+  ice.opacity = 0.82
+  ice.roughness = 0.18
+  ice.metalness = 0.12
+  ice.depthWrite = true
+  glow.push(ice)
+  const snow = std(0xe9f2f5, { roughness: 0.86 })
+
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(2.75, 3.05, 0.24, 16), snow)
+  base.position.y = 0.12
+  group.add(base)
+  const crystals = new THREE.InstancedMesh(new THREE.OctahedronGeometry(0.7, 0), ice, 7)
+  const matrix = new THREE.Matrix4()
+  const q = new THREE.Quaternion()
+  const scale = new THREE.Vector3()
+  for (let i = 0; i < 7; i++) {
+    const x = (i - 3) * 0.62
+    const h = 1.4 + (3 - Math.abs(i - 3)) * 0.48
+    q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), i * 0.36)
+    scale.set(0.62, h, 0.62)
+    matrix.compose(new THREE.Vector3(x, 0.35 + h * 0.65, Math.sin(i) * 0.42), q, scale)
+    crystals.setMatrixAt(i, matrix)
+  }
+  crystals.instanceMatrix.needsUpdate = true
+  group.add(crystals)
+  group.userData.sightArchetype = 'ice'
+  return { group, glow }
+}
+
+function monumentSight(accent, rand) {
+  const group = new THREE.Group()
+  const glow = []
+  const stone = std(0xe2ded5, { roughness: 0.76 })
+  const metal = glowMat(shade(accent, 0.02), shade(accent, 0.2))
+  glow.push(metal)
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(2.25, 2.6, 0.3, 18), stone)
+  base.position.y = 0.15
+  group.add(base)
+  for (const sx of [-1, 1]) {
+    const pier = new THREE.Mesh(new THREE.BoxGeometry(0.5, 3.5, 0.72), stone)
+    pier.position.set(sx * 1.3, 2.02, 0)
+    group.add(pier)
+  }
+  const arch = new THREE.Mesh(new THREE.TorusGeometry(1.3, 0.2, 8, 24, Math.PI), metal)
+  arch.position.y = 3.7
+  arch.rotation.z = Math.PI
+  group.add(arch)
+  const spire = new THREE.Mesh(new THREE.ConeGeometry(0.22, 1.75, 6), metal)
+  spire.position.y = 5.15
+  group.add(spire)
+  group.userData.sightArchetype = 'monument'
+  return { group, glow }
+}
+
+function resolveSightType(name, type) {
+  const value = '' + (name || '')
+  if (/冰雪|冰雕/.test(value)) return 'ice'
+  if (/石林|奇石|石窟/.test(value)) return 'rock'
+  if (/老街|街区|巷|古镇|骑楼|五大道|建筑群/.test(value)) return 'heritage'
+  if (/西湖|东湖|净月潭|橘子洲|岛|湖|潭|园林/.test(value)) return 'water'
+  if (/博物|美术|艺术|剧院|文化馆|纪念馆/.test(value)) return 'museum'
+  if (/世界之窗|纪念碑|纪念塔/.test(value) && type === 'civic') return 'monument'
+  return type
+}
+
 function buildNamedSight(spec) {
   if (!spec) return null
   const name = spec[0]
-  const type = spec[1]
+  const type = resolveSightType(name, spec[1])
   const accent = GENERIC_ACCENTS[hashName(name) % GENERIC_ACCENTS.length]
   const rand = mulberry32(hashName(name))
   let result
@@ -2563,8 +2855,14 @@ function buildNamedSight(spec) {
     case 'hall': result = dachengHall(); break
     case 'mountain': result = mountTai(); break
     case 'tower': result = slabTower({ h: 8.2, w: 0.82, color: accent, taper: 0.2 }); break
+    case 'museum': result = modernMuseum(accent, rand); break
+    case 'heritage': result = heritageBlock(accent, rand); break
+    case 'water': result = watersideSight(accent, rand); break
+    case 'rock': result = rockLandscape(accent, rand); break
+    case 'ice': result = iceMonument(accent, rand); break
+    case 'monument': result = monumentSight(accent, rand); break
     case 'civic':
-    default: result = genDomedCivic(accent, rand); break
+    default: result = hashName(name) % 2 ? modernMuseum(accent, rand) : genDomedCivic(accent, rand); break
   }
   result.group.userData.landmarkName = name
   result.group.userData.landmarkRole = 'secondary'
@@ -2613,22 +2911,67 @@ function polishLandmark(key, result) {
     })
   })
   result.group.updateMatrixWorld(true)
-  const bounds = new THREE.Box3().setFromObject(result.group)
-  const center = bounds.getCenter(new THREE.Vector3())
-  const size = bounds.getSize(new THREE.Vector3())
-  const radius = Math.max(1.5, Math.min(5.2, Math.hypot(size.x, size.z) * 0.42))
-  const accent = GENERIC_ACCENTS[hashName(key) % GENERIC_ACCENTS.length]
-  const haloMaterial = glowMat(shade(accent, 0.08), shade(accent, 0.18))
-  haloMaterial.transparent = true
-  haloMaterial.opacity = 0.58
-  haloMaterial.depthWrite = false
-  const halo = new THREE.Mesh(new THREE.TorusGeometry(radius, 0.035, 6, 40), haloMaterial)
-  halo.position.set(center.x, 0.075, center.z)
-  halo.rotation.x = Math.PI / 2
-  halo.castShadow = false
-  halo.receiveShadow = false
-  result.group.add(halo)
-  glowing.push(haloMaterial)
+  const root = result.group
+  const nodes = Array.isArray(root.userData.landmarkNodes) && root.userData.landmarkNodes.length
+    ? root.userData.landmarkNodes.filter(Boolean)
+    : [root]
+  const anchors = []
+  nodes.forEach((node) => {
+    node.updateMatrixWorld(true)
+    const bounds = new THREE.Box3().setFromObject(node)
+    const center = bounds.getCenter(new THREE.Vector3())
+    const size = bounds.getSize(new THREE.Vector3())
+    anchors.push({
+      x: center.x,
+      z: center.z,
+      radius: Math.max(0.9, Math.min(2.65, Math.hypot(size.x, size.z) * 0.34)),
+    })
+  })
+
+  if (anchors.length) {
+    // 每个地标各自落在石质展示台上；用 InstancedMesh 合为两次绘制，
+    // 比套住整组建筑的一只巨大霓虹圈更稳重，也能清楚区分主地标和景点。
+    const accent = GENERIC_ACCENTS[hashName(key) % GENERIC_ACCENTS.length]
+    const padMaterial = std(0xd7d1c5, { roughness: 0.9, metalness: 0.04, envMapIntensity: 0.48 })
+    const ringMaterial = glowMat(shade(accent, 0.04), shade(accent, 0.2))
+    ringMaterial.transparent = true
+    ringMaterial.opacity = 0.42
+    ringMaterial.depthWrite = false
+    const pads = new THREE.InstancedMesh(
+      new THREE.CylinderGeometry(1, 1, 0.075, 24),
+      padMaterial,
+      anchors.length,
+    )
+    const rings = new THREE.InstancedMesh(
+      new THREE.TorusGeometry(1, 0.026, 5, 32),
+      ringMaterial,
+      anchors.length,
+    )
+    const matrix = new THREE.Matrix4()
+    const position = new THREE.Vector3()
+    const scale = new THREE.Vector3()
+    const identity = new THREE.Quaternion()
+    const ringRotation = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0))
+    anchors.forEach((anchor, index) => {
+      position.set(anchor.x, 0.038, anchor.z)
+      scale.set(anchor.radius, 1, anchor.radius)
+      matrix.compose(position, identity, scale)
+      pads.setMatrixAt(index, matrix)
+      position.y = 0.084
+      scale.set(anchor.radius, anchor.radius, anchor.radius)
+      matrix.compose(position, ringRotation, scale)
+      rings.setMatrixAt(index, matrix)
+    })
+    pads.instanceMatrix.needsUpdate = true
+    rings.instanceMatrix.needsUpdate = true
+    pads.receiveShadow = true
+    pads.castShadow = false
+    rings.castShadow = false
+    rings.receiveShadow = false
+    root.add(pads, rings)
+    glowing.push(ringMaterial)
+    root.userData.presentationPads = anchors.length
+  }
   result.glow = glowing
   result.group.userData.visualPolished = true
   return result
@@ -2722,8 +3065,8 @@ function ensureLandmarkSet(key, result) {
     extra.group.position.set(at[0], 0, at[1])
     // 副地标统一放进前景展示带，并为楼群避让留下更大的底座净空。
     const scale = extra.group.userData.landmarkRole === 'tourist'
-      ? 0.72
-      : 0.64 + (positionIndex % 2) * 0.04
+      ? 0.78
+      : 0.68 + (positionIndex % 2) * 0.05
     extra.group.userData.landmarkPriority = 50 - positionIndex
     extra.group.userData.landmarkIndex = nodes.length
     extra.group.userData.landmarkVisible = true
