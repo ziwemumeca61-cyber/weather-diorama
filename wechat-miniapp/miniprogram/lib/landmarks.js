@@ -1910,6 +1910,7 @@ function set(parts) {
   const g = new THREE.Group()
   const glow = []
   const landmarkNodes = []
+  const landmarkNames = []
   let spin = null
   const anims = []
   parts.forEach((p, i) => {
@@ -1921,6 +1922,10 @@ function set(parts) {
     r.group.userData.landmarkPriority = p.priority == null ? (i === 0 ? 100 : 80 - i) : p.priority
     r.group.userData.landmarkIndex = i
     r.group.userData.landmarkVisible = true
+    if (p.name) {
+      r.group.userData.landmarkName = p.name
+      landmarkNames.push(p.name)
+    }
     g.add(r.group)
     landmarkNodes.push(r.group)
     if (r.glow && r.glow.length) for (let i = 0; i < r.glow.length; i++) glow.push(r.glow[i])
@@ -1929,6 +1934,7 @@ function set(parts) {
   })
   g.userData.landmarkCount = landmarkNodes.length
   g.userData.landmarkNodes = landmarkNodes
+  g.userData.secondaryLandmarks = landmarkNames
   g.userData.landmarkFocusNode = landmarkNodes[0] || null
   g.userData.landmarkVisibility = 'foreground'
   const out = { group: g, glow: glow, spin: spin }
@@ -1950,39 +1956,176 @@ function slabTower(opts) {
   const glow = []
   const H = opts.h || 8.5
   const w = opts.w || 0.95
+  const profile = opts.profile || 'generic'
+  const segments = profile === 'pingan' ? 7 : profile === 'kingkey' ? 6 : 5
   const mat = curtainWall(opts.color || 0x8fb0cc, 2.2, Math.max(4, Math.round(H * 1.4)))
   glow.push(mat)
-  const trim = std(0xd7e0e8, { metalness: 0.55, roughness: 0.32 })
-  const base = new THREE.Mesh(new THREE.BoxGeometry(w * 1.65, 0.28, w * 1.35), std(shade(opts.color || 0x8fb0cc, -0.24), { metalness: 0.35, roughness: 0.62 }))
+  const trim = std(0xd7e0e8, { metalness: 0.55, roughness: 0.32, envMapIntensity: 1.15 })
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(w * 1.68, 0.28, w * 1.38),
+    std(shade(opts.color || 0x8fb0cc, -0.24), { metalness: 0.35, roughness: 0.62 }),
+  )
   base.position.y = 0.14
   g.add(base)
-  const seg = 5
-  let y = 0
-  for (let i = 0; i < seg; i++) {
-    const f = 1 - (i / seg) * (opts.taper == null ? 0.32 : opts.taper)
-    const h = H / seg
-    const depth = w * f * 0.8
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w * f, h, depth), mat)
-    m.position.y = y + h / 2 + 0.28
-    g.add(m)
-    const band = new THREE.Mesh(new THREE.BoxGeometry(w * f * 1.06, 0.055, depth * 1.06), trim)
-    band.position.y = y + h + 0.28
+
+  const widthAt = (t) => {
+    if (profile === 'pingan') return 1 - t * 0.52
+    if (profile === 'kingkey') return t < 0.68 ? 1 - t * 0.12 : 0.72 - (t - 0.68) * 0.38
+    if (profile === 'diwang') return t < 0.78 ? 1 - t * 0.1 : 0.76
+    return 1 - t * (opts.taper == null ? 0.32 : opts.taper)
+  }
+
+  let y = 0.28
+  for (let i = 0; i < segments; i++) {
+    const t = i / Math.max(1, segments - 1)
+    const f = widthAt(t)
+    const h = H / segments
+    const depth = w * f * (profile === 'diwang' ? 0.62 : profile === 'kingkey' ? 0.74 : 0.8)
+    let geometry
+    if (profile === 'pingan') {
+      geometry = new THREE.CylinderGeometry(w * f * 0.52, w * Math.min(1, f + 0.08) * 0.52, h, 4)
+    } else {
+      geometry = new THREE.BoxGeometry(w * f, h, depth)
+    }
+    const mesh = new THREE.Mesh(geometry, mat)
+    mesh.position.y = y + h / 2
+    if (profile === 'pingan') mesh.rotation.y = Math.PI / 4 + i * 0.025
+    if (profile === 'kingkey' && i >= segments - 2) mesh.position.x = -w * 0.08
+    g.add(mesh)
+
+    const band = new THREE.Mesh(
+      profile === 'pingan'
+        ? new THREE.TorusGeometry(w * f * 0.54, 0.028, 5, 12)
+        : new THREE.BoxGeometry(w * f * 1.06, 0.055, depth * 1.06),
+      trim,
+    )
+    band.position.y = y + h
+    if (profile === 'pingan') band.rotation.x = Math.PI / 2
     g.add(band)
-    const mullion = new THREE.Mesh(new THREE.BoxGeometry(0.035, h * 0.9, 0.035), trim)
-    mullion.position.set(w * f * 0.5, y + h / 2 + 0.28, depth * 0.5)
-    g.add(mullion)
     y += h
   }
-  const crown = new THREE.Mesh(new THREE.BoxGeometry(w * 0.68, 0.14, w * 0.56), trim)
-  crown.position.y = H + 0.35
-  g.add(crown)
-  const spire = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.02, 0.07, opts.spire || 1.4, 6),
-    std(0xcfd6df, { metalness: 0.6 }),
-  )
-  spire.position.y = H + (opts.spire || 1.4) / 2
-  g.add(spire)
+
+  if (profile === 'pingan') {
+    const crown = new THREE.Mesh(new THREE.ConeGeometry(w * 0.34, 1.15, 4), trim)
+    crown.position.y = H + 0.85
+    crown.rotation.y = Math.PI / 4
+    g.add(crown)
+  } else if (profile === 'kingkey') {
+    const crown = new THREE.Mesh(new THREE.BoxGeometry(w * 0.78, 0.52, w * 0.58), mat)
+    crown.position.set(-w * 0.08, H + 0.54, 0)
+    g.add(crown)
+  } else if (profile === 'diwang') {
+    const crown = new THREE.Mesh(new THREE.BoxGeometry(w * 0.82, 0.22, w * 0.5), trim)
+    crown.position.y = H + 0.39
+    g.add(crown)
+    for (const sx of [-1, 1]) {
+      const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.045, 1.3, 6), trim)
+      antenna.position.set(sx * w * 0.28, H + 1.04, 0)
+      g.add(antenna)
+    }
+  } else {
+    const crown = new THREE.Mesh(new THREE.BoxGeometry(w * 0.68, 0.14, w * 0.56), trim)
+    crown.position.y = H + 0.35
+    g.add(crown)
+  }
+
+  const spireHeight = opts.spire == null ? (profile === 'diwang' ? 0 : 1.4) : opts.spire
+  if (spireHeight > 0) {
+    const spire = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.02, 0.07, spireHeight, 6),
+      std(0xcfd6df, { metalness: 0.6 }),
+    )
+    spire.position.y = H + 0.42 + spireHeight / 2
+    g.add(spire)
+  }
+  g.userData.towerProfile = profile
   return { group: g, glow }
+}
+
+function rafflesComplex() {
+  const group = new THREE.Group()
+  const glow = []
+  const towers = [
+    [-1.75, 8.6, -0.2],
+    [-0.58, 9.2, 0.1],
+    [0.58, 8.9, -0.05],
+    [1.75, 8.4, 0.18],
+  ]
+  towers.forEach((item, index) => {
+    const tower = slabTower({
+      h: item[1],
+      w: 0.82,
+      color: index % 2 ? 0x7695ad : 0x86a4b9,
+      taper: 0.16,
+      spire: 0,
+    })
+    tower.group.position.set(item[0], 0, item[2])
+    tower.group.rotation.z = (index - 1.5) * 0.018
+    group.add(tower.group)
+    ;(tower.glow || []).forEach((material) => glow.push(material))
+  })
+
+  const bridgeMat = curtainWall(0x91aec2, 5, 2)
+  glow.push(bridgeMat)
+  const skybridge = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.72, 1.02), bridgeMat)
+  skybridge.position.y = 7.05
+  group.add(skybridge)
+  const deck = new THREE.Mesh(
+    new THREE.BoxGeometry(4.85, 0.12, 1.18),
+    std(0xd7e0e7, { metalness: 0.58, roughness: 0.28 }),
+  )
+  deck.position.y = 6.66
+  group.add(deck)
+  const podium = new THREE.Mesh(
+    new THREE.BoxGeometry(5.25, 0.52, 2.05),
+    std(0x6d7780, { metalness: 0.3, roughness: 0.58 }),
+  )
+  podium.position.y = 0.26
+  group.add(podium)
+  group.userData.landmarkName = '重庆来福士'
+  return { group, glow }
+}
+
+function tokyoTower() {
+  const group = new THREE.Group()
+  const glow = []
+  const red = glowMat(0xd54b3f, 0xff6b55)
+  const white = std(0xf0eee8, { metalness: 0.38, roughness: 0.42 })
+  const deckMat = glowMat(0x4d6575, 0xffcf82)
+  glow.push(red, deckMat)
+  const up = new THREE.Vector3(0, 1, 0)
+
+  for (let i = 0; i < 4; i++) {
+    const angle = Math.PI / 4 + i * Math.PI / 2
+    const bottom = new THREE.Vector3(Math.cos(angle) * 1.35, 0, Math.sin(angle) * 1.35)
+    const top = new THREE.Vector3(Math.cos(angle) * 0.34, 6.2, Math.sin(angle) * 0.34)
+    const dir = new THREE.Vector3().subVectors(top, bottom)
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.13, dir.length(), 6), i % 2 ? white : red)
+    leg.position.copy(bottom).add(top).multiplyScalar(0.5)
+    leg.quaternion.setFromUnitVectors(up, dir.clone().normalize())
+    group.add(leg)
+  }
+
+  ;[1.35, 2.65, 4.0, 5.35].forEach((height, index) => {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(1.18 - index * 0.2, 0.055, 6, 16), index % 2 ? white : red)
+    ring.position.y = height
+    ring.rotation.x = Math.PI / 2
+    group.add(ring)
+  })
+  const lowerDeck = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.88, 0.46, 12), deckMat)
+  lowerDeck.position.y = 4.45
+  const upperDeck = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.46, 0.38, 10), deckMat)
+  upperDeck.position.y = 6.2
+  group.add(lowerDeck, upperDeck)
+
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.12, 4.2, 8), red)
+  mast.position.y = 8.45
+  group.add(mast)
+  const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.035, 1.25, 6), white)
+  tip.position.y = 11.15
+  group.add(tip)
+  group.userData.landmarkName = '东京塔'
+  return { group, glow }
 }
 
 /** 上海中心：螺旋收分的扭转塔 */
@@ -2400,22 +2543,18 @@ const BUILDERS = {
       { b: gateOfOrient, x: 1.9, z: -1.0 },
       { b: leaningPagoda, x: -2.2, z: 1.4, s: 0.9 },
     ]),
-  // 深圳：平安金融中心 + 京基100 + 地王大厦
+  // 深圳：平安金融中心 + 京基100 + 地王大厦，分别使用收尖、冠顶和双天线轮廓。
   深圳: () =>
     set([
-      { b: () => slabTower({ h: 12.0, w: 1.08, color: 0x6f9ec4, taper: 0.24 }), x: 0.4, z: -2.6, s: 0.9 },
-      { b: () => slabTower({ h: 9.2, w: 0.95, color: 0x7f93a8, taper: 0.12 }), x: -2.9, z: -3.6, s: 0.78, ry: -0.3 },
-      { b: () => slabTower({ h: 8.4, w: 0.9, color: 0x9fb8cc, taper: 0.08 }), x: 3.6, z: -3.0, s: 0.72, ry: 0.35 },
+      { b: () => slabTower({ h: 12.0, w: 1.08, color: 0x6f9ec4, profile: 'pingan', spire: 1.85 }), x: 0.4, z: -2.6, s: 0.9, name: '平安金融中心' },
+      { b: () => slabTower({ h: 9.2, w: 0.98, color: 0x7f93a8, profile: 'kingkey', spire: 0.75 }), x: -2.9, z: -3.6, s: 0.78, ry: -0.3, name: '京基100' },
+      { b: () => slabTower({ h: 8.4, w: 0.94, color: 0x9fb8cc, profile: 'diwang', spire: 0 }), x: 3.6, z: -3.0, s: 0.74, ry: 0.35, name: '地王大厦' },
     ]),
-  // 重庆：来福士中心的多塔楼和横向连体结构
+  // 重庆：来福士四塔与横向“水晶连廊”作为一体主地标，洪崖洞保留山城层次。
   重庆: () =>
     set([
-      { b: () => slabTower({ h: 8.8, w: 0.9, color: 0x7f93a8, taper: 0.18 }), x: -2.4, z: -3.2, s: 0.82 },
-      { b: () => slabTower({ h: 8.4, w: 0.9, color: 0x7390aa, taper: 0.16 }), x: -0.8, z: -3.2, s: 0.82 },
-      { b: () => slabTower({ h: 8.1, w: 0.9, color: 0x6f9ec4, taper: 0.14 }), x: 0.8, z: -3.2, s: 0.82 },
-      { b: () => slabTower({ h: 8.5, w: 0.9, color: 0x8aa6bd, taper: 0.12 }), x: 2.4, z: -3.2, s: 0.82 },
-      { b: () => slabTower({ h: 6.4, w: 0.75, color: 0x9fb8cc, taper: 0.08 }), x: -4.0, z: -3.2, s: 0.55 },
-      { b: () => slabTower({ h: 6.6, w: 0.75, color: 0x9fb8cc, taper: 0.08 }), x: 4.0, z: -3.2, s: 0.55 },
+      { b: rafflesComplex, x: 0, z: -3.05, s: 0.88, name: '重庆来福士' },
+      { b: () => pavilion({ tiers: 5, w: 3.4, d: 2.5, tierH: 0.9, body: 0x9d5438, roof: 0x43535b, platform: 0.55 }), x: -3.15, z: 1.25, s: 0.62, ry: 0.18, name: '洪崖洞' },
     ]),
   // 成都：熊猫主题低台 + 天府双塔
   成都: () =>
@@ -2425,6 +2564,12 @@ const BUILDERS = {
       { b: () => slabTower({ h: 9.0, w: 0.86, color: 0x9bb5c9, taper: 0.2 }), x: 3.5, z: -3.8, s: 0.68, ry: 0.16 },
     ]),
   台北: taipei101,
+  东京: () =>
+    set([
+      { b: tokyoTower, x: -1.7, z: 0.8, s: 0.92, name: '东京塔' },
+      { b: () => slabTower({ h: 10.2, w: 0.9, color: 0x8aa7bd, profile: 'pingan', spire: 0.9 }), x: 2.25, z: -2.5, s: 0.76, name: '东京晴空塔' },
+      { b: () => pagoda({ tiers: 5, baseR: 0.86, tierH: 0.92, square: true, body: 0xb54a3b, roof: 0x3d4c4a }), x: 2.65, z: 1.65, s: 0.66, name: '浅草五重塔' },
+    ]),
   哈尔滨: () =>
     set([
       { b: stSophia, x: -3.2, z: 0.6, s: 0.9, ry: 0.38 },
@@ -2469,9 +2614,9 @@ const BUILDERS = {
     ]), // 大成殿 + 万仞宫墙
   烟台: () =>
     set([
-      { b: lighthouse, x: -3.15, z: 1.15, s: 0.82 }, // 烟台山灯塔
-      { b: penglaiPavilion, x: 0.1, z: 1.35, s: 0.72, ry: -0.22 }, // 蓬莱阁
-      { b: zhangyuChateau, x: 3.0, z: -1.55, s: 0.76, ry: 0.2 }, // 张裕酒文化博物馆
+      { b: lighthouse, x: -3.15, z: 1.15, s: 0.82, name: '烟台山灯塔' }, // 烟台山灯塔
+      { b: penglaiPavilion, x: 0.1, z: 1.35, s: 0.72, ry: -0.22, name: '蓬莱阁' }, // 蓬莱阁
+      { b: zhangyuChateau, x: 3.0, z: -1.55, s: 0.76, ry: 0.2, name: '张裕酒文化博物馆' }, // 张裕酒文化博物馆
     ]),
   东营: oilField, // 黄河口油城
   潍坊: kiteCity, // 风筝之都 + 渤海之眼
@@ -2513,7 +2658,7 @@ export function hasOwnWater(name) {
 // 程序化地标（4 种原型 × 8 种配色 × 随机朝向），让每座陌生城市各不相同。
 const TOURIST_CITY_KEYS = [
   '北京', '上海', '广州', '天津', '杭州', '武汉', '南京', '苏州', '西安', '成都', '重庆',
-  '深圳', '青岛', '烟台', '威海', '哈尔滨', '拉萨', '昆明', '香港', '澳门', '台北',
+  '深圳', '青岛', '烟台', '威海', '哈尔滨', '拉萨', '昆明', '香港', '澳门', '台北', '东京',
   '济南', '长沙', '南昌', '海口', '福州', '兰州', '贵阳', '长春', '乌鲁木齐',
 ]
 const TOURIST_EXTRA_SIGHTS = {
@@ -2538,6 +2683,7 @@ const TOURIST_EXTRA_SIGHTS = {
   香港: ['天坛大佛', 'stupa'],
   澳门: ['大三巴牌坊', 'paifang'],
   台北: ['九份老街', 'heritage'],
+  东京: ['浅草寺', 'hall'],
   济南: ['千佛山', 'pavilion'],
   长沙: ['橘子洲', 'water'],
   南昌: ['滕王阁', 'pavilion'],
@@ -2563,9 +2709,10 @@ const NAMED_SECONDARY_SIGHTS = {
   开封: [['龙亭', 'pavilion'], ['大梁门', 'gate']],
   苏州: [['北寺塔', 'pagoda'], ['盘门', 'gate'], ['苏州博物馆', 'civic']],
   深圳: [['市民中心', 'civic'], ['深圳湾体育中心', 'civic']],
-  重庆: [['解放碑', 'tower'], ['洪崖洞', 'pavilion']],
+  重庆: [['解放碑', 'tower'], ['洪崖洞', 'pavilion'], ['重庆人民大礼堂', 'hall']],
   成都: [['安顺廊桥', 'bridge'], ['望江楼', 'pavilion'], ['天府艺术公园', 'civic']],
   台北: [['中正纪念堂', 'hall'], ['台北北门', 'gate'], ['新光摩天大楼', 'tower']],
+  东京: [['东京站', 'heritage'], ['东京晴空塔', 'tv'], ['明治神宫', 'gate']],
   哈尔滨: [['防洪胜利纪念塔', 'tower'], ['龙塔', 'tv'], ['松花江铁路桥', 'bridge']],
   拉萨: [['大昭寺', 'hall'], ['布达拉宫白塔', 'stupa']],
   香港: [['凌霄阁', 'civic'], ['天坛大佛', 'stupa']],
