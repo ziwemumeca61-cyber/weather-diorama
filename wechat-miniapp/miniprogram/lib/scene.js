@@ -152,7 +152,7 @@ function disposeTree(root) {
   const materials = []
   const textures = []
   root.traverse((object) => {
-    if (!object.isMesh && !object.isPoints && !object.isLine && !object.isLineSegments) return
+    if (!object.isMesh && !object.isPoints && !object.isLine && !object.isLineSegments && !object.isSprite) return
     if (object.geometry && geometries.indexOf(object.geometry) === -1) {
       geometries.push(object.geometry)
       try { object.geometry.dispose() } catch (e) {}

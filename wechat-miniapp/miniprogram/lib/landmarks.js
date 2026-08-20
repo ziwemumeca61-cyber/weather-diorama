@@ -165,6 +165,316 @@ function pagoda(opts) {
   return { group: g, glow }
 }
 
+// —— 雷峰塔（杭州）：五层八角塔、窗龛、环廊与金顶 ——
+function leifengPagoda() {
+  const g = new THREE.Group()
+  const glow = []
+  const stone = std(0xc9b99d, { roughness: 0.84, metalness: 0.04 })
+  const timber = glowMat(0x9a5a32, 0xffc56e)
+  const dark = std(0x352d27, { roughness: 0.72 })
+  const roof = tiledRoof(0x6d4931, 12, 1, { metalness: 0.2 })
+  const gold = glowMat(0xd8a840, 0xffd36b)
+  glow.push(timber, gold)
+
+  const hill = new THREE.Mesh(new THREE.SphereGeometry(2.85, 18, 9, 0, Math.PI * 2, 0, Math.PI / 2), std(0x70895c, { roughness: 0.96 }))
+  hill.scale.set(1.35, 0.42, 1.0)
+  hill.position.y = -0.08
+  g.add(hill)
+  const terrace = new THREE.Mesh(new THREE.CylinderGeometry(1.85, 2.15, 0.52, 8), stone)
+  terrace.position.y = 0.26
+  terrace.rotation.y = Math.PI / 8
+  g.add(terrace)
+
+  let y = 0.52
+  for (let level = 0; level < 5; level++) {
+    const r = 1.38 - level * 0.15
+    const h = level === 0 ? 1.12 : 0.92
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.86, r * 0.9, h, 8), timber)
+    body.position.y = y + h / 2
+    body.rotation.y = Math.PI / 8
+    g.add(body)
+    for (let side = 0; side < 4; side++) {
+      const angle = side * Math.PI / 2
+      const niche = new THREE.Mesh(new THREE.BoxGeometry(0.28, h * 0.48, 0.045), dark)
+      niche.position.set(Math.sin(angle) * r * 0.88, y + h * 0.52, Math.cos(angle) * r * 0.88)
+      niche.rotation.y = angle
+      g.add(niche)
+    }
+    const balcony = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.04, r * 1.08, 0.12, 8), stone)
+    balcony.position.y = y + h
+    balcony.rotation.y = Math.PI / 8
+    g.add(balcony)
+    const eave = new THREE.Mesh(makeConcaveRoof(r * 1.34, 0.48, 0.035), roof)
+    eave.position.y = y + h + 0.09
+    g.add(eave)
+    for (let side = 0; side < 8; side++) {
+      const a = side * Math.PI / 4
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.28, 5), gold)
+      post.position.set(Math.sin(a) * r * 1.03, y + h + 0.17, Math.cos(a) * r * 1.03)
+      g.add(post)
+    }
+    y += h + 0.56
+  }
+  const finial = new THREE.Mesh(new THREE.ConeGeometry(0.24, 1.12, 8), gold)
+  finial.position.y = y + 0.38
+  g.add(finial)
+  g.userData.landmarkName = '雷峰塔'
+  return { group: g, glow }
+}
+
+// —— 滕王阁（南昌）：两层台基、三明层四重檐、红柱白墙与金顶 ——
+function tengwangPavilion() {
+  const g = new THREE.Group()
+  const glow = []
+  const stone = std(0xc8c1b3, { roughness: 0.86 })
+  const red = glowMat(0xa74732, 0xff9b62)
+  const wall = glowMat(0xe1c99e, 0xffd68a)
+  const dark = std(0x332d2a, { roughness: 0.7 })
+  const roof = tiledRoof(0x244c43, 12, 2, { metalness: 0.24 })
+  const gold = glowMat(0xd6a33c, 0xffd35c)
+  glow.push(red, wall, gold)
+
+  ;[
+    [5.4, 0.46, 3.7, 0.23],
+    [4.7, 0.42, 3.18, 0.67],
+  ].forEach((p) => {
+    const base = new THREE.Mesh(new THREE.BoxGeometry(p[0], p[1], p[2]), stone)
+    base.position.y = p[3]
+    g.add(base)
+  })
+  for (let step = 0; step < 5; step++) {
+    const stair = new THREE.Mesh(new THREE.BoxGeometry(1.7 + step * 0.22, 0.11, 0.34), stone)
+    stair.position.set(0, 0.06 + step * 0.1, 2.05 - step * 0.22)
+    g.add(stair)
+  }
+
+  let y = 0.88
+  const widths = [4.05, 3.45, 2.75]
+  widths.forEach((w, level) => {
+    const d = w * 0.58
+    const h = level === 0 ? 1.42 : 1.18
+    const body = new THREE.Mesh(new THREE.BoxGeometry(w * 0.88, h, d * 0.82), wall)
+    body.position.y = y + h / 2
+    g.add(body)
+    for (let i = -2; i <= 2; i++) {
+      const col = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.065, h + 0.15, 7), red)
+      col.position.set((i / 2) * w * 0.37, y + h / 2, d * 0.43)
+      g.add(col)
+      if (i < 2) {
+        const bay = new THREE.Mesh(new THREE.BoxGeometry(w * 0.13, h * 0.46, 0.045), dark)
+        bay.position.set((i + 0.5) * w * 0.17, y + h * 0.52, d * 0.425 + 0.03)
+        g.add(bay)
+      }
+    }
+    const balcony = new THREE.Mesh(new THREE.BoxGeometry(w * 1.08, 0.12, d * 1.12), stone)
+    balcony.position.y = y + h
+    g.add(balcony)
+    const eave = new THREE.Mesh(makeHipRoof(w * 1.2, d * 1.28, 0.72), roof)
+    eave.position.y = y + h + 0.08
+    g.add(eave)
+    y += h + 0.74
+  })
+  const crown = new THREE.Mesh(makeHipRoof(2.25, 1.55, 0.82), roof)
+  crown.position.y = y + 0.08
+  g.add(crown)
+  const finial = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.86, 8), gold)
+  finial.position.y = y + 0.88
+  g.add(finial)
+  g.userData.landmarkName = '滕王阁'
+  return { group: g, glow }
+}
+
+// —— 洪崖洞（重庆）：依山叠落的吊脚楼、层层挑台与暖窗 ——
+function hongyaCave() {
+  const g = new THREE.Group()
+  const glow = []
+  const cliff = std(0x70675e, { roughness: 0.96 })
+  const timber = std(0x5a3728, { roughness: 0.75 })
+  const wall = std(0xa95c3c, { roughness: 0.74 })
+  const roof = tiledRoof(0x263b3d, 10, 1)
+  const window = glowMat(0xd59a4c, 0xffb45d)
+  glow.push(window)
+
+  const rock = new THREE.Mesh(new THREE.BoxGeometry(4.7, 4.7, 1.35), cliff)
+  rock.position.set(0, 2.35, -0.78)
+  g.add(rock)
+  for (let level = 0; level < 6; level++) {
+    const w = 4.2 - level * 0.27
+    const z = 0.24 + level * 0.16
+    const y = 0.52 + level * 0.79
+    const floor = new THREE.Mesh(new THREE.BoxGeometry(w, 0.62, 1.28), wall)
+    floor.position.set((level % 2 ? 0.16 : -0.12), y, z)
+    g.add(floor)
+    const balcony = new THREE.Mesh(new THREE.BoxGeometry(w + 0.34, 0.1, 1.55), timber)
+    balcony.position.set(floor.position.x, y + 0.34, z + 0.12)
+    g.add(balcony)
+    for (let bay = -2; bay <= 2; bay++) {
+      const win = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.28, 0.035), window)
+      win.position.set(floor.position.x + bay * w * 0.17, y, z + 0.655)
+      g.add(win)
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.84, 6), timber)
+      post.position.set(floor.position.x + bay * w * 0.17, y + 0.04, z + 0.78)
+      g.add(post)
+    }
+    if (level % 2 === 1 || level === 5) {
+      const eave = new THREE.Mesh(makeHipRoof(w + 0.48, 1.72, 0.46), roof)
+      eave.position.set(floor.position.x, y + 0.38, z + 0.08)
+      g.add(eave)
+    }
+  }
+  const stair = new THREE.Mesh(new THREE.BoxGeometry(0.52, 4.4, 0.28), timber)
+  stair.position.set(2.25, 2.25, 0.62)
+  stair.rotation.z = -0.13
+  g.add(stair)
+  g.userData.landmarkName = '洪崖洞'
+  return { group: g, glow }
+}
+
+// —— 黄鹤楼（武汉）：十字平面、层层外挑的金色飞檐 ——
+function yellowCraneTower() {
+  const g = new THREE.Group()
+  const glow = []
+  const stone = std(0xc6b9a1, { roughness: 0.84 })
+  const wall = glowMat(0xd8bd7f, 0xffd384)
+  const red = std(0x9d3d30, { roughness: 0.7 })
+  const roof = tiledRoof(0xb99524, 12, 1, { metalness: 0.3 })
+  const plaque = glowMat(0x243542, 0xffd86c)
+  glow.push(wall, plaque)
+
+  const terrace = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.58, 3.7), stone)
+  terrace.position.y = 0.29
+  g.add(terrace)
+  let y = 0.58
+  for (let level = 0; level < 5; level++) {
+    const w = 3.25 - level * 0.28
+    const d = 2.65 - level * 0.22
+    const h = level === 0 ? 1.16 : 0.94
+    const body = new THREE.Mesh(new THREE.BoxGeometry(w * 0.78, h, d * 0.72), wall)
+    body.position.y = y + h / 2
+    g.add(body)
+    for (const sx of [-1, 1]) {
+      for (const sz of [-1, 1]) {
+        const wing = new THREE.Mesh(new THREE.BoxGeometry(w * 0.25, h * 0.72, d * 0.22), wall)
+        wing.position.set(sx * w * 0.43, y + h * 0.48, sz * d * 0.38)
+        g.add(wing)
+      }
+    }
+    for (let i = -2; i <= 2; i++) {
+      const col = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.055, h + 0.1, 6), red)
+      col.position.set(i * w * 0.18, y + h / 2, d * 0.39)
+      g.add(col)
+    }
+    const eave = new THREE.Mesh(makeHipRoof(w * 1.28, d * 1.32, 0.66), roof)
+    eave.position.y = y + h + 0.05
+    g.add(eave)
+    y += h + 0.63
+  }
+  const sign = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.3, 0.055), plaque)
+  sign.position.set(0, 1.22, 1.07)
+  g.add(sign)
+  const finial = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.82, 8), std(0xd4a53b, { metalness: 0.5 }))
+  finial.position.y = y + 0.55
+  g.add(finial)
+  g.userData.landmarkName = '黄鹤楼'
+  return { group: g, glow }
+}
+
+// —— 成都城市符号：熊猫雕塑 + 竹叶基座 ——
+function chengduPanda() {
+  const g = new THREE.Group()
+  const glow = []
+  const white = std(0xf0eee8, { roughness: 0.88 })
+  const black = std(0x202426, { roughness: 0.76 })
+  const green = std(0x5b8052, { roughness: 0.92 })
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(1.65, 1.9, 0.42, 18), green)
+  base.position.y = 0.21
+  g.add(base)
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.92, 18, 14), white)
+  body.scale.set(0.9, 1.2, 0.72)
+  body.position.y = 1.34
+  g.add(body)
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.76, 18, 14), white)
+  head.position.set(0, 2.55, 0.03)
+  g.add(head)
+  for (const sx of [-1, 1]) {
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 10), black)
+    ear.position.set(sx * 0.5, 3.08, 0)
+    g.add(ear)
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 8), black)
+    eye.scale.set(0.72, 1.15, 0.42)
+    eye.position.set(sx * 0.26, 2.62, 0.67)
+    eye.rotation.z = -sx * 0.3
+    g.add(eye)
+    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 1.05, 8), black)
+    arm.position.set(sx * 0.73, 1.72, 0.02)
+    arm.rotation.z = sx * 0.68
+    g.add(arm)
+  }
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 6), black)
+  nose.scale.z = 0.5
+  nose.position.set(0, 2.45, 0.74)
+  g.add(nose)
+  for (const sx of [-1, 1]) {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.23, 0.72, 8), black)
+    leg.position.set(sx * 0.38, 0.7, 0)
+    g.add(leg)
+  }
+  for (let i = 0; i < 5; i++) {
+    const bamboo = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 2.1 + i * 0.16, 6), green)
+    bamboo.position.set(-1.25 + i * 0.62, 1.16, -0.72)
+    bamboo.rotation.z = (i - 2) * 0.06
+    g.add(bamboo)
+  }
+  g.userData.landmarkName = '成都大熊猫'
+  return { group: g, glow }
+}
+
+function changshaIfs() {
+  const g = new THREE.Group()
+  const glow = []
+  const podiumMat = std(0x6f7479, { metalness: 0.32, roughness: 0.55 })
+  const podium = new THREE.Mesh(new THREE.BoxGeometry(4.7, 0.72, 2.25), podiumMat)
+  podium.position.y = 0.36
+  g.add(podium)
+  const left = slabTower({ h: 10.2, w: 1.16, color: 0x8da8bb, taper: 0.06, spire: 0 })
+  const right = slabTower({ h: 8.4, w: 1.02, color: 0xa0b5c3, taper: 0.04, spire: 0 })
+  left.group.position.set(-1.05, 0.72, 0)
+  right.group.position.set(1.08, 0.72, 0.08)
+  g.add(left.group, right.group)
+  ;(left.glow || []).concat(right.glow || []).forEach((m) => glow.push(m))
+  const crown = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.16, 1.15), std(0xd5dde2, { metalness: 0.5 }))
+  crown.position.set(0, 7.25, 0.02)
+  g.add(crown)
+  g.userData.landmarkName = '长沙IFS'
+  return { group: g, glow }
+}
+
+// —— 青岛“五月的风”：上收下放的红色螺旋雕塑 ——
+function mayFourthWind() {
+  const g = new THREE.Group()
+  const glow = []
+  const red = glowMat(0xc93f32, 0xff624b)
+  glow.push(red)
+  const plinth = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.8, 0.42, 18), std(0xc7c2b7, { roughness: 0.86 }))
+  plinth.position.y = 0.21
+  g.add(plinth)
+  for (let i = 0; i < 8; i++) {
+    const t = i / 7
+    const radius = 1.28 - t * 0.68 + Math.sin(t * Math.PI) * 0.18
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(radius, 0.12 - t * 0.035, 7, 24, Math.PI * 1.7), red)
+    ring.position.set((t - 0.5) * 0.34, 0.72 + i * 0.48, 0)
+    ring.rotation.x = Math.PI / 2
+    ring.rotation.z = i * 0.44
+    g.add(ring)
+  }
+  const tip = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.86, 9), red)
+  tip.position.set(0.32, 4.45, 0)
+  tip.rotation.z = -0.24
+  g.add(tip)
+  g.userData.landmarkName = '五月的风'
+  return { group: g, glow }
+}
+
 // —— 天安门（北京）：红台 + 金色重檐 ——
 function tiananmen() {
   const g = new THREE.Group()
@@ -1129,31 +1439,61 @@ function lighthouse() {
   const g = new THREE.Group()
   const glow = []
   const white = glowMat(0xf0ece2, 0xffe9c0)
-  glow.push(white)
   const lamp = glowMat(0xfff3c4, 0xffd45a)
-  glow.push(lamp)
-  const rock = std(0x9a958c, { roughness: 0.95 })
-  const headland = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 3.2, 0.9, 12), rock)
-  headland.position.y = 0.45
+  const stone = std(0x9a958c, { roughness: 0.95 })
+  const rail = std(0x343b43, { metalness: 0.48, roughness: 0.42 })
+  const red = std(0xa83c32, { roughness: 0.62, metalness: 0.18 })
+  glow.push(white, lamp)
+
+  const headland = new THREE.Mesh(new THREE.SphereGeometry(2.9, 18, 9, 0, Math.PI * 2, 0, Math.PI / 2), std(0x667b55, { roughness: 0.98 }))
+  headland.scale.set(1.25, 0.4, 0.92)
+  headland.position.y = -0.02
   g.add(headland)
-  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.92, 5.4, 14), white)
-  shaft.position.y = 3.6
+  const terrace = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.45, 0.42, 12), stone)
+  terrace.position.y = 0.34
+  g.add(terrace)
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.78, 5.15, 8), white)
+  shaft.position.y = 3.05
+  shaft.rotation.y = Math.PI / 8
   g.add(shaft)
-  const gallery = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 0.95, 0.22, 14), std(0x3a4550))
-  gallery.position.y = 6.35
+  for (let i = 0; i < 3; i++) {
+    const slit = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.38, 0.035), rail)
+    slit.position.set(0, 1.75 + i * 1.18, 0.68 - i * 0.075)
+    g.add(slit)
+  }
+  const gallery = new THREE.Mesh(new THREE.CylinderGeometry(0.92, 0.92, 0.18, 14), rail)
+  gallery.position.y = 5.72
   g.add(gallery)
-  const room = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.85, 12), lamp)
-  room.position.y = 6.85
+  const room = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.72, 12), lamp)
+  room.position.y = 6.16
   g.add(room)
-  const cap = new THREE.Mesh(new THREE.ConeGeometry(0.75, 0.65, 12), std(0x3a4550))
-  cap.position.y = 7.6
+  const topRail = new THREE.Mesh(new THREE.TorusGeometry(0.78, 0.035, 5, 20), rail)
+  topRail.position.y = 6.08
+  topRail.rotation.x = Math.PI / 2
+  g.add(topRail)
+  for (let i = 0; i < 12; i++) {
+    const a = i * Math.PI / 6
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.42, 5), rail)
+    post.position.set(Math.sin(a) * 0.77, 6.0, Math.cos(a) * 0.77)
+    g.add(post)
+  }
+  const cap = new THREE.Mesh(new THREE.ConeGeometry(0.69, 0.58, 12), red)
+  cap.position.y = 6.8
   g.add(cap)
-  const cottage = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.0, 1.3), white)
-  cottage.position.set(1.9, 1.4, 0.6)
+  const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), lamp)
+  beacon.position.y = 7.14
+  g.add(beacon)
+
+  const cottage = new THREE.Mesh(new THREE.BoxGeometry(1.85, 0.96, 1.3), white)
+  cottage.position.set(1.85, 0.95, 0.55)
   g.add(cottage)
-  const cRoof = new THREE.Mesh(makeHipRoof(2.1, 1.6, 0.5, 0.6, 0.06), std(0xb03a30, { roughness: 0.7 }))
-  cRoof.position.set(1.9, 1.9, 0.6)
+  const cRoof = new THREE.Mesh(makeHipRoof(2.12, 1.58, 0.5, 0.6, 0.06), red)
+  cRoof.position.set(1.85, 1.46, 0.55)
   g.add(cRoof)
+  const door = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.64, 0.035), rail)
+  door.position.set(1.85, 0.78, 1.21)
+  g.add(door)
+  g.userData.landmarkName = '烟台山灯塔'
   return { group: g, glow }
 }
 
@@ -1957,46 +2297,44 @@ function slabTower(opts) {
   const H = opts.h || 8.5
   const w = opts.w || 0.95
   const profile = opts.profile || 'generic'
-  const segments = profile === 'pingan' ? 7 : profile === 'kingkey' ? 6 : 5
-  const mat = curtainWall(opts.color || 0x8fb0cc, 2.2, Math.max(4, Math.round(H * 1.4)))
+  const segments = profile === 'pingan' ? 9 : profile === 'kingkey' ? 7 : 5
+  const baseColor = profile === 'diwang' ? 0x5a8d86 : (opts.color || 0x8fb0cc)
+  const mat = curtainWall(baseColor, 2.2, Math.max(4, Math.round(H * 1.4)))
   glow.push(mat)
-  const trim = std(0xd7e0e8, { metalness: 0.55, roughness: 0.32, envMapIntensity: 1.15 })
+  const trim = std(0xd7e0e8, { metalness: 0.62, roughness: 0.28, envMapIntensity: 1.35 })
   const base = new THREE.Mesh(
-    new THREE.BoxGeometry(w * 1.68, 0.28, w * 1.38),
-    std(shade(opts.color || 0x8fb0cc, -0.24), { metalness: 0.35, roughness: 0.62 }),
+    new THREE.BoxGeometry(w * 1.72, 0.3, w * 1.42),
+    std(shade(baseColor, -0.24), { metalness: 0.35, roughness: 0.62 }),
   )
-  base.position.y = 0.14
+  base.position.y = 0.15
   g.add(base)
 
   const widthAt = (t) => {
-    if (profile === 'pingan') return 1 - t * 0.52
-    if (profile === 'kingkey') return t < 0.68 ? 1 - t * 0.12 : 0.72 - (t - 0.68) * 0.38
-    if (profile === 'diwang') return t < 0.78 ? 1 - t * 0.1 : 0.76
+    if (profile === 'pingan') return 1 - t * 0.54
+    if (profile === 'kingkey') return t < 0.68 ? 1 - t * 0.1 : 0.75 - (t - 0.68) * 0.52
+    if (profile === 'diwang') return t < 0.78 ? 1 - t * 0.08 : 0.78
     return 1 - t * (opts.taper == null ? 0.32 : opts.taper)
   }
 
-  let y = 0.28
+  let y = 0.3
   for (let i = 0; i < segments; i++) {
     const t = i / Math.max(1, segments - 1)
     const f = widthAt(t)
     const h = H / segments
-    const depth = w * f * (profile === 'diwang' ? 0.62 : profile === 'kingkey' ? 0.74 : 0.8)
-    let geometry
-    if (profile === 'pingan') {
-      geometry = new THREE.CylinderGeometry(w * f * 0.52, w * Math.min(1, f + 0.08) * 0.52, h, 4)
-    } else {
-      geometry = new THREE.BoxGeometry(w * f, h, depth)
-    }
+    const depth = w * f * (profile === 'diwang' ? 0.52 : profile === 'kingkey' ? 0.72 : 0.8)
+    const geometry = profile === 'pingan'
+      ? new THREE.CylinderGeometry(w * f * 0.53, w * Math.min(1, f + 0.065) * 0.53, h, 8)
+      : new THREE.BoxGeometry(w * f, h, depth)
     const mesh = new THREE.Mesh(geometry, mat)
     mesh.position.y = y + h / 2
-    if (profile === 'pingan') mesh.rotation.y = Math.PI / 4 + i * 0.025
-    if (profile === 'kingkey' && i >= segments - 2) mesh.position.x = -w * 0.08
+    if (profile === 'pingan') mesh.rotation.y = Math.PI / 8
+    if (profile === 'kingkey' && i >= segments - 2) mesh.position.x = -w * 0.1
     g.add(mesh)
 
     const band = new THREE.Mesh(
       profile === 'pingan'
-        ? new THREE.TorusGeometry(w * f * 0.54, 0.028, 5, 12)
-        : new THREE.BoxGeometry(w * f * 1.06, 0.055, depth * 1.06),
+        ? new THREE.TorusGeometry(w * f * 0.53, 0.024, 5, 16)
+        : new THREE.BoxGeometry(w * f * 1.06, 0.05, depth * 1.06),
       trim,
     )
     band.position.y = y + h
@@ -2006,23 +2344,41 @@ function slabTower(opts) {
   }
 
   if (profile === 'pingan') {
-    const crown = new THREE.Mesh(new THREE.ConeGeometry(w * 0.34, 1.15, 4), trim)
-    crown.position.y = H + 0.85
-    crown.rotation.y = Math.PI / 4
+    for (let side = 0; side < 4; side++) {
+      const a = Math.PI / 4 + side * Math.PI / 2
+      const rib = new THREE.Mesh(new THREE.BoxGeometry(0.045, H * 0.9, 0.045), trim)
+      rib.position.set(Math.cos(a) * w * 0.39, H * 0.43, Math.sin(a) * w * 0.39)
+      rib.rotation.z = Math.cos(a) * 0.04
+      rib.rotation.x = -Math.sin(a) * 0.04
+      g.add(rib)
+    }
+    const crown = new THREE.Mesh(new THREE.ConeGeometry(w * 0.3, 1.32, 8), trim)
+    crown.position.y = H + 0.96
+    crown.rotation.y = Math.PI / 8
     g.add(crown)
   } else if (profile === 'kingkey') {
-    const crown = new THREE.Mesh(new THREE.BoxGeometry(w * 0.78, 0.52, w * 0.58), mat)
-    crown.position.set(-w * 0.08, H + 0.54, 0)
-    g.add(crown)
+    const shoulder = new THREE.Mesh(new THREE.BoxGeometry(w * 0.76, 0.4, w * 0.54), mat)
+    shoulder.position.set(-w * 0.1, H + 0.42, 0)
+    g.add(shoulder)
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(w * 0.39, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), mat)
+    dome.scale.z = 0.72
+    dome.position.set(-w * 0.1, H + 0.62, 0)
+    g.add(dome)
   } else if (profile === 'diwang') {
-    const crown = new THREE.Mesh(new THREE.BoxGeometry(w * 0.82, 0.22, w * 0.5), trim)
-    crown.position.y = H + 0.39
-    g.add(crown)
     for (const sx of [-1, 1]) {
-      const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.045, 1.3, 6), trim)
-      antenna.position.set(sx * w * 0.28, H + 1.04, 0)
+      const fin = new THREE.Mesh(new THREE.BoxGeometry(0.055, H * 0.86, w * 0.57), trim)
+      fin.position.set(sx * w * 0.46, H * 0.47, 0)
+      g.add(fin)
+      const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.042, 1.5, 6), trim)
+      antenna.position.set(sx * w * 0.29, H + 1.0, 0)
       g.add(antenna)
+      const pearl = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), trim)
+      pearl.position.set(sx * w * 0.29, H + 1.34, 0)
+      g.add(pearl)
     }
+    const crown = new THREE.Mesh(new THREE.BoxGeometry(w * 0.82, 0.22, w * 0.48), trim)
+    crown.position.y = H + 0.38
+    g.add(crown)
   } else {
     const crown = new THREE.Mesh(new THREE.BoxGeometry(w * 0.68, 0.14, w * 0.56), trim)
     crown.position.y = H + 0.35
@@ -2031,11 +2387,8 @@ function slabTower(opts) {
 
   const spireHeight = opts.spire == null ? (profile === 'diwang' ? 0 : 1.4) : opts.spire
   if (spireHeight > 0) {
-    const spire = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.02, 0.07, spireHeight, 6),
-      std(0xcfd6df, { metalness: 0.6 }),
-    )
-    spire.position.y = H + 0.42 + spireHeight / 2
+    const spire = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.065, spireHeight, 7), trim)
+    spire.position.y = H + 0.48 + spireHeight / 2
     g.add(spire)
   }
   g.userData.towerProfile = profile
@@ -2045,43 +2398,64 @@ function slabTower(opts) {
 function rafflesComplex() {
   const group = new THREE.Group()
   const glow = []
+  const glass = curtainWall(0x789cb4, 2.4, 12)
+  const sideGlass = curtainWall(0x8faec1, 2.2, 9)
+  const white = std(0xd8e0e5, { metalness: 0.5, roughness: 0.3, envMapIntensity: 1.3 })
+  const dark = std(0x59646c, { metalness: 0.36, roughness: 0.48 })
+  glow.push(glass, sideGlass)
+
   const towers = [
-    [-1.75, 8.6, -0.2],
-    [-0.58, 9.2, 0.1],
-    [0.58, 8.9, -0.05],
-    [1.75, 8.4, 0.18],
+    [-1.8, 8.7, -0.08, glass],
+    [-0.62, 9.2, 0.06, glass],
+    [0.62, 9.0, -0.02, glass],
+    [1.8, 8.55, 0.1, glass],
+    [-2.68, 6.1, 0.38, sideGlass],
+    [2.68, 5.9, 0.34, sideGlass],
   ]
   towers.forEach((item, index) => {
-    const tower = slabTower({
-      h: item[1],
-      w: 0.82,
-      color: index % 2 ? 0x7695ad : 0x86a4b9,
-      taper: 0.16,
-      spire: 0,
-    })
-    tower.group.position.set(item[0], 0, item[2])
-    tower.group.rotation.z = (index - 1.5) * 0.018
-    group.add(tower.group)
-    ;(tower.glow || []).forEach((material) => glow.push(material))
+    const h = item[1]
+    const w = index < 4 ? 0.7 : 0.62
+    const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.78), item[3])
+    body.position.set(item[0], h / 2 + 0.48, item[2])
+    group.add(body)
+    const flare = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.72, w * 0.48, 0.9, 4), item[3])
+    flare.position.set(item[0] + (index < 2 ? -0.08 : 0.08), h + 0.48, item[2])
+    flare.rotation.y = Math.PI / 4
+    flare.rotation.z = (index - 2.5) * 0.018
+    group.add(flare)
+    for (const sx of [-1, 1]) {
+      const fin = new THREE.Mesh(new THREE.BoxGeometry(0.035, h * 0.88, 0.86), white)
+      fin.position.set(item[0] + sx * w * 0.49, h * 0.47 + 0.48, item[2])
+      group.add(fin)
+    }
   })
 
-  const bridgeMat = curtainWall(0x91aec2, 5, 2)
-  glow.push(bridgeMat)
-  const skybridge = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.72, 1.02), bridgeMat)
-  skybridge.position.y = 7.05
-  group.add(skybridge)
-  const deck = new THREE.Mesh(
-    new THREE.BoxGeometry(4.85, 0.12, 1.18),
-    std(0xd7e0e7, { metalness: 0.58, roughness: 0.28 }),
-  )
-  deck.position.y = 6.66
-  group.add(deck)
-  const podium = new THREE.Mesh(
-    new THREE.BoxGeometry(5.25, 0.52, 2.05),
-    std(0x6d7780, { metalness: 0.3, roughness: 0.58 }),
-  )
-  podium.position.y = 0.26
+  const bridge = new THREE.Group()
+  const bridgeBody = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.72, 1.02), glass)
+  bridge.add(bridgeBody)
+  for (const sx of [-1, 1]) {
+    const end = new THREE.Mesh(new THREE.CylinderGeometry(0.51, 0.51, 0.85, 8), glass)
+    end.rotation.z = Math.PI / 2
+    end.position.x = sx * 2.62
+    bridge.add(end)
+  }
+  for (let i = -5; i <= 5; i++) {
+    const band = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.56, 1.06), white)
+    band.position.x = i * 0.45
+    bridge.add(band)
+  }
+  const garden = new THREE.Mesh(new THREE.BoxGeometry(4.7, 0.12, 0.66), std(0x5f7f58, { roughness: 0.92 }))
+  garden.position.y = 0.43
+  bridge.add(garden)
+  bridge.position.y = 7.28
+  group.add(bridge)
+
+  const podium = new THREE.Mesh(new THREE.BoxGeometry(6.25, 0.58, 2.12), dark)
+  podium.position.y = 0.29
   group.add(podium)
+  const retail = new THREE.Mesh(new THREE.BoxGeometry(5.45, 0.4, 1.72), glass)
+  retail.position.y = 0.75
+  group.add(retail)
   group.userData.landmarkName = '重庆来福士'
   return { group, glow }
 }
@@ -2521,11 +2895,11 @@ const BUILDERS = {
       { b: cctvLoop, x: 2.4, z: 2.6, s: 0.7, ry: -0.5 },
     ]),
   天津: ferrisWheel,
-  杭州: () => pagoda({ tiers: 5, body: 0xcaa06a, roof: 0x8a5a2f, bodyGlow: 0xffcf7a }),
+  杭州: () => set([{ b: leifengPagoda, x: -1.2, z: 1.2, s: 0.92, name: '雷峰塔' }]),
   武汉: () =>
     set([
-      { b: () => pagoda({ tiers: 5, body: 0xd8b878, roof: 0xc9a227, bodyGlow: 0xffe0a0 }), x: -1.9, z: 1.0 },
-      { b: () => slabTower({ h: 10.0, w: 0.9, color: 0x93aec4, taper: 0.42 }), x: 2.3, z: -1.4 },
+      { b: yellowCraneTower, x: -1.9, z: 1.0, s: 0.88, name: '黄鹤楼' },
+      { b: () => slabTower({ h: 10.0, w: 0.9, color: 0x93aec4, taper: 0.42 }), x: 2.3, z: -1.4, name: '武汉绿地中心' },
     ]),
   西安: () =>
     set([
@@ -2554,13 +2928,13 @@ const BUILDERS = {
   重庆: () =>
     set([
       { b: rafflesComplex, x: 0, z: -3.05, s: 0.88, name: '重庆来福士' },
-      { b: () => pavilion({ tiers: 5, w: 3.4, d: 2.5, tierH: 0.9, body: 0x9d5438, roof: 0x43535b, platform: 0.55 }), x: -3.15, z: 1.25, s: 0.62, ry: 0.18, name: '洪崖洞' },
+      { b: hongyaCave, x: -3.15, z: 1.25, s: 0.62, ry: 0.18, name: '洪崖洞' },
     ]),
-  // 成都：熊猫主题低台 + 天府双塔
+  // 成都：大熊猫城市符号 + 天府双塔
   成都: () =>
     set([
-      { b: () => pavilion({ tiers: 3, w: 3.1, d: 2.6, tierH: 1.25, body: 0xc7a878, roof: 0x7a5a34, platform: 0.65 }), x: -3.2, z: 0.8, s: 0.72 },
-      { b: () => slabTower({ h: 9.4, w: 0.92, color: 0x7f9fbd, taper: 0.2 }), x: 2.15, z: -3.8, s: 0.78 },
+      { b: chengduPanda, x: -3.0, z: 0.9, s: 0.82, name: '成都大熊猫' },
+      { b: () => slabTower({ h: 9.4, w: 0.92, color: 0x7f9fbd, taper: 0.2 }), x: 2.15, z: -3.8, s: 0.78, name: '天府双塔' },
       { b: () => slabTower({ h: 9.0, w: 0.86, color: 0x9bb5c9, taper: 0.2 }), x: 3.5, z: -3.8, s: 0.68, ry: 0.16 },
     ]),
   台北: taipei101,
@@ -2583,7 +2957,7 @@ const BUILDERS = {
       { b: () => slabTower({ h: 8.2, w: 0.82, color: 0x9fb8cc, taper: 0.1 }), x: -3.7, z: -2.7, s: 0.52 },
     ]),
   郑州: erqiTower,
-  青岛: zhanqiao,
+  青岛: () => set([{ b: zhanqiao, x: -2.1, z: 1.2, s: 0.86, name: '栈桥' }, { b: mayFourthWind, x: 2.8, z: -1.4, s: 0.72, name: '五月的风' }]),
   昆明: paifang,
   沈阳: dazhengHall,
   济南: () =>
@@ -2601,8 +2975,11 @@ const BUILDERS = {
   太原: twinPagodas,
   银川: xixiaTombs,
   贵阳: jiaxiuLou,
-  南昌: () => pavilion({ tiers: 3, w: 4.4, d: 2.8, tierH: 1.6, body: 0xb5482e, roof: 0x2f6b4f, platform: 1.2 }),
-  长沙: () => pavilion({ tiers: 3, w: 3.4, d: 2.6, tierH: 1.45, body: 0xa8443a, roof: 0x4a5a52, platform: 1.6 }),
+  南昌: () => set([
+    { b: tengwangPavilion, x: -1.65, z: 1.05, s: 0.86, name: '滕王阁' },
+    { b: ferrisWheel, x: 3.15, z: -2.4, s: 0.56, name: '南昌之星' },
+  ]),
+  长沙: () => set([{ b: changshaIfs, x: -0.8, z: -1.6, s: 0.82, name: '长沙IFS' }]),
   福州: () => pavilion({ tiers: 2, w: 4.6, d: 2.9, tierH: 1.7, body: 0x9e3b30, roof: 0x3a3f47, platform: 1.0 }),
 
   // 山东 15 市
@@ -2987,6 +3364,14 @@ function buildNamedSight(spec) {
   const accent = GENERIC_ACCENTS[hashName(name) % GENERIC_ACCENTS.length]
   const rand = mulberry32(hashName(name))
   let result
+  if (name === '五四广场' || name === '五月的风') result = mayFourthWind()
+  else if (name === '雷峰塔') result = leifengPagoda()
+  else if (name === '滕王阁') result = tengwangPavilion()
+  if (result) {
+    result.group.userData.landmarkName = name
+    result.group.userData.landmarkRole = 'secondary'
+    return result
+  }
   switch (type) {
     case 'bridge': result = zhongshanBridge(); break
     case 'pagoda': result = pagoda({ tiers: 5, baseR: 0.9, tierH: 1.0, body: shade(accent, 0.12), roof: shade(accent, -0.2) }); break
@@ -3034,6 +3419,74 @@ function touristExtraSight(key) {
   return result
 }
 
+const PRIMARY_LANDMARK_NAMES = {
+  上海: '东方明珠', 广州: '广州塔', 北京: '天安门', 天津: '天津之眼', 成都: '成都大熊猫', 长沙: '长沙IFS',
+  杭州: '雷峰塔', 武汉: '黄鹤楼', 西安: '大雁塔', 南京: '紫峰大厦',
+  开封: '开封铁塔', 苏州: '东方之门', 深圳: '平安金融中心', 重庆: '重庆来福士',
+  台北: '台北101', 东京: '东京塔', 哈尔滨: '圣索菲亚教堂', 拉萨: '布达拉宫',
+  香港: '中银大厦', 郑州: '二七塔', 青岛: '栈桥', 昆明: '金马碧鸡坊',
+  沈阳: '大政殿', 济南: '泉标', 澳门: '大三巴', 呼和浩特: '蒙古包',
+  兰州: '中山桥', 西宁: '白塔', 乌鲁木齐: '国际大巴扎', 合肥: '徽派民居',
+  海口: '骑楼钟楼', 太原: '双塔寺', 银川: '西夏王陵', 贵阳: '甲秀楼',
+  南昌: '滕王阁', 泰安: '泰山', 曲阜: '孔庙大成殿', 烟台: '烟台山灯塔',
+  东营: '黄河口油田', 潍坊: '渤海之眼', 威海: '幸福门', 日照: '风帆广场',
+  枣庄: '台儿庄古城', 德州: '日晷太阳能大楼', 滨州: '孙子兵法城',
+  菏泽: '曹州牡丹园', 淄博: '海岱楼', 济宁: '太白楼', 临沂: '书圣阁',
+  聊城: '光岳楼', 石家庄: '电视塔', 长春: '地质宫', 南宁: '朱槿花会展中心',
+}
+
+function roundedRect(ctx, x, y, w, h, r) {
+  ctx.beginPath()
+  ctx.moveTo(x + r, y)
+  ctx.lineTo(x + w - r, y)
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r)
+  ctx.lineTo(x + w, y + h - r)
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
+  ctx.lineTo(x + r, y + h)
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r)
+  ctx.lineTo(x, y + r)
+  ctx.quadraticCurveTo(x, y, x + r, y)
+  ctx.closePath()
+}
+
+function landmarkLabel(name, hero) {
+  if (!name || typeof wx === 'undefined' || !wx.createOffscreenCanvas || !THREE.CanvasTexture) return null
+  try {
+    const canvas = wx.createOffscreenCanvas({ type: '2d', width: 384, height: 96 })
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return null
+    ctx.clearRect(0, 0, 384, 96)
+    roundedRect(ctx, 4, 6, 376, 82, 18)
+    ctx.fillStyle = hero ? 'rgba(28,38,50,0.88)' : 'rgba(36,45,53,0.76)'
+    ctx.fill()
+    ctx.lineWidth = hero ? 4 : 2
+    ctx.strokeStyle = hero ? '#e9c66f' : 'rgba(255,255,255,0.55)'
+    ctx.stroke()
+    ctx.fillStyle = hero ? '#f7e5af' : '#ffffff'
+    ctx.font = (hero ? '600 ' : '500 ') + (name.length > 8 ? 30 : 36) + 'px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(name, 192, 49)
+    const texture = new THREE.CanvasTexture(canvas)
+    if (THREE.SRGBColorSpace) texture.colorSpace = THREE.SRGBColorSpace
+    texture.needsUpdate = true
+    const material = new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+      toneMapped: false,
+    })
+    const sprite = new THREE.Sprite(material)
+    sprite.scale.set(Math.min(3.05, 1.12 + name.length * 0.23), 0.62, 1)
+    sprite.renderOrder = 999
+    sprite.userData.landmarkLabel = name
+    return sprite
+  } catch (e) {
+    return null
+  }
+}
+
 function polishLandmark(key, result) {
   if (!result || !result.group || result.group.userData.visualPolished) return result
   result.glow = result.glow || []
@@ -3063,6 +3516,10 @@ function polishLandmark(key, result) {
     ? root.userData.landmarkNodes.filter(Boolean)
     : [root]
   const anchors = []
+  if (nodes[0] && !nodes[0].userData.landmarkName && PRIMARY_LANDMARK_NAMES[key]) {
+    nodes[0].userData.landmarkName = PRIMARY_LANDMARK_NAMES[key]
+  }
+  const labelAnchors = []
   nodes.forEach((node) => {
     node.updateMatrixWorld(true)
     const bounds = new THREE.Box3().setFromObject(node)
@@ -3073,6 +3530,15 @@ function polishLandmark(key, result) {
       z: center.z,
       radius: Math.max(0.9, Math.min(2.65, Math.hypot(size.x, size.z) * 0.34)),
     })
+    if (node.userData.landmarkName && labelAnchors.length < 3) {
+      labelAnchors.push({
+        name: node.userData.landmarkName,
+        hero: node.userData.landmarkRole === 'hero',
+        x: center.x,
+        y: bounds.max.y + Math.max(0.34, size.y * 0.045),
+        z: center.z,
+      })
+    }
   })
 
   if (anchors.length) {
@@ -3119,6 +3585,13 @@ function polishLandmark(key, result) {
     glowing.push(ringMaterial)
     root.userData.presentationPads = anchors.length
   }
+  labelAnchors.forEach((anchor) => {
+    const label = landmarkLabel(anchor.name, anchor.hero)
+    if (!label) return
+    label.position.set(anchor.x, anchor.y, anchor.z)
+    root.add(label)
+  })
+  root.userData.landmarkLabels = labelAnchors.map((item) => item.name)
   result.glow = glowing
   result.group.userData.visualPolished = true
   return result
@@ -3242,6 +3715,8 @@ function ensureLandmarkSet(key, result) {
       extra = namedSecondarySight(canonicalKey, secondaryIndex - 1)
     }
     if (!extra) {
+      // 已登记城市不再用“城市地标1”之类的哈希几何体凑数；宁可少一个，也不展示假地标。
+      if (BUILDERS[canonicalKey]) break
       extra = generatedSecondarySight(canonicalKey, count)
     }
     if (!addSight(extra)) break
@@ -3251,7 +3726,7 @@ function ensureLandmarkSet(key, result) {
   root.userData.landmarkNodes = nodes
   root.userData.landmarkCount = count
   root.userData.landmarkTarget = target
-  root.userData.landmarkCoverage = count >= target ? 'complete' : 'fallback'
+  root.userData.landmarkCoverage = count >= target ? 'named-complete' : (BUILDERS[canonicalKey] ? 'named-partial' : 'procedural')
   return polishLandmark(canonicalKey, result)
 }
 
