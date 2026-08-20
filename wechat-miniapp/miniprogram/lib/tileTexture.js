@@ -43,7 +43,6 @@ export function makeWindowTexture(frameHex, paneHex, litHex) {
   const cw = (W - padX * 2) / COLS
   const rh = (H - padY * 2) / ROWS
   const clampByte = (v) => Math.max(0, Math.min(255, Math.round(v)))
-  const mix = (a, b, t) => a + (b - a) * t
 
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
@@ -76,13 +75,12 @@ export function makeWindowTexture(frameHex, paneHex, litHex) {
           const i = (y * W + x) * 4
           const inPane = x >= px0 && x < px1 && y >= py0 && y < py1
           if (inPane) {
-            // 玻璃面保留轻微纵向色差；亮斜线模拟 Web 版的天空反光。
-            const u = (x - px0) / Math.max(1, px1 - px0)
+            // 固有色只保留轻微纵向层次；方向相关高光交给 PMREM + PBR 材质。
             const v = (y - py0) / Math.max(1, py1 - py0)
-            const reflection = Math.abs(u - (0.08 + v * 0.58)) < 0.055 ? 0.42 : 0
-            map[i] = clampByte(mix(pr, 244, reflection))
-            map[i + 1] = clampByte(mix(pg, 250, reflection))
-            map[i + 2] = clampByte(mix(pb, 255, reflection))
+            const paneTone = 0.96 + (1 - v) * 0.07
+            map[i] = clampByte(pr * paneTone)
+            map[i + 1] = clampByte(pg * paneTone)
+            map[i + 2] = clampByte(pb * paneTone)
             rough[i] = rough[i + 1] = rough[i + 2] = 42
             if (on) {
               emi[i] = lr

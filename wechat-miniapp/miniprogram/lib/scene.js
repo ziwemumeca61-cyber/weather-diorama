@@ -36,65 +36,114 @@ function makeGableGeometry() {
 }
 
 
-function makeReflectionEnvironment() {
-  // Web 端 Environment 的轻量原生替代：用一张渐变环境贴图给玻璃幕墙提供蓝天、
-  // 云层和白色建筑光带的反射高光。使用 DataTexture，不依赖外部图片资源。
-  const width = 64
-  const height = 32
+function makeFallbackReflectionEnvironment() {
+  // 极少数真机若 PMREM 创建失败，仍保留轻量环境贴图，避免幕墙退化成纯黑。
+  const width = 128
+  const height = 64
   const data = new Uint8Array(width * height * 4)
-  const clamp = (value) => Math.max(0, Math.min(255, Math.round(value)))
+  const clampByte = (value) => Math.max(0, Math.min(255, Math.round(value)))
   for (let y = 0; y < height; y++) {
     const v = y / (height - 1)
     const sky = v < 0.58
-      ? [64 + v * 245, 108 + v * 190, 158 + v * 150]
-      : [206 - (v - 0.58) * 320, 230 - (v - 0.58) * 330, 244 - (v - 0.58) * 300]
+      ? [58 + v * 250, 105 + v * 196, 162 + v * 144]
+      : [214 - (v - 0.58) * 300, 235 - (v - 0.58) * 320, 248 - (v - 0.58) * 290]
     for (let x = 0; x < width; x++) {
       const u = x / width
-      const cardA = Math.exp(-Math.pow((u - 0.16) / 0.028, 2))
-      const cardB = Math.exp(-Math.pow((u - 0.52) / 0.042, 2))
-      const cardC = Math.exp(-Math.pow((u - 0.82) / 0.026, 2))
-      const cards = (cardA * 1.0 + cardB * 0.72 + cardC * 0.9) * (0.35 + (1 - v) * 0.65)
+      const cardA = Math.exp(-Math.pow((u - 0.15) / 0.052, 2))
+      const cardB = Math.exp(-Math.pow((u - 0.51) / 0.075, 2))
+      const cardC = Math.exp(-Math.pow((u - 0.83) / 0.046, 2))
+      const cards = (cardA * 1.08 + cardB * 0.76 + cardC) * (0.32 + (1 - v) * 0.68)
       const index = (y * width + x) * 4
-      data[index] = clamp(sky[0] + cards * 48)
-      data[index + 1] = clamp(sky[1] + cards * 52)
-      data[index + 2] = clamp(sky[2] + cards * 60)
+      data[index] = clampByte(sky[0] + cards * 58)
+      data[index + 1] = clampByte(sky[1] + cards * 62)
+      data[index + 2] = clampByte(sky[2] + cards * 70)
       data[index + 3] = 255
     }
   }
-  const texture = new THREE.DataTexture(
-    data,
-    width,
-    height,
-    THREE.RGBAFormat,
-    THREE.UnsignedByteType,
-  )
+  const texture = new THREE.DataTexture(data, width, height, THREE.RGBAFormat, THREE.UnsignedByteType)
   if (THREE.SRGBColorSpace) texture.colorSpace = THREE.SRGBColorSpace
   if (THREE.EquirectangularReflectionMapping) texture.mapping = THREE.EquirectangularReflectionMapping
   texture.needsUpdate = true
-  return texture
+  return {
+    texture,
+    kind: 'ldr-fallback',
+    dispose() { texture.dispose() },
+  }
+}
+
+function makeReflectionEnvironment(renderer) {
+  // 与 Web 版 Environment/Lightformer 同一路径：高亮环境光卡经 PMREM 预滤波，
+  // 幕墙反光会随粗糙度和观察方向变化。
+  const environmentScene = new THREE.Scene()
+  environmentScene.background = new THREE.Color(0x20242c)
+  const resources = []
+  let pmrem = null
+
+  const addCard = (geometry, color, intensity, position, scale, rotation) => {
+    const material = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(color).multiplyScalar(intensity),
+      side: THREE.DoubleSide,
+      toneMapped: false,
+    })
+    const mesh = new THREE.Mesh(geometry, material)
+    mesh.position.set(position[0], position[1], position[2])
+    mesh.scale.set(scale[0], scale[1], scale[2])
+    if (rotation) mesh.rotation.set(rotation[0], rotation[1], rotation[2])
+    environmentScene.add(mesh)
+    resources.push(geometry, material)
+  }
+
+  try {
+    addCard(new THREE.PlaneGeometry(1, 1), 0xffffff, 3, [10, 12, 8], [14, 14, 1], [-0.25, -0.7, 0])
+    addCard(new THREE.PlaneGeometry(1, 1), 0xcfe0ff, 1.2, [-12, 8, -6], [12, 12, 1], [-0.15, 0.95, 0])
+    addCard(new THREE.PlaneGeometry(1, 1), 0xffffff, 0.8, [0, -6, 0], [20, 20, 1], [Math.PI / 2, 0, 0])
+    addCard(new THREE.TorusGeometry(4.2, 0.55, 12, 48), 0xffe6c0, 2, [0, 10, -12], [1, 1, 1], [0.2, 0, 0])
+
+    pmrem = new THREE.PMREMGenerator(renderer)
+    pmrem.compileCubemapShader()
+    const target = pmrem.fromScene(environmentScene, 0.04, 0.1, 100)
+    return {
+      texture: target.texture,
+      kind: 'pmrem-lightformers',
+      dispose() { target.dispose() },
+    }
+  } catch (error) {
+    console.warn('[scene] PMREM environment fallback', error)
+    return makeFallbackReflectionEnvironment()
+  } finally {
+    resources.forEach((resource) => {
+      try { resource.dispose() } catch (e) {}
+    })
+    if (pmrem) {
+      try { pmrem.dispose() } catch (e) {}
+    }
+  }
 }
 
 function makeFacadeMaterial(glass) {
   const texture = glass
     ? makeWindowTexture(0xd3dbe4, 0x9fb6cc, 0xffcf7a)
     : makeWindowTexture(0xded6c8, 0xb9b3a4, 0xffcf7a)
-  // Web 版每个箱体使用完整的一张 6×14 幕墙贴图；新贴图已经有足够
-  // 的楼层和窗格，不能再按旧 4×4 贴图重复，否则远景会糊成条纹。
   texture.map.repeat.set(1, 1)
   texture.emissiveMap.repeat.copy(texture.map.repeat)
   texture.roughnessMap.repeat.copy(texture.map.repeat)
-  return new THREE.MeshStandardMaterial({
-    color: glass ? 0xd9f2ff : 0xffffff,
+
+  // Web 版 1.8/0.6 再乘 Environment intensity 0.65，折算为 r162 可用的材质强度。
+  const baseEnvMapIntensity = glass ? 1.2 : 0.4
+  const material = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
     map: texture.map,
     emissive: new THREE.Color(0xffcf7a),
     emissiveMap: texture.emissiveMap,
     roughnessMap: texture.roughnessMap,
     emissiveIntensity: 0,
-    // 保留远程版本的真实环境反射，同时让粗糙度贴图控制玻璃窗格与框架。
     roughness: glass ? 0.22 : 0.8,
     metalness: glass ? 0.85 : 0.1,
-    envMapIntensity: glass ? 1.8 : 0.55,
+    envMapIntensity: baseEnvMapIntensity,
   })
+  material.userData.baseEnvMapIntensity = baseEnvMapIntensity
+  material.userData.reflectiveFacade = glass
+  return material
 }
 
 function disposeTree(root) {
@@ -255,7 +304,6 @@ function buildSkyline(buildings) {
   const concreteFins = []
   const officeBelts = []
   const residentialBelts = []
-  const glassSheens = []
   buildings.forEach((b) => {
     const isGlass = b.core > 0.5
     if (b.h > 2.15) {
@@ -283,19 +331,6 @@ function buildSkyline(buildings) {
           color: b.color,
         })
       }
-    }
-
-    if (isGlass && b.h > 2.6 && (!b.form || b.form === 'box')) {
-      const sheenH = Math.max(1.7, b.h * 0.7)
-      const sheenW = Math.max(0.1, b.w * 0.22)
-      const sheenD = Math.max(0.1, b.d * 0.22)
-      // 四个立面各有一条略微倾斜的天空反射高光，真机不支持环境贴图时仍清晰可见。
-      glassSheens.push(
-        { x: b.x - b.w * 0.16, y: b.h * 0.58, z: b.z + b.d * 0.508, sx: sheenW, sy: sheenH, sz: 0.018, rz: -0.16 },
-        { x: b.x + b.w * 0.17, y: b.h * 0.6, z: b.z - b.d * 0.508, sx: sheenW, sy: sheenH * 0.86, sz: 0.018, rz: 0.14 },
-        { x: b.x + b.w * 0.508, y: b.h * 0.56, z: b.z - b.d * 0.14, sx: 0.018, sy: sheenH * 0.9, sz: sheenD, rx: 0.14 },
-        { x: b.x - b.w * 0.508, y: b.h * 0.61, z: b.z + b.d * 0.16, sx: 0.018, sy: sheenH * 0.78, sz: sheenD, rx: -0.12 },
-      )
     }
 
     if (b.h > 2.5 && (b.style === 'office' || b.style === 'tower') && (!b.form || b.form === 'box')) {
@@ -331,14 +366,6 @@ function buildSkyline(buildings) {
   const concreteFrameMat = new THREE.MeshStandardMaterial({ color: 0x75808b, roughness: 0.52, metalness: 0.28 })
   const officeBeltMat = new THREE.MeshStandardMaterial({ color: 0x506473, roughness: 0.32, metalness: 0.62, envMapIntensity: 1.1 })
   const balconyMat = new THREE.MeshStandardMaterial({ color: 0xa9b0b4, roughness: 0.58, metalness: 0.24 })
-  const glassSheenMat = new THREE.MeshBasicMaterial({
-    color: 0xd9f4ff,
-    transparent: true,
-    opacity: 0.46,
-    depthWrite: false,
-    fog: false,
-    blending: THREE.AdditiveBlending,
-  })
   addDetailMesh(box, podiumMat, podiums)
   addDetailMesh(box, glassMat, glassTiers)
   addDetailMesh(box, concreteMat, concreteTiers)
@@ -346,7 +373,6 @@ function buildSkyline(buildings) {
   addDetailMesh(box, concreteFrameMat, concreteFins, false)
   addDetailMesh(box, officeBeltMat, officeBelts, false)
   addDetailMesh(box, balconyMat, residentialBelts, false)
-  addDetailMesh(box, glassSheenMat, glassSheens, false)
 
   const crownList = glass.filter((b) => b.h > 5.3 && b.roof === 'flat')
   if (crownList.length) {
@@ -397,7 +423,7 @@ function buildSkyline(buildings) {
     rooftops.instanceMatrix.needsUpdate = true
     root.add(rooftops)
   }
-  return { root, materials: [glassMat, concreteMat], reflectionMaterials: [glassSheenMat] }
+  return { root, materials: [glassMat, concreteMat] }
 }
 
 function createLandmarkDistrict(center, size, seed) {
@@ -484,8 +510,8 @@ export function createScene(canvas, opts) {
   if (THREE.SRGBColorSpace) renderer.outputColorSpace = THREE.SRGBColorSpace
 
   const scene = new THREE.Scene()
-  const reflectionEnvironment = makeReflectionEnvironment()
-  scene.environment = reflectionEnvironment
+  const reflectionEnvironment = makeReflectionEnvironment(renderer)
+  scene.environment = reflectionEnvironment.texture
   scene.background = new THREE.Color(0xbcd9ec)
   scene.fog = new THREE.FogExp2(0xbcd9ec, 0.003)
   const camera = new THREE.PerspectiveCamera(38, width / height, 0.1, 200)
@@ -547,7 +573,6 @@ export function createScene(canvas, opts) {
   let landmarkSpin = null
   let landmarkAnimate = null
   let cityMaterials = []
-  let reflectionMaterials = []
   let currentCity = null
   let currentProfile = null
   let currentWeather = 'clear'
@@ -613,8 +638,6 @@ export function createScene(canvas, opts) {
 
   function applyGlow() {
     cityMaterials.forEach((material) => { material.emissiveIntensity = current.buildingGlow })
-    // 高光带只在白天存在，夜里自然淡出，避免窗面像自发光贴纸。
-    reflectionMaterials.forEach((material) => { material.opacity = 0.46 * (1 - current.night * 0.94) })
     landmarkGlow.forEach((material) => {
       if (material && material.emissiveIntensity != null) material.emissiveIntensity = current.landmarkGlow
     })
@@ -645,7 +668,6 @@ export function createScene(canvas, opts) {
     landmarkSpin = null
     landmarkAnimate = null
     cityMaterials = []
-    reflectionMaterials = []
   }
 
   function buildCity(cityName) {
@@ -699,15 +721,15 @@ export function createScene(canvas, opts) {
 
           // 用真实地标底座的外接尺寸计算半径，再额外留一圈净空；
           // 旧版固定上限 3 会让宽体建筑的边缘仍被楼脚/树冠贴住。
-          const footprintRadius = Math.hypot(partSize.x, partSize.z) * 0.52
+          const footprintRadius = Math.hypot(partSize.x, partSize.z) * 0.46
           const visibilityPadding = Number(skylineProfile.landmarkVisibilityPadding)
           const padding = isFinite(visibilityPadding)
-            ? THREE.MathUtils.clamp(visibilityPadding, 0.55, 1.35)
-            : 0.86
-          let partRadius = THREE.MathUtils.clamp(footprintRadius + padding, 1.55, 4.6)
+            ? THREE.MathUtils.clamp(visibilityPadding, 0.3, 0.9)
+            : 0.5
+          let partRadius = THREE.MathUtils.clamp(footprintRadius + padding, 1.15, 3.4)
           if (role === 'hero' || index === 0) {
             const heroRadius = Number(skylineProfile.heroClearRadius)
-            partRadius = Math.max(partRadius, isFinite(heroRadius) ? heroRadius : 2.45)
+            partRadius = Math.max(partRadius, isFinite(heroRadius) ? heroRadius : 2.05)
           }
 
           const configuredCalmPadding = Number(
@@ -716,7 +738,7 @@ export function createScene(canvas, opts) {
               : skylineProfile.calmPadding,
           )
           const calmPadding = Math.max(
-            role === 'hero' || index === 0 ? 2.2 : 1.85,
+            role === 'hero' || index === 0 ? 1.35 : 0.7,
             isFinite(configuredCalmPadding) ? configuredCalmPadding : 0,
           )
           const configuredCalmHeight = Number(
@@ -724,7 +746,7 @@ export function createScene(canvas, opts) {
               ? skylineProfile.heroCalmHeight
               : skylineProfile.calmHeight,
           )
-          const calmLimit = role === 'hero' || index === 0 ? 2.75 : 2.95
+          const calmLimit = role === 'hero' || index === 0 ? 4.2 : 5.2
           const calmHeight = Math.min(
             calmLimit,
             isFinite(configuredCalmHeight) ? configuredCalmHeight : calmLimit,
@@ -774,7 +796,7 @@ export function createScene(canvas, opts) {
           34,
         )
         // 初始镜头提高俯视角，让地标广场、主体轮廓和屋顶不再被前排楼群吞掉。
-        polar = Math.PI * 0.30
+        polar = Math.PI * 0.345
       }
       built.group.traverse((object) => { if (object.isMesh) object.castShadow = true })
       landmark = built.group
@@ -798,7 +820,6 @@ export function createScene(canvas, opts) {
     ).filter((b) => !inLake(currentProfile.water, b.x, b.z, 0.35))
     skyline = buildSkyline(buildings)
     cityMaterials = skyline.materials
-    reflectionMaterials = skyline.reflectionMaterials || []
     cityRoot.add(skyline.root)
     props = createProps(key, { water: currentProfile.water, clearZones })
     props.setWeather(currentWeather)
@@ -961,9 +982,16 @@ export function createScene(canvas, opts) {
     warmFill.intensity = Math.max(0.018, current.sunIntensity * 0.075 * nightLight)
     groundFill.intensity = Math.max(0.012, current.ambientIntensity * 0.14 * nightLight)
     landmarkFill.intensity = 0.055 + current.night * 0.58
-    if (scene.environmentIntensity != null) {
-      scene.environmentIntensity = 0.65 * (0.78 + weatherLight.grey * 0.22) * nightLight
-    }
+    // three r162 没有 Scene.environmentIntensity；改为逐材质调节真实环境反射强度。
+    const environmentStrength = THREE.MathUtils.clamp(
+      (0.98 - weatherLight.grey * 0.2) * (1 - current.night * 0.42),
+      0.5,
+      1,
+    )
+    cityMaterials.forEach((material) => {
+      const base = Number(material.userData && material.userData.baseEnvMapIntensity)
+      if (isFinite(base)) material.envMapIntensity = base * environmentStrength
+    })
     sun.color.copy(current.sun)
     sun.position.copy(current.sunPosition)
     ambient.color.copy(current.ambient)

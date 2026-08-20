@@ -57,7 +57,7 @@ export function generateCity(seed, clearZones, calmZones, maxZ, hueShift, skylin
   const absoluteHeightCap = Number(skyline.absoluteHeightCap) || Infinity
   const footprintScale = THREE.MathUtils.clamp(Number(skyline.footprintScale) || 1, 0.88, 1.08)
   const towerBias = THREE.MathUtils.clamp(Number(skyline.towerBias) || 1, 0.8, 1.35)
-  const clearPadding = THREE.MathUtils.clamp(Number(skyline.clearPadding) || 0.82, 0.35, 1.5)
+  const clearPadding = THREE.MathUtils.clamp(Number(skyline.clearPadding) || 0.38, 0.25, 0.9)
   const splitThreshold = 0.86 - Math.max(0, densityScale - 1) * 0.09
   const clear = clearZones || [{ x: CITY.landmark.x, z: CITY.landmark.z, r: 1.5 }]
   const calm = calmZones || []
