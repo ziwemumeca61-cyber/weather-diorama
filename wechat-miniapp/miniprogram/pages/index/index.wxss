@@ -3,14 +3,69 @@
   flex-direction: column;
   width: 100vw;
   height: 100vh;
+  overflow: hidden;
   background: #0b1220;
 }
 
-/* 上半屏 3D 画布 */
-.gl {
+/* 画布节点始终保留；容器随面板隐藏扩展，JS 在布局完成后同步渲染尺寸。 */
+.city-stage {
+  position: relative;
   flex: 1;
   min-height: 0;
   width: 100%;
+  overflow: hidden;
+}
+.gl {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.panel-hidden {
+  display: none !important;
+}
+.city-mode {
+  position: absolute;
+  z-index: 3;
+  right: 12px;
+  bottom: 12px;
+  box-sizing: border-box;
+  min-width: 86px;
+  height: 44px;
+  line-height: 42px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999rpx;
+  background: rgba(18, 30, 44, 0.78);
+  color: #ffffff;
+  text-align: center;
+  font-size: 13px;
+}
+.city-mode-exit {
+  left: 12px;
+  right: auto;
+  bottom: auto;
+}
+.city-immersive-hint,
+.city-immersive-credit {
+  position: absolute;
+  left: 0;
+  right: 0;
+  text-align: center;
+  pointer-events: none;
+  color: rgba(255, 255, 255, 0.88);
+  background: transparent;
+}
+.city-immersive-hint {
+  bottom: calc(32px + env(safe-area-inset-bottom));
+  font-size: 12px;
+}
+.city-immersive-credit {
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.68);
 }
 
 /* 2D 合成画布在屏幕外保留节点；所有图片合成均在本地执行。 */
@@ -27,13 +82,14 @@
 /* 昼夜切换按钮：避开微信右上角原生胶囊，固定在画布右侧安全区下方 */
 .daynight {
   position: absolute;
+  z-index: 3;
   top: calc(168rpx + env(safe-area-inset-top));
   right: 30rpx;
-  width: 76rpx;
-  height: 76rpx;
-  line-height: 76rpx;
+  width: 44px;
+  height: 44px;
+  line-height: 44px;
   text-align: center;
-  font-size: 38rpx;
+  font-size: 22px;
   border-radius: 999rpx;
   background: rgba(12, 20, 38, 0.42);
   border: 2rpx solid rgba(255, 255, 255, 0.18);

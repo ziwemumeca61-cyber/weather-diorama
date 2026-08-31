@@ -45,6 +45,9 @@ Page({
     locating: false,
     errMsg: '',
     glFailed: false,
+    sceneReady: false,
+    cityImmersive: false,
+    cityControlsTopPx: 56,
     moodAssetEnabled: MOOD_ASSET_ENABLED,
     moodOpen: false,
     moodClosing: false,
@@ -84,6 +87,7 @@ Page({
   },
 
   onLoad(options) {
+    this._unloaded = false
     this.updateOfficialPublishAvailability()
     this.updateMoodLayout()
     // 分享出去的链接带城市参数，点开直接看那座城
@@ -112,6 +116,7 @@ Page({
       .select('#gl')
       .fields({ node: true, size: true })
       .exec((res) => {
+        if (this._unloaded) return
         const info = res && res[0]
         if (!info || !info.node) {
           console.error('[scene] canvas node not found')
@@ -131,6 +136,7 @@ Page({
           if (this._pendingCity) sceneApi.setCity(this._pendingCity)
           if (this._pendingNight != null) sceneApi.setNight(this._pendingNight)
           if (this._pendingKind) sceneApi.setWeather(this._pendingKind, this._pendingRainLevel)
+          this.setData({ sceneReady: true }, () => this.queueSceneResize())
         } catch (e) {
           // 设备不支持 WebGL 时不让整页作废：标记降级，天气信息照常可看
           console.error('[scene] init failed', e)
@@ -192,6 +198,7 @@ Page({
       } : {}),
     }, () => {
       this.refreshMoodArticle()
+      this.queueSceneResize()
     })
     if (districtLookupFailed) console.warn('[location] district lookup failed', d.locationLookup)
     const lastPlace = districtLocated ? place.district : (!districtLookupFailed ? displayName : '')
@@ -353,7 +360,7 @@ Page({
 
   onForecastMode(e) {
     const mode = e.currentTarget.dataset.mode
-    if (mode === 'hourly' || mode === 'daily') this.setData({ forecastMode: mode })
+    if (mode === 'hourly' || mode === 'daily') this.setData({ forecastMode: mode }, () => this.queueSceneResize())
   },
 
   onInput(e) {
@@ -429,10 +436,14 @@ Page({
     }
     // 弹层本身从屏幕顶部开始，这个值只负责把头部内容放到状态栏/胶囊下方。
     const headerTop = Math.ceil(Math.max(statusBarHeight + 12, Math.min(menuBottom + 8, 96), 44))
-    this.setData({ moodSheetTopPx: headerTop })
+    this.setData({
+      moodSheetTopPx: headerTop,
+      cityControlsTopPx: Math.ceil(Math.max(statusBarHeight + 12, menuBottom + 10, 44)),
+    })
   },
 
   onMoodToggle() {
+    if (this.data.cityImmersive) return
     const open = !this.data.moodOpen
     if (!open) {
       this.onMoodClose()
@@ -458,18 +469,7 @@ Page({
 
   finishMoodClose() {
     clearTimeout(this._moodCloseTimer)
-    this.setData({ moodOpen: false, moodClosing: false }, () => {
-      const restoreSceneSize = () => {
-        wx.createSelectorQuery()
-          .select('#gl')
-          .boundingClientRect((rect) => {
-            if (sceneApi && rect && rect.width && rect.height) sceneApi.resize(rect.width, rect.height)
-          })
-          .exec()
-      }
-      if (wx.nextTick) wx.nextTick(restoreSceneSize)
-      else setTimeout(restoreSceneSize, 0)
-    })
+    this.setData({ moodOpen: false, moodClosing: false }, () => this.queueSceneResize())
   },
 
   onMoodSheetAnimationEnd(e) {
@@ -920,6 +920,9 @@ Page({
   },
 
   onUnload() {
+    this._unloaded = true
+    this._sceneResizeSeq = (this._sceneResizeSeq || 0) + 1
+    clearTimeout(this._sceneResizeTimer)
     clearTimeout(this._moodCloseTimer)
     clearTimeout(this._officialFeedRefreshTimer)
     this._officialFeedRefreshTimer = null
@@ -930,5 +933,52 @@ Page({
 
   onResize() {
     this.updateMoodLayout()
+    this.queueSceneResize()
+  },
+
+  onShow() {
+    if (sceneApi && this.data.sceneReady) this.queueSceneResize()
+  },
+
+  onHide() {
+    if (sceneApi) sceneApi.onTouchEnd([])
+  },
+
+  onEnterCity() {
+    if (!sceneApi || !this.data.sceneReady || this.data.glFailed || this.data.moodOpen || this.data.cityImmersive) return
+    sceneApi.onTouchEnd([])
+    this.setData({ cityImmersive: true }, () => this.queueSceneResize())
+  },
+
+  onExitCity() {
+    if (!this.data.cityImmersive) return
+    if (sceneApi) sceneApi.onTouchEnd([])
+    // 仅隐藏/显示既有面板：预报 scroll-view、搜索输入和画报数据都不重建。
+    this.setData({ cityImmersive: false }, () => this.queueSceneResize())
+  },
+
+  queueSceneResize() {
+    if (this._unloaded) return
+    const sequence = (this._sceneResizeSeq || 0) + 1
+    this._sceneResizeSeq = sequence
+    clearTimeout(this._sceneResizeTimer)
+    let attempts = 0
+    const measure = () => {
+      if (this._unloaded || sequence !== this._sceneResizeSeq || !sceneApi || this.data.moodOpen) return
+      wx.createSelectorQuery()
+        .select('#gl')
+        .boundingClientRect((rect) => {
+          if (this._unloaded || sequence !== this._sceneResizeSeq || !sceneApi || this.data.moodOpen) return
+          if (!rect || !(rect.width > 0) || !(rect.height > 0)) {
+            if (++attempts < 3) this._sceneResizeTimer = setTimeout(measure, 40)
+            return
+          }
+          sceneApi.resize(rect.width, rect.height, { immersive: this.data.cityImmersive })
+        })
+        .exec()
+    }
+    // 等视图层完成布局，再更新相机比例与实际绘图缓冲区；旧回调不得覆盖新模式。
+    if (wx.nextTick) wx.nextTick(measure)
+    else this._sceneResizeTimer = setTimeout(measure, 0)
   },
 })

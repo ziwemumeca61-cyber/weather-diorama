@@ -866,6 +866,23 @@ export function createScene(canvas, opts) {
   let lastTouches = []
   let lastCenter = null
   let lastDistance = 0
+
+  // 沉浸模式保存的是轨道参数，而非每帧都会被重算的 camera.position。
+  let immersiveSnapshot = null
+  let immersiveMode = false
+  function fitViewportRadius(value, previousAspect, nextAspect) {
+    const before = Math.min(1, Math.max(0.01, previousAspect))
+    const after = Math.min(1, Math.max(0.01, nextAspect))
+    return THREE.MathUtils.clamp(value * before / after, MIN_RADIUS, MAX_RADIUS)
+  }
+  function syncCamera() {
+    camera.position.set(
+      cameraTarget.x + Math.sin(polar) * Math.cos(angle) * radius,
+      cameraTarget.y + Math.cos(polar) * radius,
+      cameraTarget.z + Math.sin(polar) * Math.sin(angle) * radius,
+    )
+    camera.lookAt(cameraTarget)
+  }
   const now = () => (Date.now ? Date.now() : new Date().getTime())
 
   function normalizeTouches(value, y) {
@@ -960,12 +977,7 @@ export function createScene(canvas, opts) {
     const t = (stamp - started) * 0.001
     lastFrame = stamp
     if (!dragging && !userInteracted) angle += dt * 0.042
-    camera.position.set(
-      cameraTarget.x + Math.sin(polar) * Math.cos(angle) * radius,
-      cameraTarget.y + Math.cos(polar) * radius,
-      cameraTarget.z + Math.sin(polar) * Math.sin(angle) * radius,
-    )
-    camera.lookAt(cameraTarget)
+    syncCamera()
 
     const damping = 1 - Math.exp(-3 * dt)
     current.sky.lerp(target.sky, damping)
@@ -1040,11 +1052,39 @@ export function createScene(canvas, opts) {
     onTouchStart,
     onTouchMove,
     onTouchEnd,
-    resize(w, h) {
-      if (!w || !h) return
-      camera.aspect = w / h
+    resize(w, h, options = {}) {
+      const width = Number(w), height = Number(h)
+      if (![width, height].every(Number.isFinite) || width <= 0 || height <= 0) return
+      const nextAspect = width / height
+      if (!Number.isFinite(nextAspect) || nextAspect <= 0) return
+      const nextImmersive = typeof options.immersive === 'boolean' ? options.immersive : immersiveMode
+
+      if (nextImmersive && !immersiveMode) {
+        immersiveSnapshot = {
+          angle, polar, radius, userInteracted, aspect: camera.aspect,
+          target: cameraTarget.clone(), city: currentCity,
+        }
+      }
+      if (!nextImmersive && immersiveMode && immersiveSnapshot && immersiveSnapshot.city === currentCity) {
+        angle = immersiveSnapshot.angle
+        polar = immersiveSnapshot.polar
+        radius = fitViewportRadius(immersiveSnapshot.radius, immersiveSnapshot.aspect, nextAspect)
+        userInteracted = immersiveSnapshot.userInteracted
+        cameraTarget.copy(immersiveSnapshot.target)
+      } else if (nextImmersive || immersiveMode) {
+        // 只按前后宽高比补偿；重复相同尺寸不会累乘放大，用户在全屏里仍可缩放。
+        radius = fitViewportRadius(radius, camera.aspect, nextAspect)
+      }
+      if (!nextImmersive) immersiveSnapshot = null
+      immersiveMode = nextImmersive
+      camera.aspect = nextAspect
       camera.updateProjectionMatrix()
-      renderer.setSize(w, h, false)
+      renderer.setSize(width, height, false)
+      dragging = false
+      lastTouches = []
+      lastCenter = null
+      lastDistance = 0
+      syncCamera()
     },
     dispose() {
       try { if (raf && canvas.cancelAnimationFrame) canvas.cancelAnimationFrame(raf) } catch (e) {}
