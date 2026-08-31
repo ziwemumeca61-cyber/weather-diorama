@@ -798,6 +798,12 @@ export function createScene(canvas, opts) {
         // 初始镜头提高俯视角，让地标广场、主体轮廓和屋顶不再被前排楼群吞掉。
         polar = Math.PI * 0.345
       }
+      // 专属模型可声明有限的前景视线净空，避免矮地标仍被圆形底座范围外的楼挡住。
+      const frontClearance = built.group.userData.frontClearanceZones
+      if (Array.isArray(frontClearance)) frontClearance.slice(0, 4).forEach((zone) => {
+        if (!zone || ![zone.x, zone.z, zone.r].every(Number.isFinite) || zone.r <= 0) return
+        clearZones.push({ x: zone.x, z: zone.z, r: Math.min(zone.r, 1.6) })
+      })
       built.group.traverse((object) => { if (object.isMesh) object.castShadow = true })
       landmark = built.group
       landmarkGlow = built.glow || []

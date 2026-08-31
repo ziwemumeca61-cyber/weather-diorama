@@ -7,6 +7,7 @@ import { makeConcaveRoof, makeHipRoof } from './roofKit'
 import { makeTileTexture, makeWindowTexture, darken } from './tileTexture'
 import { mulberry32, hashName } from './cityData'
 import { buildEnhancedLandmark } from './landmarksEnhanced'
+import { buildYantaiLandmarks } from './yantaiLandmarks'
 
 function std(color, opts) {
   return new THREE.MeshStandardMaterial(
@@ -2777,103 +2778,6 @@ function leaningPagoda() {
 
 // 城市名（中文，Open-Meteo language=zh 返回）→ builder
 
-// 烟台专属补景：蓬莱阁的多层海边阁楼，以及张裕酒文化的红砖酒庄。
-function penglaiPavilion() {
-  const group = new THREE.Group()
-  const glow = []
-  const cliff = std(0x9a8d7a, { roughness: 0.96, metalness: 0.02 })
-  const stone = std(0xd8cdb8, { roughness: 0.88 })
-  const wall = glowMat(0xb78b58, 0xffd39a)
-  const roofMat = tiledRoof(0x36596b, 7, 2, { roughness: 0.55, metalness: 0.22 })
-  glow.push(wall)
-
-  // 蓬莱阁不再只是通用亭子：海蚀台地、主阁、偏阁、城墙和临海长廊共同形成轮廓。
-  const headland = new THREE.Mesh(new THREE.CylinderGeometry(3.0, 3.45, 0.62, 10), cliff)
-  headland.position.y = 0.31
-  group.add(headland)
-
-  const main = pavilion({
-    tiers: 4, w: 3.35, d: 2.5, tierH: 1.02,
-    body: 0xc3a06b, roof: 0x36596b, platform: 0.7,
-  })
-  main.group.position.set(-0.45, 0.58, -0.05)
-  main.group.scale.setScalar(0.88)
-  group.add(main.group)
-  ;(main.glow || []).forEach((material) => glow.push(material))
-
-  const sideHall = new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.15, 1.35), wall)
-  sideHall.position.set(2.0, 1.16, 0.35)
-  const sideRoof = new THREE.Mesh(makeHipRoof(2.05, 1.65, 0.62, 0.7, 0.05), roofMat)
-  sideRoof.position.set(2.0, 1.73, 0.35)
-  const wallWalk = new THREE.Mesh(new THREE.BoxGeometry(5.7, 0.48, 0.34), stone)
-  wallWalk.position.set(0.15, 0.86, 1.88)
-  group.add(sideHall, sideRoof, wallWalk)
-
-  const merlonGeo = new THREE.BoxGeometry(0.22, 0.22, 0.4)
-  const merlons = new THREE.InstancedMesh(merlonGeo, stone, 11)
-  const matrix = new THREE.Matrix4()
-  for (let i = 0; i < 11; i++) {
-    matrix.makeTranslation(-2.35 + i * 0.5, 1.2, 1.88)
-    merlons.setMatrixAt(i, matrix)
-  }
-  merlons.instanceMatrix.needsUpdate = true
-  group.add(merlons)
-  return { group, glow }
-}
-
-function zhangyuChateau() {
-  const group = new THREE.Group()
-  const glow = []
-  const brick = std(0x9f4d36, { roughness: 0.8 })
-  const stone = std(0xd8c5aa, { roughness: 0.72 })
-  const roof = std(0x405463, { roughness: 0.56, metalness: 0.2, envMapIntensity: 0.9 })
-  const dark = std(0x352b29, { roughness: 0.86 })
-  const windowMat = glowMat(0x49657a, 0xffd08a)
-  glow.push(windowMat)
-
-  // 张裕酒文化建筑群：砖石主楼、双塔楼、坡屋顶、石带和成排拱窗。
-  const main = new THREE.Mesh(new THREE.BoxGeometry(3.3, 1.75, 1.55), brick)
-  main.position.y = 1.05
-  const wing = new THREE.Mesh(new THREE.BoxGeometry(1.25, 1.28, 1.36), stone)
-  wing.position.set(2.05, 0.8, 0)
-  const roofMain = new THREE.Mesh(new THREE.ConeGeometry(1.48, 0.82, 4), roof)
-  roofMain.position.set(-0.15, 2.34, 0)
-  roofMain.rotation.y = Math.PI * 0.25
-  group.add(main, wing, roofMain)
-
-  for (const sx of [-1, 1]) {
-    const turret = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.48, 2.18, 10), sx < 0 ? brick : stone)
-    turret.position.set(sx * 1.82, 1.25, 0.02)
-    const cap = new THREE.Mesh(new THREE.ConeGeometry(0.62, 0.78, 10), roof)
-    cap.position.set(sx * 1.82, 2.73, 0.02)
-    group.add(turret, cap)
-  }
-
-  const band = new THREE.Mesh(new THREE.BoxGeometry(3.45, 0.12, 1.62), stone)
-  band.position.set(-0.05, 1.42, 0)
-  const entry = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.86, 0.06), dark)
-  entry.position.set(-0.25, 0.48, 0.805)
-  group.add(band, entry)
-
-  const windows = new THREE.InstancedMesh(new THREE.BoxGeometry(0.28, 0.38, 0.035), windowMat, 10)
-  const matrix = new THREE.Matrix4()
-  let wi = 0
-  for (const y of [0.72, 1.28]) {
-    for (const x of [-1.35, -0.78, 0.35, 0.92, 1.46]) {
-      matrix.makeTranslation(x, y, 0.805)
-      windows.setMatrixAt(wi++, matrix)
-    }
-  }
-  windows.instanceMatrix.needsUpdate = true
-  group.add(windows)
-
-  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.42, 10), dark)
-  barrel.position.set(0.66, 0.28, 0.92)
-  barrel.rotation.z = Math.PI * 0.5
-  group.add(barrel)
-  return { group, glow }
-}
-
 const BUILDERS = {
   上海: () =>
     set([
@@ -2989,12 +2893,7 @@ const BUILDERS = {
       { b: dachengHall, x: -3.2, z: 0.6, s: 0.9, ry: -0.24 },
       { b: cityGate, x: 3.2, z: -0.4, s: 0.72, ry: 0.32 },
     ]), // 大成殿 + 万仞宫墙
-  烟台: () =>
-    set([
-      { b: lighthouse, x: -3.15, z: 1.15, s: 0.82, name: '烟台山灯塔' }, // 烟台山灯塔
-      { b: penglaiPavilion, x: 0.1, z: 1.35, s: 0.72, ry: -0.22, name: '蓬莱阁' }, // 蓬莱阁
-      { b: zhangyuChateau, x: 3.0, z: -1.55, s: 0.76, ry: 0.2, name: '张裕酒文化博物馆' }, // 张裕酒文化博物馆
-    ]),
+  烟台: buildYantaiLandmarks,
   东营: oilField, // 黄河口油城
   潍坊: kiteCity, // 风筝之都 + 渤海之眼
   威海: gateOfHappiness, // 幸福门
@@ -3530,7 +3429,7 @@ function polishLandmark(key, result) {
       z: center.z,
       radius: Math.max(0.9, Math.min(2.65, Math.hypot(size.x, size.z) * 0.34)),
     })
-    if (node.userData.landmarkName && labelAnchors.length < 3) {
+    if (node.userData.landmarkName && labelAnchors.length < (root.userData.landmarkLabelLimit || 3)) {
       labelAnchors.push({
         name: node.userData.landmarkName,
         hero: node.userData.landmarkRole === 'hero',
@@ -3541,7 +3440,7 @@ function polishLandmark(key, result) {
     }
   })
 
-  if (anchors.length) {
+  if (anchors.length && !root.userData.noPresentationPads) {
     // 每个地标各自落在石质展示台上；用 InstancedMesh 合为两次绘制，
     // 比套住整组建筑的一只巨大霓虹圈更稳重，也能清楚区分主地标和景点。
     const accent = GENERIC_ACCENTS[hashName(key) % GENERIC_ACCENTS.length]
