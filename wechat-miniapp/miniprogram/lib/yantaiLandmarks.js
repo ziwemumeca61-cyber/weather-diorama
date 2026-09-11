@@ -321,10 +321,12 @@ export function buildYantaiLandmarks() {
   const group = new THREE.Group()
   const glow = []
   const entries = [
-    [yantaiHillLighthouse, -3.10, -1.70, .87, 'hero'],
-    [penglaiPavilion, -2.60, 4.45, .73, 'tourist'],
-    [changyuWineMuseum, 2.35, 3.05, .65, 'secondary'],
-    [yantaiCityMuseum, 2.85, -2.65, .66, 'secondary'],
+    // 灯塔放到城市外围的海岸展示位，避免再次被中心高楼包住。
+    // 其余三处留在城市内部，形成“海岸灯塔 + 城市文化地标”的空间关系。
+    [yantaiHillLighthouse, -5.75, -4.65, .92, 'hero'],
+    [penglaiPavilion, -2.45, 4.35, .73, 'tourist'],
+    [changyuWineMuseum, 2.15, 3.00, .65, 'secondary'],
+    [yantaiCityMuseum, 2.65, -2.20, .66, 'secondary'],
   ]
   const nodes = entries.map(([build,x,z,s,role],index) => {
     const result=build(),node=result.group
@@ -342,7 +344,9 @@ export function buildYantaiLandmarks() {
   group.userData.landmarkLabelLimit=4
   // 默认东南视角的三条局部视线净空；只让前排少数楼位避让，不削减背景高层。
   group.userData.frontClearanceZones=[
-    {x:-.35,z:6.05,r:1.10}, {x:4.70,z:5.90,r:1.15}, {x:5.90,z:-.10,r:1.10},
+    // 灯塔前方增加一块海岸视线走廊；另外三块继续保护城市内部地标。
+    {x:-5.15,z:-2.55,r:1.35}, {x:-.35,z:6.05,r:1.10},
+    {x:4.70,z:5.90,r:1.15}, {x:5.90,z:-.10,r:1.10},
   ]
   group.userData.noPresentationPads=true
   group.userData.secondaryLandmarks=nodes.slice(1).map(node=>node.userData.landmarkName)
