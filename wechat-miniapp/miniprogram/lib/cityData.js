@@ -57,13 +57,21 @@ export function generateCity(seed, clearZones, calmZones, maxZ, hueShift, skylin
   const absoluteHeightCap = Number(skyline.absoluteHeightCap) || Infinity
   const footprintScale = THREE.MathUtils.clamp(Number(skyline.footprintScale) || 1, 0.88, 1.08)
   const towerBias = THREE.MathUtils.clamp(Number(skyline.towerBias) || 1, 0.8, 1.35)
+  const towerFootprintScale = THREE.MathUtils.clamp(Number(skyline.towerFootprintScale) || 0.68, 0.68, 1)
+  const towerSetbackChance = THREE.MathUtils.clamp(
+    skyline.towerSetbackChance == null ? 0.76 : Number(skyline.towerSetbackChance),
+    0,
+    0.9,
+  )
   const clearPadding = THREE.MathUtils.clamp(Number(skyline.clearPadding) || 0.38, 0.25, 0.9)
   const splitThreshold = 0.86 - Math.max(0, densityScale - 1) * 0.09
   const clear = clearZones || [{ x: CITY.landmark.x, z: CITY.landmark.z, r: 1.5 }]
   const calm = calmZones || []
-  // 多地标组合的视觉中心不一定等于旧版 CITY.landmark。楼群围绕第一块
-  // 地标净空区生长，核心高度梯度才会真正衬托当前城市的主角。
-  const focus = clear[0] || CITY.landmark
+  const configuredCoreX = Number(skyline.skylineCoreX)
+  const configuredCoreZ = Number(skyline.skylineCoreZ)
+  const focus = Number.isFinite(configuredCoreX) && Number.isFinite(configuredCoreZ)
+    ? { x: configuredCoreX, z: configuredCoreZ }
+    : (clear[0] || CITY.landmark)
   const zEnd = maxZ == null ? CITY.maxZ : maxZ
   const shift = hueShift || 0
   const hsl = { h: 0, s: 0, l: 0 }
@@ -76,8 +84,6 @@ export function generateCity(seed, clearZones, calmZones, maxZ, hueShift, skylin
       let blocked = false
       for (let i = 0; i < clear.length; i++) {
         const zone = clear[i]
-        // clearZones 是地标中心的净空半径；再加一圈 lot padding，避免
-        // 楼体底座和 splitLot 附楼从圆边缘探进广场。
         if (Math.hypot(x - zone.x, z - zone.z) < zone.r + clearPadding) {
           blocked = true
           break
@@ -89,16 +95,12 @@ export function generateCity(seed, clearZones, calmZones, maxZ, hueShift, skylin
       const jitterX = (rand() - 0.5) * 0.5
       const jitterZ = (rand() - 0.5) * 0.5
       let footprint = (0.74 + rand() * 0.48) * footprintScale
-      // densityScale 主要提高主楼 + 附楼地块比例，仍沿用同一网格和 InstancedMesh，
-      // 烟台看起来更密，但不会按栋增加独立 draw call。
       const splitLot = footprint > splitThreshold && rand() < Math.min(0.58, 0.34 * densityScale)
       if (splitLot) footprint *= 0.74
       const base = 0.82 + rand() * 1.05
-      // 旧公式在极端随机值下会生成接近 30 单位的普通楼，而专属地标通常只有
-      // 8–13 单位，随机楼反客为主。这里把背景天际线控制在地标之下。
       let height = (base + Math.pow(coreness, 1.22) * (4.8 + rand() * 10.4)) * heightScale
       if (coreness > 0.5 && rand() < Math.min(0.48, 0.3 * towerBias)) {
-        footprint *= 0.68
+        footprint *= towerFootprintScale
         height *= 1.16 + rand() * 0.14
       }
       const skylineHeight = height
@@ -127,11 +129,9 @@ export function generateCity(seed, clearZones, calmZones, maxZ, hueShift, skylin
       if (height <= 5.5) {
         if (coreness < 0.42 && height < 2.4) roof = rr < 0.22 ? 'gable' : rr < 0.4 ? 'hip' : 'flat'
         else roof = rr < 0.12 ? 'hip' : 'flat'
-      } else if (style === 'tower' && rr < 0.76) {
+      } else if (style === 'tower' && rr < towerSetbackChance) {
         roof = 'setback'
       }
-      // 主体不再全部使用 BoxGeometry：高层混入收分塔、八边塔和菱形塔，
-      // 仍然按类型 InstancedMesh 合批，不用外部模型也能打破“灰盒阵列”。
       const formRoll = rand()
       let form = 'box'
       if (style === 'tower') form = formRoll < 0.34 ? 'taper' : formRoll < 0.62 ? 'octagon' : formRoll < 0.78 ? 'diamond' : 'box'
@@ -151,6 +151,7 @@ export function generateCity(seed, clearZones, calmZones, maxZ, hueShift, skylin
         style,
         form,
         yaw,
+        cleanHighriseRoofFrom: Number(skyline.cleanHighriseRoofFrom) || 0,
       })
       if (splitLot) {
         const alongX = rand() < 0.5
