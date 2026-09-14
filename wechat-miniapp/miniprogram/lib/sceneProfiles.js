@@ -18,7 +18,6 @@ const BASE_SKYLINE = {
   footprintScale: 0.94,
   towerBias: 1.1,
   distributedLandmarks: true,
-  // 地标周围的建筑只做低矮陪衬，且位置留出一圈可读净空。
   landmarkVisibilityPadding: 0.5,
   clearPadding: 0.38,
   calmPadding: 0.75,
@@ -34,9 +33,15 @@ const SKYLINE_PROFILES = {
     densityScale: 1.45,
     footprintScale: 0.92,
     towerBias: 0.92,
+    towerFootprintScale: 0.84,
+    towerSetbackChance: 0.08,
+    cleanHighriseRoofFrom: 5.4,
+    // 高层核心放在城市东侧；灯塔位于西侧海岸低层带，避免高楼围着灯塔生长。
+    skylineCoreX: 3.35,
+    skylineCoreZ: -0.35,
     heroClearRadius: 2.6,
-    heroCalmPadding: 1.35,
-    heroCalmHeight: 4.2,
+    heroCalmPadding: 2.05,
+    heroCalmHeight: 2.75,
     landmarkVisibilityPadding: 0.58,
     clearPadding: 0.42,
     calmPadding: 0.8,
@@ -63,7 +68,6 @@ const SKYLINE_PROFILES = {
   taian: { heightScale: 0.98, heightCapScale: 0.96, densityScale: 1.04, calmHeight: 2.5 },
   qufu: { heightScale: 0.94, heightCapScale: 0.92, densityScale: 1.0, calmHeight: 2.35 },
 }
-// 顺序与 Web 端注册表一致，第一条命中即采用该城市的水景构图。
 const PROFILES = [
   ['beijing', /北京|beijing/i, { kind: 'river', z0: 9, boats: false, bridge: false }],
   ['guangzhou', /广州|guangzhou|canton/i],
@@ -124,22 +128,16 @@ function genericVariant(name) {
   const key = (name && name.trim()) || 'City'
   const seed = hashName(key)
   const rand = mulberry32(seed)
-  rand() // landmark kind
+  rand()
   const hueShift = (rand() - 0.5) * 0.16
-  rand() // accent
-  rand() // landmark yaw
+  rand()
+  rand()
   const wr = rand()
   let water
   if (wr < 0.55) {
     water = { kind: 'river', z0: 6.6 + rand() * 1.8, boats: rand() < 0.6, bridge: rand() < 0.4 }
   } else if (wr < 0.8) {
-    water = {
-      kind: 'lake',
-      x: -0.4 + (rand() - 0.5) * 2.4,
-      z: 3.2 + rand() * 0.8,
-      rx: 2.4 + rand() * 1,
-      rz: 1.9 + rand() * 0.6,
-    }
+    water = { kind: 'lake', x: -0.4 + (rand() - 0.5) * 2.4, z: 3.2 + rand() * 0.8, rx: 2.4 + rand() * 1, rz: 1.9 + rand() * 0.6 }
   } else water = { kind: 'none' }
   return { seed, hueShift, water }
 }
@@ -153,32 +151,15 @@ export function resolveWater(spec) {
       riverZ0: z0,
       groundZ1: z0,
       cityMaxZ: Math.min(MAX_BLOCK_Z, z0 - 0.9),
-      // 宽水面统一保留小船；只有窄水面才自动无船，避免配置遗漏让河面变空。
       boats: CITY.trayHalf - z0 > 2.9,
       bridge: value.bridge == null ? true : value.bridge,
       lake: null,
     }
   }
   if (value.kind === 'lake') {
-    return {
-      spec: value,
-      riverZ0: null,
-      groundZ1: LAND_Z1,
-      cityMaxZ: MAX_BLOCK_Z,
-      boats: false,
-      bridge: false,
-      lake: { x: value.x, z: value.z, rx: value.rx, rz: value.rz },
-    }
+    return { spec: value, riverZ0: null, groundZ1: LAND_Z1, cityMaxZ: MAX_BLOCK_Z, boats: false, bridge: false, lake: { x: value.x, z: value.z, rx: value.rx, rz: value.rz } }
   }
-  return {
-    spec: value,
-    riverZ0: null,
-    groundZ1: LAND_Z1,
-    cityMaxZ: MAX_BLOCK_Z,
-    boats: false,
-    bridge: false,
-    lake: null,
-  }
+  return { spec: value, riverZ0: null, groundZ1: LAND_Z1, cityMaxZ: MAX_BLOCK_Z, boats: false, bridge: false, lake: null }
 }
 
 export function profileForCity(name) {
@@ -186,9 +167,6 @@ export function profileForCity(name) {
   for (let i = 0; i < PROFILES.length; i++) {
     const p = PROFILES[i]
     if (p[1].test(value)) {
-      // 登记城市过去全部共用 REGISTERED_SEED，除了地标和水面外楼群几乎一模一样。
-      // 用规范城市 id 派生稳定种子和轻微色相偏移，让每城拥有自己的街区密度、
-      // 高低轮廓与材质气质，同时保持同一城市每次进入都完全一致。
       const signature = hashName(p[0])
       const rand = mulberry32((signature ^ REGISTERED_SEED) >>> 0)
       return {
