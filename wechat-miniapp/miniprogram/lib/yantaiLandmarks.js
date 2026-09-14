@@ -21,7 +21,6 @@ function mesh(g, geo, mat, x, y, z, ry) {
   g.add(o)
   return o
 }
-// 重复窗格、栏杆、垛口按材质合批，不为每一根细杆增加绘制调用。
 function boxes(g, mat, rows) {
   if (!rows.length) return
   const batch = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), mat, rows.length)
@@ -70,8 +69,6 @@ function named(g, name, glow, features) {
   return { group: g, glow: glow || [] }
 }
 
-// 宽阔灰石古堡底座 + 乳白多面塔身 + 外挑八角观景层 + 缩进灯室。
-// 红色只用于小型灯室帽，不再用红尖锥 + 看守小屋代替整个地标。
 export function yantaiHillLighthouse() {
   const g = new THREE.Group()
   const stone = stoneMaterial()
@@ -99,9 +96,7 @@ export function yantaiHillLighthouse() {
   const openings = [[0.47, 0.73, 0.035, 0, 0.45, 1.287]]
   for (const x of [-1.16, -0.64, 0.64, 1.16]) openings.push([0.21, 0.30, 0.035, x, 1.25, 1.003])
   boxes(g, dark, openings)
-
   mesh(g, new THREE.CylinderGeometry(0.56, 0.63, 4.72, 8), white, 0, 3.98, -0.12, Math.PI / 8)
-  // 塔身竖直折面与狭窗保留清晰比例，不加假螺旋或横向套环。
   boxes(g, dark, [[0.075, 0.44, 0.025, -0.18, 5.62, 0.455]])
   mesh(g, new THREE.CylinderGeometry(1.04, 0.64, 0.38, 8), ledge, 0, 6.46, -0.12, Math.PI / 8)
   mesh(g, new THREE.CylinderGeometry(1.04, 1.04, 0.20, 8), white, 0, 6.75, -0.12, Math.PI / 8)
@@ -125,7 +120,6 @@ export function yantaiHillLighthouse() {
   return named(g, '烟台山灯塔', [glass], ['castle-base', 'faceted-white-shaft', 'octagonal-observation-deck', 'stepped-lantern'])
 }
 
-// 歇山顶：下半部四坡翘檐，上半部双坡山面，区别于通用圆锥宝塔顶。
 function xieshanRoof(g, w, d, h, y, roof, gable, ridge) {
   mesh(g, makeHipRoof(w, d, h * 0.56, 0.70, 0.14), roof, 0, y, 0)
   const halfW = w * 0.35
@@ -163,7 +157,6 @@ export function penglaiPavilion() {
   const gold = material(0xc4aa6f)
   const roof = material(0xffffff, { map: makeTileTexture(0x526860, 0x394f48, 4, 3), roughness: 0.76, side: THREE.DoubleSide })
   const dark = windows(0x302d28)
-  // 非圆盘台地。正面石阶和丹崖台基让主阁与海边环境衔接。
   boxes(g, stone, [[4.45, 0.34, 3.08, 0, 0.17, 0], [4.12, 0.14, 2.78, 0, 0.41, 0]])
   const steps = []
   for (let i = 0; i < 4; i++) steps.push([2.0, 0.105, 0.22, 0, 0.052 + i * 0.104, 2.15 - i * 0.22])
@@ -175,7 +168,6 @@ export function penglaiPavilion() {
     pillars.push([0.10, 1.20, 0.10, x, 1.10, z], [0.085, 0.98, 0.085, x, 2.45, z])
   }
   beams.push([3.9, 0.12, 2.46, 0, 1.75, 0], [3.85, 0.14, 2.43, 0, 2.99, 0])
-  // 上层朱赤明廊，窗格为几何，手机缩小后仍保留横向层次。
   const balcony = [[3.88, 0.12, 2.50, 0, 1.98, 0], [3.93, 0.065, 0.07, 0, 2.38, 1.22], [3.93, 0.065, 0.07, 0, 2.12, 1.22]]
   for (let i = 0; i < 24; i++) lattice.push([0.04, 0.28, 0.045, -1.84 + i * 0.16, 2.24, 1.22])
   for (const sx of [-1, 1]) {
@@ -192,7 +184,6 @@ export function penglaiPavilion() {
   const brackets = []
   for (let i = -7; i <= 7; i++) brackets.push([0.10, 0.12, 0.25, i * 0.25, 1.69, 1.18], [0.10, 0.12, 0.23, i * 0.245, 2.90, 1.16])
   boxes(g, green, brackets)
-  // 两重屋檐，仅两层主阁，正立面蓝底金边牌匾不再增加虚构楼层。
   mesh(g, makeHipRoof(4.35, 2.95, 0.40, 0.70, 0.16), roof, 0, 1.81, 0)
   xieshanRoof(g, 4.12, 2.82, 0.83, 3.03, roof, wood, green)
   boxes(g, gold, [[1.26, 0.34, 0.05, 0, 1.56, 1.25]])
@@ -200,8 +191,6 @@ export function penglaiPavilion() {
   return named(g, '蓬莱阁', [dark], ['two-storeys', 'xieshan-roof', 'red-open-balcony', 'painted-beams'])
 }
 
-
-// 直坡四坡瓦顶；酒文化博物馆不使用中式翘檐，也不使用酒庄尖塔。
 function straightHipRoof(w, d, h) {
   const a = w / 2, b = d / 2, r = w * 0.20
   const p = [
@@ -237,12 +226,9 @@ export function changyuWineMuseum() {
   ])
   mesh(g, straightHipRoof(5.90,2.78,.90),roof,0,3.96,0)
   const parapets=[]
-  for (const x of [-2.76,-1.40,0,1.40,2.76]) {
-    parapets.push([.15,.32,.18,x,4.06,1.38],[.23,.065,.25,x,4.25,1.38])
-  }
+  for (const x of [-2.76,-1.40,0,1.40,2.76]) parapets.push([.15,.32,.18,x,4.06,1.38],[.23,.065,.25,x,4.25,1.38])
   boxes(g,trim,parapets)
   const panes=[],borders=[],frames=[]
-  // 前后均保留两层窗序；一层正中为入口，不塞一扇假窗。
   for (const z of [-1.372,1.372]) for (const x of [-2.28,-1.14,0,1.14,2.28]) {
     for(const y of [1.30,2.82]) {
       if(z>0&&x===0&&y<2)continue
@@ -252,7 +238,6 @@ export function changyuWineMuseum() {
       frames.push([.027,.86,.045,x,y,z*1.01],[.66,.035,.045,x,y+.23,z*1.01])
     }
   }
-  // 两侧立面窗，旋转查看时不再只剩空白方盒。
   for(const x of [-2.91,2.91])for(const z of [-.75,.35])for(const y of [1.30,2.82]){
     panes.push([.026,.88,.62,x,y,z])
     borders.push([.10,.07,.76,x,y+.5,z],[.13,.08,.76,x,y-.5,z])
@@ -262,13 +247,10 @@ export function changyuWineMuseum() {
   boxes(g,gold,[[1.56,.14,.06,0,1.90,1.46],[1.02,.065,.055,0,1.67,1.47]])
   boxes(g,paving,[[5.98,.65,2.93,0,.325,0]])
   const stairs=[],rails=[]
-  // 正面双侧台阶 + 中央缓坡，是入口最容易辨认的空间特征。
   for(let i=0;i<7;i++){
     const y=.047+i*.091,z=3.10-i*.23
     stairs.push([1.92,.094,.24,-1.83,y,z],[1.92,.094,.24,1.83,y,z])
-    for(const x of [-2.76,-.82,.82,2.76]){
-      rails.push([.10,.42,.11,x,y+.21,z],[.17,.06,.17,x,y+.44,z])
-    }
+    for(const x of [-2.76,-.82,.82,2.76]) rails.push([.10,.42,.11,x,y+.21,z],[.17,.06,.17,x,y+.44,z])
   }
   boxes(g,paving,stairs);boxes(g,trim,rails)
   const ramp=mesh(g,new THREE.BoxGeometry(1.40,.08,1.77),paving,0,.34,2.32)
@@ -285,7 +267,6 @@ export function yantaiCityMuseum() {
   const mullion = material(0x35464b,{roughness:.45,metalness:.38})
   const wings=[],columns=[],detail=[],grid=[],panes=[]
   boxes(g,stone,[[6.55,3.55,2.9,0,2.22,-.12]])
-  // 宽阔玻璃门厅位于石柱之后，而不是用曲线屋顶代表市博物馆。
   boxes(g,glass,[[5.22,3.13,.045,0,2.21,1.36]])
   wings.push([.70,3.83,3.03,-2.98,2.31,-.1],[.70,3.83,3.03,2.98,2.31,-.1])
   for(const x of [-2.50,-1.50,-.50,.50,1.50,2.50]){
@@ -300,30 +281,24 @@ export function yantaiCityMuseum() {
   ]))
   for(let i=-5;i<=5;i++)grid.push([.022,3.10,.035,i*.47,2.2,1.396])
   for(const y of [.97,1.57,2.17,2.77,3.37])grid.push([5.2,.025,.035,0,y,1.396])
-  // 中央三组深色玻璃门及左右侧窗。
   for(const x of [-1,0,1])panes.push([.68,.83,.045,x,1.04,1.43])
-  for(const x of [-3.34,3.34])for(const z of [-1.03,-.2,.65]){
-    panes.push([.035,1.9,.50,x,2.22,z])
-  }
+  for(const x of [-3.34,3.34])for(const z of [-1.03,-.2,.65]) panes.push([.035,1.9,.50,x,2.22,z])
   boxes(g,mullion,grid);boxes(g,glass,panes)
   const steps=[]
   for(let i=0;i<6;i++)steps.push([6.75,.085,.24,0,.043+i*.084,3.02-i*.24])
   boxes(g,light,steps)
-  // 檐下重复饰块合批，保留长水平檐线。
   const cornice=[]
   for(let i=-12;i<=12;i++)cornice.push([.10,.10,.12,i*.26,4.08,1.62])
   boxes(g,inset,cornice)
   return named(g,'烟台市博物馆',[glass],['six-stone-columns','flat-entablature','recessed-glass-entrance','broad-front-stairs'])
 }
 
-// 四处建筑按默认东南视角错位，不用圆形展台包住建筑，不占用外围高层带。
 export function buildYantaiLandmarks() {
   const group = new THREE.Group()
   const glow = []
   const entries = [
-    // 灯塔放到城市外围的海岸展示位，避免再次被中心高楼包住。
-    // 其余三处留在城市内部，形成“海岸灯塔 + 城市文化地标”的空间关系。
-    [yantaiHillLighthouse, -5.75, -4.65, .92, 'hero'],
+    // 灯塔固定在西侧海岸低层带，与东侧高层核心拉开距离。
+    [yantaiHillLighthouse, -6.25, -4.15, .94, 'hero'],
     [penglaiPavilion, -2.45, 4.35, .73, 'tourist'],
     [changyuWineMuseum, 2.15, 3.00, .65, 'secondary'],
     [yantaiCityMuseum, 2.65, -2.20, .66, 'secondary'],
@@ -342,10 +317,8 @@ export function buildYantaiLandmarks() {
   group.userData.landmarkCount=nodes.length
   group.userData.landmarkFocusNode=nodes[0]
   group.userData.landmarkLabelLimit=4
-  // 默认东南视角的三条局部视线净空；只让前排少数楼位避让，不削减背景高层。
   group.userData.frontClearanceZones=[
-    // 灯塔前方增加一块海岸视线走廊；另外三块继续保护城市内部地标。
-    {x:-5.15,z:-2.55,r:1.35}, {x:-.35,z:6.05,r:1.10},
+    {x:-5.70,z:-2.20,r:1.45}, {x:-.35,z:6.05,r:1.10},
     {x:4.70,z:5.90,r:1.15}, {x:5.90,z:-.10,r:1.10},
   ]
   group.userData.noPresentationPads=true
