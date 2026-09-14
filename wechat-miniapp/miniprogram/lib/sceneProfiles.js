@@ -26,14 +26,14 @@ const BASE_SKYLINE = {
   heroFocusWeight: 0.52,
 }
 const SKYLINE_PROFILES = {
-  // 烟台：楼群更高、更密，海岸地标分散排布。
+  // 烟台：保持楼群密度，但收住普通高层的高度，避免少数随机塔楼显得突兀。
   yantai: {
-    heightScale: 1.18,
-    heightCapScale: 1.08,
-    absoluteHeightCap: 11.2,
+    heightScale: 1.04,
+    heightCapScale: 0.96,
+    absoluteHeightCap: 8.8,
     densityScale: 1.45,
     footprintScale: 0.92,
-    towerBias: 1.18,
+    towerBias: 0.92,
     heroClearRadius: 2.6,
     heroCalmPadding: 1.35,
     heroCalmHeight: 4.2,
