@@ -21,19 +21,6 @@ function normalizeCityName(name) {
     .replace(/(?:市|地区|盟|自治州)$/, '')
 }
 
-function canUseNativeLocation() {
-  try {
-    const info = wx.getDeviceInfo ? wx.getDeviceInfo() : wx.getSystemInfoSync()
-    const platform = String(info && info.platform || '').toLowerCase()
-    // 微信开发者工具 / PC 端基础库的 wx.getLocation 会直接在 SDK 层抛
-    // SystemError: timeout；区县自动定位只在手机端启用，桌面端使用缓存城市。
-    return platform === 'android' || platform === 'ios'
-  } catch (error) {
-    console.warn('[location] platform detection unavailable', error)
-    return false
-  }
-}
-
 Page({
   data: {
     place: '—',
@@ -110,18 +97,11 @@ Page({
       return
     }
     const last = wx.getStorageSync(LAST_PLACE) || wx.getStorageSync(LAST_CITY) || ''
-    // 桌面开发者工具直接走缓存城市，不再触发位置权限查询。
-    // 部分 Windows DevTools 版本即使不真正调用 getLocation，getSetting 在
-    // userLocation 授权链路上也可能由 AppService SDK 抛 SystemError: timeout。
-    if (!canUseNativeLocation()) {
-      this.load(last || '上海')
-      return
-    }
     // 已授权过定位就静默自动定位；没授权则不弹窗打扰，先显示上次看的城市
     wx.getSetting({
       success: (res) => {
         const authed = res && res.authSetting && res.authSetting['scope.userLocation']
-        if (authed && canUseNativeLocation()) this.locate(true)
+        if (authed) this.locate(true)
         else this.load(last || '上海')
       },
       fail: () => this.load(last || '上海'),
@@ -327,11 +307,6 @@ Page({
   /** silent=true 时失败不弹提示，静默退回上次区县或城市（用于启动自动定位） */
   locate(silent) {
     if (this.data.locating) return
-    if (!canUseNativeLocation()) {
-      if (!silent) wx.showToast({ title: '请使用手机真机定位', icon: 'none' })
-      if (this.data.place === '—') this.load(wx.getStorageSync(LAST_PLACE) || wx.getStorageSync(LAST_CITY) || '上海')
-      return
-    }
     this.setData({ locating: true })
     if (!silent && wx.showLoading) wx.showLoading({ title: '正在定位区县', mask: true })
 
