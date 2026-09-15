@@ -51,6 +51,9 @@ const SKYLINE_PROFILES = {
   shanghai: {
     heightScale: 1.18,
     heightCapScale: 1.12,
+    // 上海中心是上海天际线的最高视觉锚点。普通程序化楼体（含约 0.32 的屋顶设备）
+    // 必须明显低于上海中心约 13.4 的总高度，避免随机高楼反客为主。
+    absoluteHeightCap: 11.0,
     densityScale: 1.38,
     footprintScale: 0.98,
     towerBias: 1.26,

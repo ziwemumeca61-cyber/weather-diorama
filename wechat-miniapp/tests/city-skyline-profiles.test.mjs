@@ -40,6 +40,7 @@ const qingdao = profilesModule.namespace.profileForCity('青岛').skyline
 const weihai = profilesModule.namespace.profileForCity('威海').skyline
 assert.ok(shanghai.densityScale > beijing.densityScale, 'Shanghai should read denser than Beijing')
 assert.ok(shanghai.heightScale > beijing.heightScale, 'Shanghai should read taller than Beijing')
+assert.ok(shanghai.absoluteHeightCap <= 11.0, 'Shanghai generic buildings must stay below the landmark crown')
 assert.ok(beijing.heroClearRadius > shanghai.heroClearRadius, 'Beijing historic core needs more open space')
 assert.ok(qingdao.densityScale > weihai.densityScale, 'Qingdao should carry the stronger coastal skyline')
 assert.ok(weihai.absoluteHeightCap < qingdao.absoluteHeightCap, 'Weihai should stay calmer and lower than Qingdao')
