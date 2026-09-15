@@ -21,6 +21,19 @@ function normalizeCityName(name) {
     .replace(/(?:市|地区|盟|自治州)$/, '')
 }
 
+function canUseNativeLocation() {
+  try {
+    const info = wx.getDeviceInfo ? wx.getDeviceInfo() : wx.getSystemInfoSync()
+    const platform = String(info && info.platform || '').toLowerCase()
+    // 微信开发者工具 / PC 端基础库的 wx.getLocation 会直接在 SDK 层抛
+    // SystemError: timeout；区县自动定位只在手机端启用，桌面端使用缓存城市。
+    return platform === 'android' || platform === 'ios'
+  } catch (error) {
+    console.warn('[location] platform detection unavailable', error)
+    return false
+  }
+}
+
 Page({
   data: {
     place: '—',
@@ -101,7 +114,7 @@ Page({
     wx.getSetting({
       success: (res) => {
         const authed = res && res.authSetting && res.authSetting['scope.userLocation']
-        if (authed) this.locate(true)
+        if (authed && canUseNativeLocation()) this.locate(true)
         else this.load(last || '上海')
       },
       fail: () => this.load(last || '上海'),
@@ -307,6 +320,11 @@ Page({
   /** silent=true 时失败不弹提示，静默退回上次区县或城市（用于启动自动定位） */
   locate(silent) {
     if (this.data.locating) return
+    if (!canUseNativeLocation()) {
+      if (!silent) wx.showToast({ title: '请使用手机真机定位', icon: 'none' })
+      if (this.data.place === '—') this.load(wx.getStorageSync(LAST_PLACE) || wx.getStorageSync(LAST_CITY) || '上海')
+      return
+    }
     this.setData({ locating: true })
     if (!silent && wx.showLoading) wx.showLoading({ title: '正在定位区县', mask: true })
 
