@@ -110,6 +110,13 @@ Page({
       return
     }
     const last = wx.getStorageSync(LAST_PLACE) || wx.getStorageSync(LAST_CITY) || ''
+    // 桌面开发者工具直接走缓存城市，不再触发位置权限查询。
+    // 部分 Windows DevTools 版本即使不真正调用 getLocation，getSetting 在
+    // userLocation 授权链路上也可能由 AppService SDK 抛 SystemError: timeout。
+    if (!canUseNativeLocation()) {
+      this.load(last || '上海')
+      return
+    }
     // 已授权过定位就静默自动定位；没授权则不弹窗打扰，先显示上次看的城市
     wx.getSetting({
       success: (res) => {
