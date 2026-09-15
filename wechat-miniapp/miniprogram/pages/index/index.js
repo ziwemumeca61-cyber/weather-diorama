@@ -310,10 +310,12 @@ Page({
     this.setData({ locating: true })
     if (!silent && wx.showLoading) wx.showLoading({ title: '正在定位区县', mask: true })
 
+    // 区县级天气不需要强制高精度定位。Windows 开发者工具和部分桌面环境
+    // 在 isHighAccuracy=true 时会由基础库直接抛出 SystemError: timeout，甚至
+    // 不稳定地绕过业务 fail 回调。使用普通 GCJ-02 定位足够做区县反查，
+    // 同时可避免 4 秒高精度等待把启动链路卡死。
     wx.getLocation({
       type: 'gcj02',
-      isHighAccuracy: true,
-      highAccuracyExpireTime: 4000,
       success: (loc) => {
         // 就近匹配已注册城市，好让地标是真的那座城，而不是通用塔。
         // 区县名称仍以云函数的腾讯逆地理编码结果为准，不用最近城市覆盖。
@@ -330,11 +332,11 @@ Page({
       fail: (error) => {
         this.setData({ locating: false })
         if (!silent && wx.hideLoading) wx.hideLoading()
+        const message = String(error && error.errMsg || error && error.message || '')
         if (silent) {
           this.load(wx.getStorageSync(LAST_PLACE) || wx.getStorageSync(LAST_CITY) || '上海')
           return
         }
-        const message = String(error && error.errMsg || '')
         if (/auth|authorize|permission|deny/i.test(message) && wx.openSetting) {
           wx.showModal({
             title: '开启位置权限',
@@ -351,6 +353,10 @@ Page({
               })
             },
           })
+          return
+        }
+        if (/timeout/i.test(message)) {
+          wx.showToast({ title: '定位超时，已保留当前城市', icon: 'none' })
           return
         }
         wx.showToast({ title: '定位失败，请检查系统定位', icon: 'none' })
