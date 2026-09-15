@@ -190,7 +190,6 @@
               placeholder="说说此刻的天气和心情…"
               background-color="#f6f8fc"
               color-unity="{{true}}"
-              show-related="{{true}}"
               recommend-path="/pages/index/index"
               recommend-title="云上幻象天气 · 发布天气心情"
               binderror="onMoodComponentError"
