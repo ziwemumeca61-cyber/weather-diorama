@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AI 羊毛条目",
+  "description": "一条 AI 免费福利/羊毛的聚合数据",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "id", "标题", "一句话", "怎么领", "链接", "品类", "地域",
+      "版本", "模型", "开始日期", "结束日期", "状态", "验真", "抓取时间"
+    ],
+    "properties": {
+      "id": {
+        "type": "string",
+        "minLength": 1,
+        "description": "全局唯一 ID"
+      },
+      "标题": { "type": "string", "minLength": 1 },
+      "一句话": { "type": "string" },
+      "怎么领": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "领取步骤"
+      },
+      "链接": { "type": "string", "description": "官网或领取入口，'-' 表示无" },
+      "品类": {
+        "type": "string",
+        "enum": ["API额度", "软件试用", "云credits", "内测资格", "学生优惠"]
+      },
+      "地域": { "type": "string", "enum": ["国内", "海外"] },
+      "版本": { "type": "string", "description": "'-' 表示无" },
+      "模型": { "type": "string", "description": "'-' 表示无" },
+      "开始日期": { "type": "string", "description": "YYYY-MM-DD 或 '-'" },
+      "结束日期": { "type": "string", "description": "YYYY-MM-DD 或 '-'" },
+      "状态": { "type": "string", "enum": ["有效", "过期", "待验证"] },
+      "验真": { "type": "string", "enum": ["已验真", "待验证"] },
+      "抓取时间": { "type": "string", "description": "YYYY-MM-DD" }
+    },
+    "additionalProperties": false
+  }
+}

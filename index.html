@@ -2,85 +2,12 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <meta name="theme-color" content="#0b1220" />
-    <title>3D微缩城市天气 · Weather Diorama</title>
-    <meta name="description" content="3D 微缩城市实时天气预报——搜索一座城市，看雨滴打在屋顶、雾气笼罩街道、夜晚万家灯火。16 座城市地标，昼夜随当地时间流转。" />
-    <link rel="icon" type="image/png" href="./favicon.png" />
-    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
-    <!-- installable web-app (iOS standalone + Android) -->
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="微缩天气" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="3D微缩城市天气 · Weather Diorama" />
-    <meta property="og:description" content="3D 微缩城市实时天气：雨打屋顶、雾漫街道、夜晚万家灯火。搜索你的城市看看现在的天气长什么样。" />
-    <meta property="og:image" content="./og.png" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="3D微缩城市天气 · Weather Diorama" />
-    <meta name="twitter:description" content="3D 微缩城市实时天气：雨打屋顶、雾漫街道、夜晚万家灯火。" />
-    <meta name="twitter:image" content="./og.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="AI 免费额度、试用、优惠聚合列表" />
+    <title>AI 羊毛聚合（内测版）</title>
   </head>
   <body>
-    <!-- instant splash while the 3D bundle downloads; faded out by the app -->
-    <style>
-      #splash {
-        position: fixed;
-        inset: 0;
-        z-index: 100;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 14px;
-        background: linear-gradient(#0b1220, #141e33);
-        color: #f4f7fb;
-        font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-        transition: opacity 0.5s ease;
-      }
-      #splash.splash-hide {
-        opacity: 0;
-        pointer-events: none;
-      }
-      .splash-icon {
-        font-size: 56px;
-        animation: splash-bob 1.6s ease-in-out infinite;
-      }
-      .splash-title {
-        font-size: 20px;
-        font-weight: 700;
-        letter-spacing: 4px;
-      }
-      .splash-tip {
-        font-size: 13px;
-        color: rgba(244, 247, 251, 0.55);
-      }
-      .splash-tip::after {
-        content: '…';
-        display: inline-block;
-        width: 1.2em;
-        text-align: left;
-        animation: splash-dots 1.4s steps(4) infinite;
-        overflow: hidden;
-        vertical-align: bottom;
-        white-space: nowrap;
-      }
-      @keyframes splash-bob {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-8px); }
-      }
-      @keyframes splash-dots {
-        0% { width: 0; }
-        100% { width: 1.2em; }
-      }
-    </style>
-    <div id="splash" aria-hidden="true">
-      <div class="splash-icon">🏙️</div>
-      <div class="splash-title">3D微缩城市天气</div>
-      <div class="splash-tip">正在搭建城市</div>
-    </div>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
