@@ -1,0 +1,1279 @@
+[
+  {
+    "id": "wb-intl-ds",
+    "标题": "WorkBuddy 国际版 DeepSeek v4.1-flash 限时 0 扣费",
+    "一句话": "腾讯 AI 办公软件国际版该模型挂 Free now，国内版同模型按 0.11x 收费",
+    "怎么领": [
+      "去 workbuddy.ai 下载国际版",
+      "模型选 deepseek-v4.1-flash",
+      "确认 Free now 标签在再动手"
+    ],
+    "链接": "https://www.workbuddy.ai",
+    "品类": "软件试用",
+    "地域": "海外",
+    "版本": "国际版",
+    "模型": "deepseek-v4.1-flash",
+    "开始日期": "-",
+    "结束日期": "2026-09-25",
+    "状态": "有效",
+    "验真": "已验真",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "zhipu-flash",
+    "标题": "智谱 GLM Flash 模型 0 元 + 新用户 2000 万券",
+    "一句话": "4.x 代 Flash 系列直接 0 元调用，写代码跑 agent 的主力免费模型",
+    "怎么领": [
+      "智谱开放平台注册",
+      "控制台申请 API key",
+      "OpenAI 兼容接口即插即用"
+    ],
+    "链接": "https://open.bigmodel.cn",
+    "品类": "API额度",
+    "地域": "国内",
+    "版本": "-",
+    "模型": "glm-4-flash",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "有效",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "siliconflow",
+    "标题": "硅基流动 注册送 14 元券 + 一堆 0 元模型",
+    "一句话": "模型多、OpenAI 兼容，接 Cherry Studio 当备用池最合适",
+    "怎么领": [
+      "官网注册",
+      "账户领券",
+      "0 元模型直接调"
+    ],
+    "链接": "https://cloud.siliconflow.cn",
+    "品类": "API额度",
+    "地域": "国内",
+    "版本": "-",
+    "模型": "-",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "有效",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "qwen",
+    "标题": "通义千问 每模型 100 万 token / 90 天",
+    "一句话": "每个模型独立额度，中文内容、客服语料首选",
+    "怎么领": [
+      "阿里云百炼控制台开通",
+      "90 天有效期，领了尽快用"
+    ],
+    "链接": "https://bailian.console.aliyun.com",
+    "品类": "API额度",
+    "地域": "国内",
+    "版本": "-",
+    "模型": "qwen",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "有效",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "kimi",
+    "标题": "Kimi 实名送 15 元券",
+    "一句话": "长文本之王，读论文读长文档直接喂",
+    "怎么领": [
+      "Moonshot 开放平台实名认证",
+      "认证后到账"
+    ],
+    "链接": "https://platform.kimi.com",
+    "品类": "API额度",
+    "地域": "国内",
+    "版本": "-",
+    "模型": "kimi-k2",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "有效",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "groq",
+    "标题": "Groq 免费层免绑卡",
+    "一句话": "开源模型推理速度天花板，免费层 30 RPM / 1000 RPD",
+    "怎么领": [
+      "console.groq.com 注册",
+      "拿 key 即用"
+    ],
+    "链接": "https://console.groq.com",
+    "品类": "API额度",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "-",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "有效",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-common-minimax",
+    "标题": "MiniMax 新用户 Token Plan 订阅/体验",
+    "一句话": "新用户 Token Plan 订阅/体验（OpenAI 兼容，推荐模型：MiniMax-M3, MiniMax-M2.7）",
+    "怎么领": [
+      "申请直达：控制台申请（https://platform.minimax.cn/console/access?tab=api-keys）",
+      "Base URL：https://api.minimax.chat/v1",
+      "推荐免费模型：MiniMax-M3, MiniMax-M2.7"
+    ],
+    "链接": "https://platform.minimax.cn/console/access?tab=api-keys",
+    "品类": "API额度",
+    "地域": "国内",
+    "版本": "-",
+    "模型": "MiniMax-M3",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-common-小米mimo",
+    "标题": "小米 MiMo TTS 系列限时免费；语言模型按量计费",
+    "一句话": "TTS 系列限时免费；语言模型按量计费（OpenAI 兼容，推荐模型：mimo-v2.6-pro, mimo-v2.6-flash, mimo-v2.5-tts）",
+    "怎么领": [
+      "申请直达：控制台申请（https://platform.xiaomimimo.com/#/console/api-keys）",
+      "Base URL：https://api.xiaomimimo.com/v1",
+      "推荐免费模型：mimo-v2.6-pro, mimo-v2.6-flash, mimo-v2.5-tts"
+    ],
+    "链接": "https://platform.xiaomimimo.com/#/console/api-keys",
+    "品类": "API额度",
+    "地域": "国内",
+    "版本": "-",
+    "模型": "mimo-v2.6-pro",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-common-文心ernie",
+    "标题": "文心 ERNIE 17 个模型各 100 万 / 3 个月",
+    "一句话": "17 个模型各 100 万 / 3 个月（OpenAI 兼容，推荐模型：ernie-5.0, ernie-4.5-turbo, ernie-x1.1）",
+    "怎么领": [
+      "申请直达：控制台申请（https://console.bce.baidu.com/qianfan/overview）",
+      "Base URL：https://qianfan.baidubce.com/v2",
+      "推荐免费模型：ernie-5.0, ernie-4.5-turbo, ernie-x1.1"
+    ],
+    "链接": "https://console.bce.baidu.com/qianfan/overview",
+    "品类": "API额度",
+    "地域": "国内",
+    "版本": "-",
+    "模型": "ernie-5.0",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-common-googlegemini",
+    "标题": "Google Gemini 免费层每日滚动重置（免绑卡）",
+    "一句话": "免费层每日滚动重置（免绑卡）（OpenAI 兼容，推荐模型：gemini-2.5-flash, gemini-3.8-flash）",
+    "怎么领": [
+      "申请直达：AI Studio 申请（https://aistudio.google.com/apikey）",
+      "Base URL：https://generativelanguage.googleapis.com/v1beta/openai/",
+      "推荐免费模型：gemini-2.5-flash, gemini-3.8-flash"
+    ],
+    "链接": "https://aistudio.google.com/apikey",
+    "品类": "API额度",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "gemini-2.5-flash",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-common-openrouter",
+    "标题": "OpenRouter 20 RPM 免费层（免绑卡）",
+    "一句话": "20 RPM 免费层（免绑卡）（OpenAI 兼容，推荐模型：选带 :free 后缀模型（如 google/gemma-4-31b-it:free、nvidia/nemotron-3-super-120b:free））",
+    "怎么领": [
+      "申请直达：控制台申请（https://openrouter.ai/keys）",
+      "Base URL：https://openrouter.ai/api/v1",
+      "推荐免费模型：选带 :free 后缀模型（如 google/gemma-4-31b-it:free、nvidia/nemotron-3-super-120b:free）"
+    ],
+    "链接": "https://openrouter.ai/keys",
+    "品类": "API额度",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "google/gemma-4-31b-it:free",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-common-inceptionlabs",
+    "标题": "InceptionLabs 新号 1 亿 free tokens，免信用卡",
+    "一句话": "新号 1 亿 free tokens，免信用卡（OpenAI 兼容，推荐模型：mercury-2.5, mercury-2）",
+    "怎么领": [
+      "申请直达：Dashboard 申请（https://platform.inceptionlabs.ai/dashboard/api-keys）",
+      "Base URL：https://api.inceptionlabs.ai/v1",
+      "推荐免费模型：mercury-2.5, mercury-2"
+    ],
+    "链接": "https://platform.inceptionlabs.ai/dashboard/api-keys",
+    "品类": "API额度",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "mercury-2.5",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-6-火山引擎",
+    "标题": "火山引擎 (火山方舟 / 豆包) · 豆包系列大语言模型（Doubao-Seed 等） —— 分别提供 50 万 t…",
+    "一句话": "豆包系列大语言模型（Doubao-Seed 等） —— 分别提供 50 万 tokens 免费推理额度； Managed Agents（Agent 编排） —— 赠送 30 小时运行时长 + 500 次 web_search 工具调用，有效期 2 年",
+    "怎么领": [
+      "前置条件：注册火山引擎账号并完成实名认证",
+      "额度有效期：Agent 免费额度有效期 2 年；文本模型以开通页展示为准",
+      "官方入口：火山方舟产品页（https://www.volcengine.com/product/ark）"
+    ],
+    "链接": "https://www.volcengine.com/product/doubao",
+    "品类": "API额度",
+    "地域": "国内",
+    "版本": "-",
+    "模型": "-",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-8-腾讯云混元",
+    "标题": "腾讯云混元 (TokenHub) · Hunyuan-a13b（共享版）—— 首次开通赠送 100 万 tokens…",
+    "一句话": "Hunyuan-a13b（共享版）—— 首次开通赠送 100 万 tokens，有效期 1 年； 文本嵌入模型 —— 赠送 100 万 tokens，有效期 1 年； 付费旗舰：混元 Hy4 预览版（2026-08-28 发布）、Hy-MT2-Pro（翻译）、Hy-Role-Latest（角色扮演）、Hy-Image…",
+    "怎么领": [
+      "前置条件：腾讯云注册并完成实名认证",
+      "额度有效期：免费资源包有效期 1 年（官方文档原文）",
+      "官方入口：免费额度官方文档（https://cloud.tencent.com/document/product/1729/97731）"
+    ],
+    "链接": "https://hunyuan.tencent.com/",
+    "品类": "API额度",
+    "地域": "国内",
+    "版本": "-",
+    "模型": "Hunyuan-a13b",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-10-商汤日日新",
+    "标题": "商汤 日日新 (SenseNova) · SenseNova 6.8 Flash Lite（轻量文本）、SenseNov…",
+    "一句话": "SenseNova 6.8 Flash Lite（轻量文本）、SenseNova U1 Fast（多模态）等 —— Token Plan 公测免费：每 5 小时 60,000 积分（滚动刷新），单账号可创建 20 个 API Key；各模型按积分计量",
+    "怎么领": [
+      "前置条件：注册商汤大装置（SenseCore）开放平台账号",
+      "额度有效期：公测期间滚动有效（每 5 小时自动刷新）",
+      "官方入口：Token Plan 官方页（https://www.sensenova.cn/token-plan）"
+    ],
+    "链接": "https://www.sensenova.cn/",
+    "品类": "API额度",
+    "地域": "国内",
+    "版本": "-",
+    "模型": "SenseNova 6.8 Flash Lite",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-11-科大讯飞星火",
+    "标题": "科大讯飞星火 (Spark API) · 星火 Lite —— 官方 HTTP 调用文档原文“具有更高的响应速度，支持免…",
+    "一句话": "星火 Lite —— 官方 HTTP 调用文档原文“具有更高的响应速度，支持免费使用”，免费额度在星火产品页领取（QPS/限速以领取页规则为准）； 付费版本：Pro、Pro-128K、Max、Max-32K、4.0 Ultra（已升级至 X1.5 快思考模式），另有深度推理 X2 产品线；Max 套餐将于 2026-…",
+    "怎么领": [
+      "前置条件：讯飞开放平台注册并实名认证",
+      "额度有效期：Lite 免费额度以产品页领取规则为准（官方文档无“永久”字样）",
+      "官方入口：星火 API 产品页（免费额度领取）（https://xinghuo.xfyun.cn/sparkapi）"
+    ],
+    "链接": "https://xinghuo.xfyun.cn/",
+    "品类": "API额度",
+    "地域": "国内",
+    "版本": "-",
+    "模型": "-",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-12-美团longcat",
+    "标题": "美团 LongCat · LongCat-2.0（2026-06-30 发布，1M 上下文）—— 调用消…",
+    "一句话": "LongCat-2.0（2026-06-30 发布，1M 上下文）—— 调用消耗 token 资源包（新用户包数额以账户到账为准，资源包有效期 30 天）； 旧 LongCat-Flash 系列已于 2026-05-29 下线",
+    "怎么领": [
+      "前置条件：注册并登录开放平台（定价与资源包页需登录查看）",
+      "额度有效期：官方定价页标注 token 资源包有效期 30 天",
+      "官方入口：开放平台（https://longcat.chat/platform/）"
+    ],
+    "链接": "https://longcat.chat/platform/",
+    "品类": "API额度",
+    "地域": "国内",
+    "版本": "-",
+    "模型": "LongCat-2.0",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-14-streamlake",
+    "标题": "StreamLake (快手万擎) · 基础模型推理 —— 注册开通后分批获得免费调用次数（不可抵扣 Batch 批量…",
+    "一句话": "基础模型推理 —— 注册开通后分批获得免费调用次数（不可抵扣 Batch 批量推理；具体次数以活动说明为准）； 在架模型：自研 KAT-Coder-Pro-V2.5/KAT-Coder-Air-V2.5（均为 256K 上下文/80K 输出）及托管 DeepSeek-V4-Flash/Pro、GLM-5.x、Mini…",
+    "怎么领": [
+      "前置条件：注册 StreamLake 账号并开通服务",
+      "额度有效期：各资源包有效期以活动说明为准（官方文档无“永久免费”表述）",
+      "官方入口：官方主页（https://www.streamlake.com/）"
+    ],
+    "链接": "https://www.streamlake.com/",
+    "品类": "API额度",
+    "地域": "国内",
+    "版本": "-",
+    "模型": "KAT-Coder-Pro-V2.5",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-15-云知声tokenhub",
+    "标题": "云知声 Token Hub · Unisound U2（通用）、U2-Med（医疗）、U1-OCR、U1-OC…",
+    "一句话": "Unisound U2（通用）、U2-Med（医疗）、U1-OCR、U1-OCR-Med（医疗 OCR）、U2 Flash、U2-RadiMed（放射医疗）—— 完成实名认证即送各 500 万 tokens； U2-ASR（语音识别）—— 赠送 5 小时；U2-TTS（语音合成）—— 赠送 5 万字； U2-TTS-…",
+    "怎么领": [
+      "前置条件：注册并完成实名认证（无需企业审核）",
+      "额度有效期：以账户内资源包标注为准（官方文档未标注有效期）",
+      "官方入口：快速入门（新人礼包说明）（https://maas.unisound.com/docs/guide/quickstart）"
+    ],
+    "链接": "https://maas.unisound.com/",
+    "品类": "API额度",
+    "地域": "国内",
+    "版本": "-",
+    "模型": "Unisound U2",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-16-摩尔线程musacodingplan",
+    "标题": "摩尔线程 MUSA Coding Plan · GLM-4.7（代码场景，运行于摩尔线程 MUSA GPU 集群）—— 官网 …",
+    "一句话": "GLM-4.7（代码场景，运行于摩尔线程 MUSA GPU 集群）—— 官网 Free Trial 标注 ¥0 免费试用、有效期 30 天，每日限量 100 名开发者；核对时页面按钮显示“体验爆满，扩容中”（可能暂时无法开通）",
+    "怎么领": [
+      "前置条件：手机号注册开发者账号，每日名额有限",
+      "额度有效期：试用期 30 天",
+      "官方入口：Coding Plan 官网（https://code.mthreads.com/）"
+    ],
+    "链接": "https://code.mthreads.com/",
+    "品类": "API额度",
+    "地域": "国内",
+    "版本": "-",
+    "模型": "GLM-4.7",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-18-中国电信",
+    "标题": "中国电信 (天翼云 / 息壤智算) · 星辰大模型专区托管 GLM、DeepSeek V4/V3.2、Qwen 系列 …",
+    "一句话": "星辰大模型专区托管 GLM、DeepSeek V4/V3.2、Qwen 系列 —— 专区设有 50 万免费 tokens 领取入口（以体验中心实际到账为准）； 电信自研 TeleChat3（TeleChat3-36B-Thinking、TeleChat3-Coder-36B 等）由 Tele-AI 发布并开源在 Hu…",
+    "怎么领": [
+      "前置条件：实名认证天翼云账号",
+      "额度有效期：试用体验金与 tokens 有效期以试用中心规则为准",
+      "官方入口：试用中心（2000 元体验金）（https://www.ctyun.cn/act/trial/central）"
+    ],
+    "链接": "https://www.ctyun.cn/",
+    "品类": "API额度",
+    "地域": "国内",
+    "版本": "-",
+    "模型": "TeleChat3",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-19-中国移动九天",
+    "标题": "中国移动 九天 (MoMA) · 需登录控制台核实",
+    "一句话": "需登录控制台核实：平台在架模型清单无法从官方公开页确认（旧档案“九天海云/九天客服/MoMA”等名称无法从现行官方页证实；移动云 MoMA 产品页已 404 下线）",
+    "怎么领": [
+      "前置条件：注册中国移动/移动云账号并完成实名认证",
+      "额度有效期：需登录控制台核实",
+      "官方入口：九天人工智能平台门户（https://jiutian.10086.cn/portal/）"
+    ],
+    "链接": "https://ecloud.10086.cn/",
+    "品类": "API额度",
+    "地域": "国内",
+    "版本": "-",
+    "模型": "-",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-20-360智脑",
+    "标题": "360 智脑 · 无公开免费模型层",
+    "一句话": "无公开免费模型层：平台转为聚合模式，模型列表约 86 款（含第三方模型）；自研模型 360zhinao-pro 定价输入 ¥2/百万 tokens、输出 ¥5/百万 tokens（以定价页为准）",
+    "怎么领": [
+      "前置条件：360 账号注册并完成实名认证",
+      "额度有效期：以资源包标注为准",
+      "官方入口：模型与定价页（https://ai.360.com/open/models）"
+    ],
+    "链接": "https://ai.360.com/open/",
+    "品类": "API额度",
+    "地域": "国内",
+    "版本": "-",
+    "模型": "360zhinao-pro",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-21-数眼智能",
+    "标题": "数眼智能 (数言 AI / ShuyanAI) · 聚合转发模型（价格页列出 kimi-k3、deepseek-v4-pro、qw…",
+    "一句话": "聚合转发模型（价格页列出 kimi-k3、deepseek-v4-pro、qwen3.8-max、glm-5.3-flash 等，以站点实时列表为准）—— 共享新用户 50 万免费 tokens",
+    "怎么领": [
+      "前置条件：手机号或微信注册",
+      "额度有效期：免费 tokens 用完即止（有效期以账户标注为准）",
+      "官方入口：价格页（50 万 tokens 说明）（https://www.shuyanai.com/price）"
+    ],
+    "链接": "https://www.shuyanai.com/",
+    "品类": "API额度",
+    "地域": "国内",
+    "版本": "-",
+    "模型": "kimi-k3",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-22-dmxapi",
+    "标题": "DMXAPI (大模型聚合转发) · 无公开免费模型层",
+    "一句话": "无公开免费模型层：第三方聚合转发，模型清单随上游更新，当前文档列出 GPT-5.x、Claude 4.5、Gemini 3、DeepSeek 等系列（以文档站模型列表为准）",
+    "怎么领": [
+      "前置条件：邮箱或手机号注册",
+      "额度有效期：测试额度用完即止",
+      "官方入口：官方文档站（模型列表）（https://doc.dmxapi.cn/）"
+    ],
+    "链接": "https://www.dmxapi.cn/",
+    "品类": "API额度",
+    "地域": "国内",
+    "版本": "-",
+    "模型": "-",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-23-anthropicclaude",
+    "标题": "Anthropic Claude · API 无免费模型层",
+    "一句话": "API 无免费模型层：当前代际 Claude Fable 5.1、Claude Opus 5.5、Claude Sonnet 5.5、Claude Haiku 4.5（上下文最高 1M，随模型而异）均按量付费，Sonnet 5/Opus 5/Fable 5 等已移入 legacy models；新用户少量测试 cre…",
+    "怎么领": [
+      "前置条件：网页端注册账号即可；API 需绑定付款方式；免费版不含 Claude Code（官方原文 “Claude Code is included in all paid plans”）",
+      "额度有效期：网页免费版额度每 5 小时滚动重置；API 测试额度以账户到账为准",
+      "官方入口：官方主页（https://claude.com/）"
+    ],
+    "链接": "https://claude.com/",
+    "品类": "API额度",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "Claude Fable 5.1",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-24-openai",
+    "标题": "OpenAI · API 无免费模型层，当前代际均按量付费",
+    "一句话": "API 无免费模型层，当前代际均按量付费：旗舰 GPT-6 Astra（$10/$50 每百万 token）、GPT-5.6 Sol/Terra/Luna；最低价 gpt-5-nano（$0.05/$0.40）；text-embedding-3-small 仍在售",
+    "怎么领": [
+      "前置条件：注册 OpenAI 账号并绑定海外付款方式；按组织层级划分 RPM / TPM 配额",
+      "额度有效期：免费测试请求为注册后一次性体验；额度政策以官方定价页为准",
+      "官方入口：官方主页（https://openai.com/）"
+    ],
+    "链接": "https://openai.com/",
+    "品类": "API额度",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "GPT-6 Astra",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-27-mistralai",
+    "标题": "Mistral AI · Leanstral（Labs，labs-leanstral-2603，限时开放…",
+    "一句话": "Leanstral（Labs，labs-leanstral-2603，限时开放收集反馈）—— 免费端点； Mistral Moderation 2（Free） —— 免费端点； 商业模型均付费：Mistral Medium 3.5、Large 3（$0.50/$1.50 每百万）、Small 4（$0.15/$0.6…",
+    "怎么领": [
+      "前置条件：邮箱注册并验证手机号",
+      "额度有效期：以官方定价页为准",
+      "官方入口：API Key 控制台直达（https://console.mistral.ai/api-keys/）"
+    ],
+    "链接": "https://mistral.ai/",
+    "品类": "API额度",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "Leanstral",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-29-huggingface",
+    "标题": "Hugging Face (Inference Providers) · 经 18 家 provider（Cerebras/Together/Firew…",
+    "一句话": "经 18 家 provider（Cerebras/Together/Fireworks/Groq/Novita 等）路由的开源模型：openai/gpt-oss-120b、deepseek-ai/DeepSeek-V3/R1、FLUX.1-dev 等 —— 共享免费用户 $0.10/月 额度（原 Serverless…",
+    "怎么领": [
+      "前置条件：注册 Hugging Face 账号并生成 Access Token，免信用卡",
+      "额度有效期：免费额度按月发放",
+      "官方入口：官方主页（https://huggingface.co/）"
+    ],
+    "链接": "https://huggingface.co/",
+    "品类": "API额度",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "openai/gpt-oss-120b",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-31-cloudflareworkersai",
+    "标题": "Cloudflare Workers AI · 目录内可免费使用的模型共享 每日 10,000 Neurons 免费额度（官方…",
+    "一句话": "目录内可免费使用的模型共享 每日 10,000 Neurons 免费额度（官方定价页原文 “use a total of 10,000 Neurons per day at no charge”），UTC 0 点刷新；代表模型 @cf/meta/llama-4-scout-17b、llama-3.3-70b-fp8、…",
+    "怎么领": [
+      "前置条件：注册 Cloudflare 账号即可使用，免绑卡",
+      "额度有效期：每日 UTC 0 点重置",
+      "官方入口：Workers AI 文档（https://developers.cloudflare.com/workers-ai/）"
+    ],
+    "链接": "https://developers.cloudflare.com/workers-ai/",
+    "品类": "API额度",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "@cf/meta/llama-4-scout-17b",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-32-cohere",
+    "标题": "Cohere · Command A+、Command A Reasoning/Translat…",
+    "一句话": "Command A+、Command A Reasoning/Translate/Vision、Command A、Command R/R+、Command R7B、North Mini Code —— Trial Key 每月 1,000 次调用免费，Trial 速率 Chat 20 RPM； Embed 4 Sm…",
+    "怎么领": [
+      "前置条件：邮箱注册即可，免信用卡；Trial Key 仅限非商用开发测试",
+      "额度有效期：每月 1 日重置 1,000 次",
+      "官方入口：API Key 控制台直达（https://dashboard.cohere.com/api-keys）"
+    ],
+    "链接": "https://cohere.com/",
+    "品类": "API额度",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "Command A+",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-33-nvidianim",
+    "标题": "NVIDIA NIM (API Catalog) · API 目录代表模型 nvidia/nemotron-3-ultra-550b…",
+    "一句话": "API 目录代表模型 nvidia/nemotron-3-ultra-550b-a55b、nemotron-3.5-lightning-30b、nemotron-3-super-120b、deepseek-v4-pro/flash、kimi-k3、gpt-oss-120b/20b、glm-5.2、llama-3.3-…",
+    "怎么领": [
+      "前置条件：注册 NVIDIA 开发者账号",
+      "额度有效期：免费层长期有效（以官方试用条款为准）",
+      "官方入口：体验中心（https://build.nvidia.com/）"
+    ],
+    "链接": "https://build.nvidia.com/",
+    "品类": "API额度",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "nvidia/nemotron-3-ultra-550b-a55b",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-34-metallama",
+    "标题": "Meta Llama (开源权重) · Llama 4 Scout（17B 激活/109B 总参，10M 上下文）与 …",
+    "一句话": "Llama 4 Scout（17B 激活/109B 总参，10M 上下文）与 Llama 4 Maverick（17B 激活/400B 总参，原生多模态，2025-04-05 发布）—— 开源权重免版税授权（Llama 4 Community License 原文 “royalty-free”），可自行部署或经 Gr…",
+    "怎么领": [
+      "前置条件：遵守 Llama 4 社区许可；上自然月活跃用户超过 7 亿（700 million MAU） 的实体需另行向 Meta 申请授权",
+      "额度有效期：永久有效（遵守许可条款）",
+      "官方入口：Meta AI 开发者站（https://developer.meta.com/ai/）"
+    ],
+    "链接": "https://ai.meta.com/",
+    "品类": "API额度",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "Llama 4 Scout",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-35-cerebrasinference",
+    "标题": "Cerebras Inference (晶圆级推理) · 公共端点当前仅 gpt-oss-120b（约 3000 tok/s）与 qwe…",
+    "一句话": "公共端点当前仅 gpt-oss-120b（约 3000 tok/s）与 qwen-3.8-27b —— 免费层限额 5 RPM / 30K uncached TPM（90K total）/ 1M Tokens 每天； Llama 模型已不在公共目录（旧“永久免费 Developer Tier / 30 RPM / 6…",
+    "怎么领": [
+      "前置条件：注册账号；$5 赠金需添加验证付款方式",
+      "额度有效期：30 天",
+      "官方入口：官方主页（https://www.cerebras.ai/）"
+    ],
+    "链接": "https://www.cerebras.ai/",
+    "品类": "API额度",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "gpt-oss-120b",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-36-togetherai",
+    "标题": "Together AI · 无免费试用，但存在 $0 / 输出免费定价模型",
+    "一句话": "无免费试用，但存在 $0 / 输出免费定价模型：官方价目表中 Ternary Bonsai 27B 输入/输出均为 $0.00/1M tokens；Tev1 4B Experimental 输出免费（Free），输入收取 $0.04/1M tokens。调用前平台访问仍需首次最低 $15 充值；其余模型均需充值后按量…",
+    "怎么领": [
+      "前置条件：注册账号并完成组织首次最低 $15 充值（后续充值最低 $5）",
+      "额度有效期：预付余额不过期；无免费额度",
+      "官方入口：API Key 设置直达（https://api.together.ai/settings/api-keys）"
+    ],
+    "链接": "https://www.together.ai/",
+    "品类": "API额度",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "-",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-37-fireworksai",
+    "标题": "Fireworks AI · serverless 模型可用 $1 赠金抵扣",
+    "一句话": "serverless 模型可用 $1 赠金抵扣：Kimi K3（$3/$15）、Kimi K2.7 Code、DeepSeek V4 Pro 0813（$1.32/$3.96）、DeepSeek V4 Flash 0731（$0.22/$0.66）、Qwen 3.8 Max / 3.7 Plus 等",
+    "怎么领": [
+      "前置条件：邮箱注册即可自助开通（self-serve）",
+      "额度有效期：用完即止",
+      "官方入口：API Key 控制台直达（https://fireworks.ai/api-keys）"
+    ],
+    "链接": "https://fireworks.ai/",
+    "品类": "API额度",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "Kimi K3",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-38-deepinfra",
+    "标题": "DeepInfra · 无免费模型层，代表模型 DeepSeek-V4-Pro（$1.30/$2.60…",
+    "一句话": "无免费模型层，代表模型 DeepSeek-V4-Pro（$1.30/$2.60）、DeepSeek-V4-Flash（$0.06/$0.18）、DeepSeek-R1-0528、Qwen3-Max、Qwen3-Coder-480B、Llama-4-Maverick/Scout、Llama-3.3-70B-Turbo、…",
+    "怎么领": [
+      "前置条件：支持 GitHub/Google/邮箱/SSO 登录（登录免卡，实际调用需加卡或预付）",
+      "额度有效期：以官方定价页为准",
+      "官方入口：API Key 控制台直达（https://deepinfra.com/dash/api_keys）"
+    ],
+    "链接": "https://deepinfra.com/",
+    "品类": "API额度",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "-",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-39-nebius",
+    "标题": "Nebius (Token Factory / AI Cloud) · 无免费模型层",
+    "一句话": "无免费模型层：Nebius Token Factory（原 AI Studio，studio.nebius.ai 已 301 跳转 tokenfactory.nebius.com）模型目录以后台为准，需账户余额；GPU 云按需 B300 $7.85/h、B200 $7.15/h、H200 $4.50/h 等，官方价目…",
+    "怎么领": [
+      "前置条件：注册 Nebius 账户并绑卡（$25 扣款转余额）",
+      "额度有效期：promo code 有效期以活动规则为准",
+      "官方入口：官方主页（https://nebius.com/）"
+    ],
+    "链接": "https://nebius.com/",
+    "品类": "API额度",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "-",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-40-stabilityai",
+    "标题": "Stability AI · Stable Diffusion 3.5 Large/Turbo/Medium…",
+    "一句话": "Stable Diffusion 3.5 Large/Turbo/Medium 及 Stable Image 系列（API）—— 调用可使用新账号 25 免费积分抵扣； 开源模型权重免费下载：Community License 下年营收低于 100 万美元 的组织/个人可免费使用（含商用），超过需申请企业授权",
+    "怎么领": [
+      "前置条件：API 需注册平台账号；开源权重自行下载部署",
+      "额度有效期：赠送积分用完即止（以账户页显示为准）",
+      "官方入口：API 定价（25 free credits 说明）（https://platform.stability.ai/pricing）"
+    ],
+    "链接": "https://stability.ai/",
+    "品类": "API额度",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "Stable Diffusion 3.5 Large/Turbo/Medium",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-41-ai21labs",
+    "标题": "AI21 Labs · Jamba Large 1.7（jamba-large-1.7-2025-07…",
+    "一句话": "Jamba Large 1.7（jamba-large-1.7-2025-07）、Jamba Mini 2（jamba-mini-2-2026-01）—— 试用 $10 credits、7 天有效；Jamba 1.5/1.6 已弃用（旧“$10 / 3 个月”说法过时）",
+    "怎么领": [
+      "前置条件：邮箱注册即可获取 API Key，免信用卡",
+      "额度有效期：7 天",
+      "官方入口：官方主页（https://www.ai21.com/）"
+    ],
+    "链接": "https://studio.ai21.com/",
+    "品类": "API额度",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "Jamba Large 1.7",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-42-jinaai",
+    "标题": "Jina AI (Reader / Embeddings / Reranker) · Reader API（r.jina.ai 网页转 Markdown）——…",
+    "一句话": "Reader API（r.jina.ai 网页转 Markdown）—— 免 key 20 RPM、免费 key 500 RPM； jina-embeddings-v5（v4 免费但限非商用）、jina-reranker-v3.5 —— 免费层 100 RPM / 100K TPM，共享新 Key 10M token…",
+    "怎么领": [
+      "前置条件：GitHub 账号登录获取 API Key，免绑定信用卡",
+      "额度有效期：免费速率限制长期有效",
+      "官方入口：官方主页（https://jina.ai/）"
+    ],
+    "链接": "https://jina.ai/",
+    "品类": "API额度",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "jina-embeddings-v5",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-43-morphlabs",
+    "标题": "Morph Labs · OpenAI 兼容端点（api.morphllm.com/v1）",
+    "一句话": "OpenAI 兼容端点（api.morphllm.com/v1）：morph-v3-fast、morph-v3-large 及托管 Kimi K3、GLM-5.3、DeepSeek V4/V4.1 Flash、Qwen、MiniMax 等开源模型 —— 免费层 每月 200 次请求（200 req free ever…",
+    "怎么领": [
+      "前置条件：邮箱注册获取 API Key",
+      "额度有效期：免费层按月重置",
+      "官方入口：定价页（免费层说明）（https://morphllm.com/pricing）"
+    ],
+    "链接": "https://morphllm.com/",
+    "品类": "API额度",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "morph-v3-fast",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-44-relace",
+    "标题": "Relace · 面向编程智能体的推理模型 relace-compact、relace-appl…",
+    "一句话": "面向编程智能体的推理模型 relace-compact、relace-apply-3、relace-rank、relace-search（代码改写/检索/排序）—— 免费套餐（free tier）可用，具体配额注册后查看",
+    "怎么领": [
+      "前置条件：官网注册（免费套餐入口）；企业部署可预约 guided onboarding",
+      "额度有效期：以注册后控制台显示为准",
+      "官方入口：定价页（含 free tier 说明）（https://relace.ai/pricing）"
+    ],
+    "链接": "https://relace.ai/",
+    "品类": "API额度",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "relace-compact",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-45-poolside",
+    "标题": "Poolside · 代码模型 Laguna S 2.1（118B 总参/8B 激活，1M 上下文）…",
+    "一句话": "代码模型 Laguna S 2.1（118B 总参/8B 激活，1M 上下文）、Laguna XS 2.1（33B/3B 激活，256K）—— 限时免费调用；端点 inference.poolside.ai/v1（OpenAI 兼容），权重在 Hugging Face 发布",
+    "怎么领": [
+      "前置条件：官网注册获取 API Key",
+      "额度有效期：限时免费期内有效（以官方后续公告为准）",
+      "官方入口：模型页（https://poolside.ai/models）"
+    ],
+    "链接": "https://poolside.ai/",
+    "品类": "API额度",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "Laguna S 2.1",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-46-mancer",
+    "标题": "Mancer · 官方模型页标注 FREE 的模型（如 MythoLite，及 MythoMax…",
+    "一句话": "官方模型页标注 FREE 的模型（如 MythoLite，及 MythoMax、Magnum 72B v4 等角色扮演向模型）—— 0 元免费调用（清单以 mancer.tech/models 页面 FREE 标签为准）； 付费另有 DeepSeek V4 Flash 284B、GLM 4.7 353B、GPT OS…",
+    "怎么领": [
+      "前置条件：邮箱注册；按 token 消耗计费",
+      "额度有效期：免费模型长期可用；付费额度以账户标注为准",
+      "官方入口：模型页（FREE 标注）（https://mancer.tech/models）"
+    ],
+    "链接": "https://mancer.tech/",
+    "品类": "API额度",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "MythoLite",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-47-anyscale",
+    "标题": "Anyscale · 无独立免费模型层",
+    "一句话": "无独立免费模型层：额度用于抵扣 Ray on Anyscale 的 GPU / CPU 算力消耗（VM / K8s 部署），按量计费",
+    "怎么领": [
+      "前置条件：注册 Anyscale 账号，需工作邮箱（work email）；pricing 页未公示绑卡要求",
+      "额度有效期：官方 pricing 页未载明 $100 额度的有效期",
+      "官方入口：Pricing（$100 额度说明）（https://www.anyscale.com/pricing）"
+    ],
+    "链接": "https://www.anyscale.com/",
+    "品类": "API额度",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "-",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-52-无问芯穹infiniai",
+    "标题": "无问芯穹 Infini AI (GenStudio) · 嵌入/重排（embedding/rerank）模型接口 —— 免费",
+    "一句话": "嵌入/重排（embedding/rerank）模型接口 —— 免费； 网页 Playground —— 全模型免费体验（DeepSeek V4、Qwen 3.6、GLM、Kimi、MiniMax、MiMo 等；当前模型列表无 Llama）； GenStudio API 推理（上述模型）—— 不设试用额度，调用按量付费",
+    "怎么领": [
+      "前置条件：手机号注册；API 推理需充值",
+      "额度有效期：网页体验长期免费；API 调用按量付费",
+      "官方入口：计费说明文档（https://docs.infini-ai.com/gen-studio/api/usage-and-billing/billing.html）"
+    ],
+    "链接": "https://infini-ai.com/",
+    "品类": "云credits",
+    "地域": "国内",
+    "版本": "-",
+    "模型": "-",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-53-amazonbedrock",
+    "标题": "Amazon Bedrock (AWS Free Tier) · Bedrock 托管 GPT-5.6 系列、Anthropic Claude …",
+    "一句话": "Bedrock 托管 GPT-5.6 系列、Anthropic Claude 最新代、Llama 4、Amazon Nova、Qwen3 等 —— 调用可使用账户额度抵扣，各模型具体免费额度以 Bedrock 定价页标注为准；另含 90 款服务 6 个月免费 + 30+ 款永久免费（Always Free）",
+    "怎么领": [
+      "前置条件：注册 AWS 账号并绑定信用卡；控制台开通 Model Access",
+      "额度有效期：探索额度 6 个月；Always Free 永久",
+      "官方入口：AWS Free Tier 官方页（https://aws.amazon.com/free/）"
+    ],
+    "链接": "https://aws.amazon.com/bedrock/",
+    "品类": "云credits",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "-",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-54-azureopenai-azureaifoundry",
+    "标题": "Azure OpenAI / Azure AI Foundry · AI Foundry 托管 GPT-5.6 Sol/Terra/Luna 等 …",
+    "一句话": "AI Foundry 托管 GPT-5.6 Sol/Terra/Luna 等 OpenAI 最新模型及开源模型 —— 可用 $200 赠金抵扣调用（模型清单以 Foundry 模型页为准）；另含 20+ 款服务 12 个月免费 + 65+ 款永久免费服务",
+    "怎么领": [
+      "前置条件：注册 Azure 账号（需信用卡/身份验证）；OpenAI 服务需在 Foundry 中申请接入",
+      "额度有效期：$200 赠金 30 天；12 个月免费层按服务规则",
+      "官方入口：Azure 免费账号页（https://azure.microsoft.com/en-us/free/）"
+    ],
+    "链接": "https://azure.microsoft.com/en-us/products/ai/",
+    "品类": "云credits",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "-",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-55-googlecloudvertexai",
+    "标题": "Google Cloud Vertex AI · Vertex 托管 Gemini 3.x 系列、Anthropic Claud…",
+    "一句话": "Vertex 托管 Gemini 3.x 系列、Anthropic Claude Opus/Sonnet 5、Llama 4 等 —— 可用 $300 赠金抵扣调用（模型可用性以区域与 Vertex 模型页为准）",
+    "怎么领": [
+      "前置条件：Google 账号 + 开通 Cloud Billing（需信用卡验证）",
+      "额度有效期：$300 赠金 90 天；Always Free 永久",
+      "官方入口：GCP 免费套餐页（https://cloud.google.com/free）"
+    ],
+    "链接": "https://cloud.google.com/vertex-ai",
+    "品类": "云credits",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "-",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-56-oracleocigenerativeai",
+    "标题": "Oracle OCI Generative AI · OCI 托管 Cohere Command A 系列、Gemini 2.5、L…",
+    "一句话": "OCI 托管 Cohere Command A 系列、Gemini 2.5、Llama 4 Maverick/Scout、gpt-oss、Grok 4.3/4.20 等 —— 可用 $300 云额度抵扣（以预训练模型文档页清单为准）",
+    "怎么领": [
+      "前置条件：注册 Oracle Cloud 账号（需信用卡做身份验证）",
+      "额度有效期：$300 额度 30 天；Always Free 永久",
+      "官方入口：OCI 预训练模型文档（https://docs.oracle.com/en-us/iaas/Content/generative-ai/pretrained-models.htm）"
+    ],
+    "链接": "https://www.oracle.com/artificial-intelligence/generative-ai/",
+    "品类": "云credits",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "-",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-57-ibmwatsonx-ai",
+    "标题": "IBM watsonx.ai (Free Toolbox) · Granite 4.1 系列（30b/8b/3b）及 Granite Spee…",
+    "一句话": "Granite 4.1 系列（30b/8b/3b）及 Granite Speech/Vision 4.1 等 IBM 自研模型（部分开源可商用）—— 免费层每月 300,000 tokens 生成额度 + 20 CUH（Capacity Unit-Hours）+ 100 个文档解析额度，按月重置",
+    "怎么领": [
+      "前置条件：注册 IBM Cloud 账号（Lite 免费层免信用卡）",
+      "额度有效期：免费额度每月重置",
+      "官方入口：watsonx.ai 产品页（https://www.ibm.com/watsonx）"
+    ],
+    "链接": "https://www.ibm.com/watsonx/",
+    "品类": "云credits",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "-",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-58-baseten",
+    "标题": "Baseten · 模型部署平台（Truss 框架）",
+    "一句话": "模型部署平台（Truss 框架）：模型库开源模型一键部署与付费专有模型端点 —— 新账户试用额度可抵扣，金额未公开",
+    "怎么领": [
+      "前置条件：注册账号；Startup Program 需申请审核",
+      "额度有效期：以账户/项目协议为准",
+      "官方入口：Startup Program（https://www.baseten.co/startup-program/）"
+    ],
+    "链接": "https://baseten.co/",
+    "品类": "云credits",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "-",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-59-modal",
+    "标题": "Modal (Serverless AI 云平台) · 通用 Serverless GPU/CPU 平台，可自行部署 vLLM、LLM…",
+    "一句话": "通用 Serverless GPU/CPU 平台，可自行部署 vLLM、LLM 推理、Whisper、FLUX 等任意模型/函数 —— 调用消耗 每月 $30 免费额度，可抵扣 GPU/CPU 使用，超出后按量计费",
+    "怎么领": [
+      "前置条件：支持 GitHub/Google/SSO 注册（官方页面未见手机验证要求）",
+      "额度有效期：每月重置",
+      "官方入口：开发文档直达（https://modal.com/docs）"
+    ],
+    "链接": "https://modal.com/",
+    "品类": "云credits",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "-",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-60-modular",
+    "标题": "Modular (原 BentoCloud/BentoML) · 共享推理端点（shared endpoints） —— 可免费测试（基于 MA…",
+    "一句话": "共享推理端点（shared endpoints） —— 可免费测试（基于 MAX 引擎，可体验 Llama、DeepSeek 等开源模型）； 自托管（self-hosted） —— 永久免费、不限模型，开源自托管无需账号",
+    "怎么领": [
+      "前置条件：官网注册（云托管）；开源自托管无需账号",
+      "额度有效期：共享端点免费测试长期有效；自托管永久免费",
+      "官方入口：Modular 定价页（https://www.modular.com/pricing）"
+    ],
+    "链接": "https://www.modular.com/",
+    "品类": "云credits",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "-",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-61-digitaloceaninferenceengine",
+    "标题": "DigitalOcean Inference Engine · 无 LLM 免费层",
+    "一句话": "无 LLM 免费层：$5 为通用云试用金，可抵扣 Droplets / GPU / Inference Engine 等任意服务； 产品名已由 GenAI Inference 改为 Inference Engine（旧路径 /products/genai-inference 全线 404）",
+    "怎么领": [
+      "前置条件：注册账号并必须添加有效付款方式后才能创建 Droplets 等资源（官方文档原文：\"must add a valid payment method\"）",
+      "额度有效期：90 天（自注册起）",
+      "官方入口：Signup Credit 文档（$5 / 90 天）（https://docs.digitalocean.com/platform/billing/signup-credit/）"
+    ],
+    "链接": "https://www.digitalocean.com/",
+    "品类": "云credits",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "/products/genai-inference",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-62-qoder",
+    "标题": "Qoder (Agentic Coding Platform 国际版) · 基础模型 —— Free 方案长期可用，消息条数受限（Free 列还含有限补全…",
+    "一句话": "基础模型 —— Free 方案长期可用，消息条数受限（Free 列还含有限补全/NES 与 BYOK）； 高级（premium）模型 —— 每日领 100 Credits（2026-09-18 起，官方未公布截止）+ Pro 试用 300 Credits 抵扣； 限时免费活动 —— Qwen3.8-Flash 限免至…",
+    "怎么领": [
+      "前置条件：注册 Qoder 账号（GitHub / Google 等 OAuth）；每日领取需在桌面端 App 操作",
+      "额度有效期：每日 100 Credits 自领取日 30 天内有效（未过期结转后续天，非每日清零）；Pro 试用 2 周；订阅方案的 Credits 仅当前订阅周期有效（周期结束归零）",
+      "官方入口：定价与额度文档（含免费层表）（https://docs.qoder.com/account/pricing）"
+    ],
+    "链接": "https://qoder.com/",
+    "品类": "软件试用",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "Qwen3.8-Flash",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-64-trae",
+    "标题": "Trae (字节跳动 AI IDE 中国版为主) · 内置模型调度 —— 中国版免费版「所有功能均可免费使用」，以 500 积分/月…",
+    "一句话": "内置模型调度 —— 中国版免费版「所有功能均可免费使用」，以 500 积分/月计量； TraeCode / TraeWork —— 页面顶部导航列出的两条产品线均在免费功能范围内",
+    "怎么领": [
+      "前置条件：中国版手机号 / 抖音等国内账号注册；企业版选型走火山引擎",
+      "额度有效期：中国版免费积分按月发放；会员档另有「会员签到多得 1550 积分」与模型折扣（Seed-2.1 2.5 折、GLM / Deepseek-V4 5 折）",
+      "官方入口：中国版定价页（免费版 500 积分/月）（https://www.trae.cn/pricing）"
+    ],
+    "链接": "https://www.trae.cn/",
+    "品类": "软件试用",
+    "地域": "国内",
+    "版本": "-",
+    "模型": "-",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-65-通义灵码-qodercn",
+    "标题": "通义灵码 / Qoder CN (阿里云) · 代码补全 —— 个人社区版每月有限次数免费",
+    "一句话": "代码补全 —— 个人社区版每月有限次数免费； Agent / 对话 —— 个人体验版走「有限体验额度 + 2 周 Pro 试用 + 300 Credits」",
+    "怎么领": [
+      "前置条件：阿里云主账号登录",
+      "额度有效期：Pro 试用 2 周 / 300 Credits 为一次性；社区版补全次数按月计",
+      "官方入口：计费说明（个人体验版 Free）（https://help.aliyun.com/zh/lingma/product-overview/billing-description）"
+    ],
+    "链接": "https://lingma.aliyun.com/",
+    "品类": "软件试用",
+    "地域": "国内",
+    "版本": "-",
+    "模型": "-",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-66-文心快码comate",
+    "标题": "文心快码 Comate (百度智能云) · 智能补全 —— 个人标准版免费不限次",
+    "一句话": "智能补全 —— 个人标准版免费不限次； 智能体请求 —— 首次赠 ¥10 请求券；Auto-Free 模式在额度用尽后兜底（限付费档）",
+    "怎么领": [
+      "前置条件：百度智能云账号（个人实名认证）",
+      "额度有效期：智能补全长期免费；¥10 智能体请求券为首次赠送，按订阅周期刷新、不可提前预支",
+      "官方入口：产品定价文档（个人版免费层）（https://cloud.baidu.com/doc/COMATE/s/rlnvnio4a）"
+    ],
+    "链接": "https://comate.baidu.com/",
+    "品类": "软件试用",
+    "地域": "国内",
+    "版本": "-",
+    "模型": "-",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-67-githubcopilotfree",
+    "标题": "GitHub Copilot Free · 代码补全 —— 2,000 次/月（免费）",
+    "一句话": "代码补全 —— 2,000 次/月（免费）； Copilot Chat / Edits —— 50 次/月（免费）",
+    "怎么领": [
+      "前置条件：GitHub 账号，无需付款方式",
+      "额度有效期：按月重置",
+      "官方入口：定价页（含 Free 层 FAQ）（https://github.com/features/copilot/plans）"
+    ],
+    "链接": "https://github.com/features/copilot",
+    "品类": "软件试用",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "-",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-68-cursor",
+    "标题": "Cursor (AI 代码编辑器 Hobby 免费层) · Agent —— Hobby 档限量请求（Limited Agent requ…",
+    "一句话": "Agent —— Hobby 档限量请求（Limited Agent requests）； Composer —— 免费档即可访问",
+    "怎么领": [
+      "前置条件：邮箱 / GitHub / Google 登录，无需付款方式",
+      "额度有效期：免费档不限时；Pro $20/月 起为「Extended limits on Agent」的付费升级",
+      "官方入口：定价页（Hobby Free 卡）（https://cursor.com/pricing）"
+    ],
+    "链接": "https://cursor.com/",
+    "品类": "软件试用",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "-",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-69-kiro",
+    "标题": "Kiro (AWS 背景 Agentic IDE) · 开源权重模型 —— Qwen3 Coder Next、DeepSeek 3.2…",
+    "一句话": "开源权重模型 —— Qwen3 Coder Next、DeepSeek 3.2、MiniMax M2.1 等（Free 档可用）； Claude Sonnet 4.5 —— Free 档限量可用",
+    "怎么领": [
+      "前置条件：社交账号或 AWS Builder ID 登录（升级付费档时首次登录发放试用）",
+      "额度有效期：Free 档 $0/月、credits 按月计；页面 JSON-LD 标注 “Kiro Free” price 0",
+      "官方入口：定价页（Kiro Free）（https://kiro.dev/pricing）"
+    ],
+    "链接": "https://kiro.dev/",
+    "品类": "软件试用",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "-",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  },
+  {
+    "id": "intel-70-zed",
+    "标题": "Zed (编辑器 AI 托管额度) · 编辑预测（accepted edit predictions）—— 免费 2,…",
+    "一句话": "编辑预测（accepted edit predictions）—— 免费 2,000 次； BYOK / 外部 Agent —— 免费编辑器内不限次使用",
+    "怎么领": [
+      "前置条件：Zed 账号，无需付款方式",
+      "额度有效期：免费档不限时；Pro 试用为 14 天或 $5 GPT-5.6 Luna 用量耗尽即止（“The trial ends when you use the $5 balance o…",
+      "官方入口：定价页（Personal 免费档）（https://zed.dev/pricing）"
+    ],
+    "链接": "https://zed.dev/",
+    "品类": "软件试用",
+    "地域": "海外",
+    "版本": "-",
+    "模型": "-",
+    "开始日期": "-",
+    "结束日期": "-",
+    "状态": "待验证",
+    "验真": "待验证",
+    "抓取时间": "2026-10-11"
+  }
+]
